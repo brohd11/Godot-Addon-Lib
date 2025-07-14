@@ -4,17 +4,18 @@ extends Node
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 const DockPopupHandler = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup_handler.gd") #>remote
 const Docks = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/docks.gd")
+const BottomPanel = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/bottom_panel.gd")
 const _MainScreenHandlerClass = preload("res://addons/addon_lib/brohd/dock_manager/class/main_screen_handler.gd")
-const _MainScreenHandlerMultiClass = preload("res://addons/addon_lib/brohd/dock_manager/class/main_screen_handler_multi.gd")
+const MainScreenHandlerMultiClass = preload("res://addons/addon_lib/brohd/dock_manager/class/main_screen_handler_multi.gd")
 const PanelWindow = preload("res://addons/addon_lib/brohd/dock_manager/class/panel_window.gd")
 
 var MainScreenHandler #>class_inst
+var external_main_screen_flag := false
 
 var plugin:EditorPlugin
 var plugin_control:Control
 var dock_button:Button
 var default_dock:int
-var multi_gui:bool
 var can_be_freed:bool
 
 enum Slot{
@@ -49,18 +50,20 @@ signal free_requested(dock_manager)
 static func hide_main_screen_button(_plugin):
 	_MainScreenHandlerClass.hide_main_screen_button(_plugin)
 
-func _init(_plugin:EditorPlugin, _plugin_control, _default_dock:Slot=Slot.BOTTOM_PANEL, _can_be_freed:=false, _multi_gui:=false) -> void:
+func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, _can_be_freed:=false, _main_screen_handler=null) -> void:
 	plugin = _plugin
-	if _plugin_control is Control:
-		plugin_control = _plugin_control
-	elif _plugin_control is PackedScene:
-		plugin_control = _plugin_control.instantiate()
+	if _control is Control:
+		plugin_control = _control
+	elif _control is PackedScene:
+		plugin_control = _control.instantiate()
 	
-	default_dock = _slot.get(_default_dock)
-	multi_gui = _multi_gui
+	default_dock = _slot.get(_dock)
 	can_be_freed = _can_be_freed
-	#if can_be_freed:
-		#free_requested.connect(_plugin._on_free_requested.bind())
+	
+	if _main_screen_handler != null:
+		MainScreenHandler = _main_screen_handler
+		external_main_screen_flag = true
+	
 	_init_async()
 
 func _init_async():
@@ -74,12 +77,10 @@ func _init_async():
 		dock_button.pressed.connect(_on_dock_button_pressed)
 	else:
 		print("Need dock button in scene to use Dock Manager.")
-	if multi_gui:
-		MainScreenHandler = _MainScreenHandlerMultiClass.new(plugin, plugin_control)
-	else:
+	if not is_instance_valid(MainScreenHandler):
 		plugin_control.name = plugin._get_plugin_name()
 		MainScreenHandler = _MainScreenHandlerClass.new(plugin, plugin_control)
-	plugin.add_child(MainScreenHandler)
+		plugin.add_child(MainScreenHandler)
 	
 	var layout_data = load_layout_data()
 	var dock_target = layout_data.get("current_dock", default_dock)
@@ -97,8 +98,9 @@ func clean_up():
 	save_layout_data()
 	_remove_control_from_parent()
 	plugin_control.queue_free()
-	MainScreenHandler.clean_up()
-	MainScreenHandler.queue_free()
+	if not external_main_screen_flag:
+		MainScreenHandler.clean_up()
+		MainScreenHandler.queue_free()
 	
 	queue_free()
 
@@ -192,6 +194,7 @@ func _remove_control_from_parent():
 			MainScreenHandler.remove_main_screen_control(plugin_control)
 		elif current_dock == -2:
 			plugin.remove_control_from_bottom_panel(plugin_control)
+			BottomPanel.show_first_panel()
 		else:
 			control_parent.remove_child(plugin_control)
 	

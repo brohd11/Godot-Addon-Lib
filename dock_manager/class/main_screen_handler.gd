@@ -18,8 +18,9 @@ func _init(_editor_plugin, _plugin_control) -> void:
 	editor_plugin = _editor_plugin
 	plugin_control = _plugin_control
 	_connect_buttons()
-	var bar_children = MainScreen.get_button_container()
-	for child in bar_children.get_children():
+	var main_bar = MainScreen.get_button_container()
+	main_bar.child_entered_tree.connect(_child_entered_tree)
+	for child in main_bar.get_children():
 		if String(child.name) == editor_plugin._get_plugin_name():
 			main_screen_button = child
 			main_screen_button.hide()
@@ -28,6 +29,9 @@ func _init(_editor_plugin, _plugin_control) -> void:
 	for child in EditorInterface.get_editor_main_screen().get_children():
 		if child is Control:
 			child.visibility_changed.connect(_on_main_screen_control_vis_changed.bind(child))
+
+func _child_entered_tree(c):
+	_connect_buttons()
 
 func clean_up():
 	pass
