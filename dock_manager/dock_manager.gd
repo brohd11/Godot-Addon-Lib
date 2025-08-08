@@ -2,7 +2,7 @@
 extends Node
 
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
-const DockPopupHandler = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup_handler.gd") #>remote
+const DockPopupHandler = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup_handler.gd")
 const Docks = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/docks.gd")
 const BottomPanel = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/bottom_panel.gd")
 const _MainScreenHandlerClass = preload("res://addons/addon_lib/brohd/dock_manager/class/main_screen_handler.gd")
@@ -121,7 +121,7 @@ func load_layout_data():
 func save_layout_data():
 	if not is_instance_valid(plugin_control):
 		return
-	var current_dock = Docks.get_current_dock(plugin_control)
+	var current_dock = _get_current_dock()
 	if current_dock == -3:
 		return
 	var data = {}
@@ -148,13 +148,17 @@ func _on_dock_button_pressed():
 	if handled is String:
 		return
 	
-	var current_dock = Docks.get_current_dock(plugin_control)
+	var current_dock
+	if plugin_control.get_parent() is PanelWrapper:
+		current_dock = _slot.get(Slot.MAIN_SCREEN)
+	else:
+		current_dock = Docks.get_current_dock(plugin_control)
 	if current_dock == handled:
 		return
 	if handled == 20:
 		free_instance.call_deferred()
 		#free_requested.emit(self)
-	elif handled == -3:
+	elif handled == _slot.get(Slot.FLOATING):
 		undock_instance()
 	else:
 		dock_instance(handled)
@@ -165,7 +169,9 @@ func dock_instance(target_dock:int):
 	if target_dock > -1:
 		plugin.add_control_to_dock(target_dock, plugin_control)
 	elif target_dock == -1:
-		MainScreenHandler.add_main_screen_control(plugin_control)
+		var panel_wrapper = PanelWrapper.new(plugin_control)
+		panel_wrapper.name = plugin_control.name
+		MainScreenHandler.add_main_screen_control(panel_wrapper)
 	elif target_dock == -2:
 		var name = plugin_control.name
 		plugin.add_control_to_bottom_panel(plugin_control, name)
@@ -173,6 +179,8 @@ func dock_instance(target_dock:int):
 	if is_instance_valid(window):
 		if window is PanelWindow:
 			window.queue_free()
+	
+	save_layout_data()
 
 func undock_instance():
 	_remove_control_from_parent()
@@ -185,13 +193,16 @@ func undock_instance():
 
 func _remove_control_from_parent():
 	var window = plugin_control.get_window()
-	var current_dock = Docks.get_current_dock(plugin_control)
+	var current_dock = _get_current_dock()
 	var control_parent = plugin_control.get_parent()
 	if is_instance_valid(control_parent):
 		if current_dock > -1:
 			plugin.remove_control_from_docks(plugin_control)
 		elif current_dock == -1:
-			MainScreenHandler.remove_main_screen_control(plugin_control)
+			var panel_wrapper = plugin_control.get_parent()
+			MainScreenHandler.remove_main_screen_control(panel_wrapper)
+			panel_wrapper.remove_child(plugin_control)
+			panel_wrapper.queue_free()
 		elif current_dock == -2:
 			plugin.remove_control_from_bottom_panel(plugin_control)
 			BottomPanel.show_first_panel()
@@ -202,6 +213,11 @@ func _remove_control_from_parent():
 		if window is PanelWindow:
 			window.queue_free()
 
+func _get_current_dock():
+	if plugin_control.get_parent() is PanelWrapper:
+		return _slot.get(Slot.MAIN_SCREEN)
+	else:
+		return Docks.get_current_dock(plugin_control)
 
 func window_close_requested() -> void:
 	var layout_data = load_layout_data()
@@ -211,3 +227,14 @@ func _on_window_mouse_entered(window):
 	window.grab_focus()
 func _on_window_mouse_exited():
 	EditorInterface.get_base_control().get_window().grab_focus()
+
+class PanelWrapper extends PanelContainer:
+	func _init(control) -> void:
+		add_child(control)
+		size_flags_vertical = Control.SIZE_EXPAND_FILL
+		
+	func _ready() -> void:
+		var panel_sb = get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+		panel_sb.content_margin_left = 4
+		panel_sb.content_margin_right = 4
+		add_theme_stylebox_override("panel", panel_sb)

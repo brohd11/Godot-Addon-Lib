@@ -81,6 +81,11 @@ static func _case_insensitive_compare(a: String, b: String) -> int:
 	else:
 		return false
 
+static func write_to_json_exported(data:Variant, path:String, export_flag, access=FileAccess.WRITE_READ):
+	if export_flag:
+		path = path_from_relative(path, true)
+	print(path)
+	write_to_json(data, path, access)
 
 static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE_READ) -> void:
 	var data_string = JSON.stringify(data,"\t")
@@ -89,6 +94,9 @@ static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE_READ)
 
 
 static func read_from_json(path:String,access=FileAccess.READ) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		path = path_from_relative(path)
+	
 	var json_read = JSON.new()
 	var json_load = FileAccess.open(path, access)
 	if json_load == null:
@@ -212,3 +220,45 @@ static func get_relative_path(from_path: String, to_path: String) -> String:
 		var final_string = ""
 		final_string = "/".join(relative_parts)
 		return final_string
+
+static func path_from_relative(path_or_name:String, new_file:=false, print_err:=true) -> String:
+	var script_dir = _get_script_dir()
+	var file_name = path_or_name.get_file()
+	var script_rel_path = script_dir.path_join(file_name)
+	var new_path = ""
+	if new_file:
+		return script_rel_path
+	else:
+		if FileAccess.file_exists(path_or_name):
+			new_path = path_or_name
+		else:
+			if FileAccess.file_exists(script_rel_path):
+				new_path = script_rel_path
+			else:
+				if print_err:
+					print("File doesn't exist: %s - Or relative path: %s" % [path_or_name, script_rel_path])
+	
+	return new_path
+
+static func relative_file_exists(path_or_name:String) -> bool:
+	var dir = _get_script_dir()
+	var rel_path = dir.path_join(path_or_name.get_file())
+	return FileAccess.file_exists(rel_path)
+
+static func _get_script_dir() -> String:
+	var script = new()
+	return script.get_script().resource_path.get_base_dir()
+
+static func is_file_in_directory(file_path: String, dir_path: String) -> bool:
+	var absolute_file_path = ProjectSettings.globalize_path(file_path)
+	var absolute_dir_path = ProjectSettings.globalize_path(dir_path)
+	# 2. Ensure the directory path ends with a separator.
+	#    This is crucial to prevent false positives where directory names are prefixes
+	#    of other directory names (e.g., "folder" and "folder_plus").
+	if not absolute_dir_path.ends_with("/"):
+		absolute_dir_path += "/"
+	# 3. A path cannot be a child of itself.
+	if absolute_file_path == absolute_dir_path:
+		return false
+	# 4. The file path must begin with the fully resolved directory path.
+	return absolute_file_path.begins_with(absolute_dir_path)

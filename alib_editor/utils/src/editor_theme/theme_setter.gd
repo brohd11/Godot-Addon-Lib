@@ -11,41 +11,44 @@ const style_box_types = ["panel", "normal"]
 		overide_color = val
 		_set_theme()
 
-
-
 @export var color_multiply:Color = Color(1,1,1)
 
-# Called when the node enters the scene tree for the first time.
 func _ready() -> void:
-	#EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_scan_files)
 	EditorInterface.get_base_control().theme_changed.connect(_on_scan_files)
 	_set_theme()
 
 func _on_scan_files():
-	print("THEME CHANGED")
+	print("THEME CHANGED ", self.get_parent())
 	_set_theme()
 
 func _set_theme():
-	var color_type = ThemeColor.Type.BACKGROUND
-	if overide_color != ThemeColor.Type.NONE:
-		color_type = overide_color
-	var color = ThemeColor.get_theme_color(color_type)
-	color = color * color_multiply
 	var parent = get_parent()
 	if not parent:
 		return
 	
-	if parent is ColorRect:
-		parent.color = color
+	set_theme_color(parent, overide_color, color_multiply)
+
+static func set_theme_color(node, overide_color_type:=ThemeColor.Type.NONE, color_multiply:=Color(1,1,1)):
+	var color_type = ThemeColor.Type.BACKGROUND
+	if overide_color_type != ThemeColor.Type.NONE:
+		color_type = overide_color_type
+	
+	var color = ThemeColor.get_theme_color(color_type)
+	color = color * color_multiply
+	
+	if node is ColorRect:
+		node.color = color
+		return
+	
 	var style_box_type
 	for style in style_box_types:
-		if parent.has_theme_stylebox(style):
+		if node.has_theme_stylebox(style):
 			style_box_type = style
 			break
 	if style_box_type:
-		var stylebox:StyleBoxFlat = parent.get_theme_stylebox(style_box_type)
+		var stylebox:StyleBoxFlat = node.get_theme_stylebox(style_box_type).duplicate()
 		stylebox.bg_color = color
-		parent.add_theme_stylebox_override(style_box_type, stylebox)
+		node.add_theme_stylebox_override(style_box_type, stylebox)
 
 func list_editor_theme_colors():
 	#var tree = Tree.new()
@@ -75,5 +78,7 @@ static func set_theme_setters_in_scene(root_node):
 			var theme_setter = new()
 			node.add_child(theme_setter)
 			var setting = node_name.get_slice("ThemeSet", 1)
+			if setting == "":
+				setting = "NONE"
 			setting = setting.to_upper()
 			theme_setter.overide_color = ThemeColor.Type.get(setting)

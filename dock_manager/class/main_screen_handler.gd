@@ -25,10 +25,6 @@ func _init(_editor_plugin, _plugin_control) -> void:
 			main_screen_button = child
 			main_screen_button.hide()
 			break
-	
-	for child in EditorInterface.get_editor_main_screen().get_children():
-		if child is Control:
-			child.visibility_changed.connect(_on_main_screen_control_vis_changed.bind(child))
 
 func _child_entered_tree(c):
 	_connect_buttons()
@@ -37,6 +33,11 @@ func clean_up():
 	pass
 
 func _on_main_screen_control_vis_changed(main_screen_control):
+	if not is_instance_valid(plugin_control):
+		print("MAINSCREENHANDLER - CONTROL VIS CHANGED",plugin_control," ", is_queued_for_deletion())
+		return
+	if not main_screen_control.visible:
+		return
 	if plugin_control.get_parent() != EditorInterface.get_editor_main_screen():
 		return
 	if main_screen_control != plugin_control and main_screen_control.visible:
@@ -48,8 +49,16 @@ func _connect_buttons():
 	for button:Button in main_bar.get_children():
 		if not button.pressed.is_connected(_on_main_screen_bar_button_pressed):
 			button.pressed.connect(_on_main_screen_bar_button_pressed.bind(button))
+	
+	for child in EditorInterface.get_editor_main_screen().get_children():
+		if child is Control:
+			if not child.visibility_changed.is_connected(_on_main_screen_control_vis_changed):
+				child.visibility_changed.connect(_on_main_screen_control_vis_changed.bind(child))
 
 func _on_main_screen_bar_button_pressed(button:Button):
+	if not is_instance_valid(plugin_control):
+		print("MAINSCREENHANDLER - MAIN SCREEN BUTTON PRESSED",plugin_control," ", is_queued_for_deletion(), " button", main_screen_button)
+		return
 	if button == main_screen_button and main_screen_button.button_pressed:
 		EditorInterface.set_main_screen_editor.call_deferred(editor_plugin._get_plugin_name())
 		plugin_control.show()
@@ -70,13 +79,3 @@ func remove_main_screen_control(control):
 		main_screen_button.hide()
 	EditorInterface.get_editor_main_screen().remove_child(control)
 	EditorInterface.set_main_screen_editor("Script")
-
-
-func _get_control_icon(control):
-	if "_get_plugin_icon" in editor_plugin:
-		return editor_plugin._get_plugin_icon()
-	elif "icon" in control:
-		return control.icon
-	else:
-		return EditorInterface.get_base_control().get_theme_icon("Node", &"EditorIcons")
-	

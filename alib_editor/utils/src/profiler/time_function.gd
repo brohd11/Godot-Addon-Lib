@@ -7,6 +7,7 @@ enum TimeScale{
 	MSEC,
 	USEC
 }
+var _message = ""
 var _time_scale: TimeScale = TimeScale.MSEC
 var _unit:String = "msec"
 var _start_time:int = 0
@@ -16,7 +17,8 @@ var _current_time_count:int = 0
 
 var callable:Callable
 
-func _init(_callable=null, one_shot:=true, _ts:TimeScale=TimeScale.MSEC) -> void:
+func _init(msg="", one_shot:=true, _callable=null, _ts:TimeScale=TimeScale.MSEC) -> void:
+	_message = msg
 	_one_shot = _one_shot
 	_time_scale = _ts
 	
@@ -49,6 +51,8 @@ func stop():
 func _print():
 	if _one_shot:
 		var print_string = "Function complete in: "
+		if _message != "":
+			print_string = "%s: " % _message
 		if callable:
 			var callable_name = callable.get_method() as String
 			print_string = "Function: '%s' complete in: " % callable_name

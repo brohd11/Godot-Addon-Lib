@@ -1,6 +1,9 @@
 @tool
 extends RefCounted
 
+const PLUGIN_EXPORTED = false
+const PLUGIN_EXPORT_FLAT = false
+
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 
 var plugin:EditorPlugin
@@ -11,11 +14,13 @@ var _code_completions_instances:Dictionary = {}
 var _context_plugin_instances:Dictionary = {}
 var _inspector_plugin_instances:Dictionary = {}
 var _syntax_highlighter_instances:Dictionary = {}
+var _editor_plugin_instances:Dictionary = {}
 
 var code_completion_paths:Array = []
 var context_menu_plugin_paths:Array = []
 var inspector_plugin_paths:Array = []
 var syntax_highlighter_paths:Array = []
+var editor_plugin_paths:Array = []
 
 func _init(_plugin:EditorPlugin, plugins_file_path:="", check_for_zyx:=false) -> void:
 	plugin = _plugin
@@ -25,26 +30,27 @@ func _init(_plugin:EditorPlugin, plugins_file_path:="", check_for_zyx:=false) ->
 		add_plugins()
 
 func load_paths_from_file(path) -> void:
-	if not FileAccess.file_exists(path):
-		print("File doesn't exist: %s" % path)
-		return
+	
 	var data = UFile.read_from_json(path)
 	code_completion_paths = data.get("code_completion", [])
 	context_menu_plugin_paths = data.get("context_menu", [])
 	inspector_plugin_paths = data.get("inspector", [])
 	syntax_highlighter_paths = data.get("syntax_highlighter", [])
+	editor_plugin_paths = data.get("editor_plugin", [])
 
 func add_plugins() -> void:
 	add_code_completions()
 	add_context_menu_plugins()
 	add_inspector_plugins()
 	add_syntax_highlighters()
+	add_editor_plugins()
 
 func remove_plugins() -> void:
 	_remove_code_completions()
 	_remove_context_menu_plugins()
 	_remove_inspector_plugins()
 	_remove_syntax_highlighters()
+	_remove_editor_plugins()
 
 #region Add/Remove Logic
 
@@ -55,6 +61,8 @@ func add_code_completions(code_completions=null) -> void:
 	
 	for path_or_script in code_completions:
 		var script_data = _get_plugin_script(path_or_script)
+		if script_data.is_empty():
+			continue
 		var path = script_data[0]
 		var script:Script = script_data[1]
 		
@@ -73,16 +81,22 @@ func _remove_code_completions() -> void:
 
 #region Context Menu Plugins
 func add_context_menu_plugins(context_menu_plugins=null) -> void:
-	if _check_for_zyx and DirAccess.dir_exists_absolute("res://addons/zyx_popup_wrapper"):
-		return
+	if _check_for_zyx:
+		if PLUGIN_EXPORT_FLAT and UFile.relative_file_exists("zyx_popup_wrapper_plugin_logic.gd"):
+			return
+		if DirAccess.dir_exists_absolute("res://addons/zyx_popup_wrapper"):
+			return
+	
 	if context_menu_plugins == null:
 		context_menu_plugins = context_menu_plugin_paths
 	
 	for path_or_script in context_menu_plugins:
 		var script_data = _get_plugin_script(path_or_script)
+		if script_data.is_empty():
+			continue
 		var path = script_data[0]
 		var script:Script = script_data[1]
-		if script.get("Slot"):
+		if "Slot" in script:
 			var ins = script.new()
 			if ins is EditorContextMenuPlugin:
 				plugin.add_context_menu_plugin(ins.Slot, ins)
@@ -91,10 +105,15 @@ func add_context_menu_plugins(context_menu_plugins=null) -> void:
 				ins.queue_free()
 
 func _remove_context_menu_plugins() -> void:
-	for instance_name in _context_plugin_instances:
+	if not PLUGIN_EXPORTED:
+		print(_context_plugin_instances)
+	for instance_name in _context_plugin_instances.keys():
 		var instance = _context_plugin_instances.get(instance_name)
 		if is_instance_valid(instance):
+			if not PLUGIN_EXPORTED:
+				print("REMOVE", instance)
 			plugin.remove_context_menu_plugin(instance)
+		_context_plugin_instances.erase(instance_name)
 
 #endregion
 
@@ -105,6 +124,8 @@ func add_inspector_plugins(inspector_plugins=null) -> void:
 	
 	for path_or_script in inspector_plugins:
 		var script_data = _get_plugin_script(path_or_script)
+		if script_data.is_empty():
+			continue
 		var path = script_data[0]
 		var script:Script = script_data[1]
 		
@@ -113,11 +134,13 @@ func add_inspector_plugins(inspector_plugins=null) -> void:
 		_inspector_plugin_instances[path] = instance
 
 func _remove_inspector_plugins() -> void:
-	for key in _inspector_plugin_instances:
+	for key in _inspector_plugin_instances.keys():
 		var instance = _inspector_plugin_instances.get(key)
 		plugin.remove_inspector_plugin(instance)
+		_inspector_plugin_instances.erase(key)
 
 #endregion
+
 
 #region Syntax Highlighters
 func add_syntax_highlighters(highlighters=null) -> void:
@@ -126,6 +149,8 @@ func add_syntax_highlighters(highlighters=null) -> void:
 	
 	for path_or_script in highlighters:
 		var script_data = _get_plugin_script(path_or_script)
+		if script_data.is_empty():
+			continue
 		var path = script_data[0]
 		var script:Script = script_data[1]
 		
@@ -134,11 +159,46 @@ func add_syntax_highlighters(highlighters=null) -> void:
 		_syntax_highlighter_instances[path] = highlighter
 
 func _remove_syntax_highlighters() -> void:
-	for key in _syntax_highlighter_instances:
+	for key in _syntax_highlighter_instances.keys():
 		var highlighter = _syntax_highlighter_instances.get(key)
 		EditorInterface.get_script_editor().unregister_syntax_highlighter(highlighter)
+		_syntax_highlighter_instances.erase(key)
 
 #endregion
+
+
+#region Editor Plugins
+func add_editor_plugins(editor_plugins=null) -> void:
+	if editor_plugins == null:
+		editor_plugins = editor_plugin_paths
+	
+	for path_or_script in editor_plugins:
+		var script_data = _get_plugin_script(path_or_script)
+		if script_data.is_empty():
+			continue
+		var path = script_data[0]
+		var script:Script = script_data[1]
+		
+		var file_name = path.get_file()
+		if file_name.find("_plugin_logic") > -1:
+			var plugin_name = file_name.get_slice("_plugin_logic", 0)
+			var plugin_dir = "res://addons/%s" % plugin_name
+			if DirAccess.dir_exists_absolute(plugin_dir):
+				print("Plugin exists, not enabling: %s" % plugin_name)
+				continue
+		
+		var editor_plugin = script.new(plugin)
+		plugin.add_child(editor_plugin)
+		_editor_plugin_instances[path] = editor_plugin
+
+func _remove_editor_plugins() -> void:
+	for key in _editor_plugin_instances.keys():
+		var editor_plugin = _editor_plugin_instances.get(key)
+		editor_plugin.queue_free()
+		_editor_plugin_instances.erase(key)
+
+#endregion
+
 
 #endregion
 
@@ -149,5 +209,10 @@ func _get_plugin_script(path) -> Array:
 		script = path
 		path = script.resource_path
 	elif path is String:
+		if not FileAccess.file_exists(path):
+			path = UFile.path_from_relative(path, false, PLUGIN_EXPORTED)
+			if path == "":
+				return []
+		
 		script = load(path)
 	return [path, script]

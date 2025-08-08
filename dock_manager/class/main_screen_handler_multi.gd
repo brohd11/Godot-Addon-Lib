@@ -37,6 +37,23 @@ func _connect_buttons():
 	for button:Button in main_bar.get_children():
 		if not button.pressed.is_connected(_on_main_screen_bar_button_pressed):
 			button.pressed.connect(_on_main_screen_bar_button_pressed.bind(button))
+	for child in EditorInterface.get_editor_main_screen().get_children():
+		if child is Control:
+			if not child.visibility_changed.is_connected(_on_main_screen_control_vis_changed):
+				child.visibility_changed.connect(_on_main_screen_control_vis_changed.bind(child))
+
+func _on_main_screen_control_vis_changed(main_screen_control):
+	if not main_screen_control.visible:
+		return
+	if not main_screen_control in plugin_buttons.values():
+		_on_main_screen_bar_button_pressed(MainScreen.get_button_container().get_child(0))
+		return
+	for button in plugin_buttons:
+		var plugin_control = plugin_buttons.get(button)
+		if plugin_control.get_parent() != EditorInterface.get_editor_main_screen():
+			continue
+		if main_screen_control != plugin_control and main_screen_control.visible:
+			plugin_control.hide()
 
 func _on_main_screen_bar_button_pressed(button:Button):
 	if button == main_screen_button and main_screen_button.button_pressed:
