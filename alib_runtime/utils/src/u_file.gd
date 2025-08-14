@@ -221,7 +221,10 @@ static func get_relative_path(from_path: String, to_path: String) -> String:
 		final_string = "/".join(relative_parts)
 		return final_string
 
-static func path_from_relative(path_or_name:String, new_file:=false, print_err:=true) -> String:
+static func path_from_relative(path_or_name:String, new_file:=false, print_err:=true) -> String: # DEPRECATED
+	return get_plugin_exported_path(path_or_name, new_file, print_err)
+
+static func get_plugin_exported_path(path_or_name:String, new_file:=false, print_err:=true) -> String:
 	var script_dir = _get_script_dir()
 	var file_name = path_or_name.get_file()
 	var script_rel_path = script_dir.path_join(file_name)
@@ -240,10 +243,14 @@ static func path_from_relative(path_or_name:String, new_file:=false, print_err:=
 	
 	return new_path
 
-static func relative_file_exists(path_or_name:String) -> bool:
+static func relative_file_exists(path_or_name:String) -> bool: # DEPRECATED
+	return plugin_exported_file_exists(path_or_name)
+
+static func plugin_exported_file_exists(path_or_name:String) -> bool:
 	var dir = _get_script_dir()
 	var rel_path = dir.path_join(path_or_name.get_file())
 	return FileAccess.file_exists(rel_path)
+
 
 static func _get_script_dir() -> String:
 	var script = new()

@@ -30,6 +30,8 @@ func _create_dialog(dialog_scn:PackedScene):
 
 
 func _on_confirmed():
+	var dialog_parent_window = dialog.get_parent().get_window()
+	
 	var param = null
 	if scene.has_method("on_confirm_pressed"):
 		param = await scene.on_confirm_pressed()
@@ -38,6 +40,8 @@ func _on_confirmed():
 	self.handled.emit(param)
 	dialog.queue_free()
 	
+	dialog_parent_window.grab_focus()
+
 func _on_canceled():
 	self.handled.emit(CANCEL_STRING)
 	dialog.queue_free()

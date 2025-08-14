@@ -136,16 +136,19 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 			path_popup = item_dict.get(working_menu_path)
 		else:
 			path_popup = PopupMenu.new()
-			if extra_args.is_empty():
-				path_popup.id_pressed.connect(signal_callable.bind(path_popup))
-			else:
-				path_popup.id_pressed.connect(signal_callable.bindv(extra_args).bind(path_popup))
+			if signal_callable != null:
+				if extra_args.is_empty():
+					path_popup.id_pressed.connect(signal_callable.bind(path_popup))
+				else:
+					path_popup.id_pressed.connect(signal_callable.bindv(extra_args).bind(path_popup))
 			path_popup.submenu_popup_delay = 0
 			_create_popup_item(parent_popup, slice, tool_tip, icon, icon_color, -1, path_popup)
 			item_dict[working_menu_path] = path_popup
 			
 		
 		parent_popup = path_popup
+	
+	return parent_popup
 
 static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id, submenu_node:PopupMenu=null):
 	if submenu_node:
@@ -193,7 +196,7 @@ class PopupMenuPathParams:
 	
 	var popup_menu_path:String
 	var base_popup:PopupMenu
-	var signal_callable:Callable
+	var signal_callable#:Callable
 	var popup_items_dict:Dictionary
 	
 	var icon_array:Array = []
@@ -276,6 +279,43 @@ class MouseHelper:
 		if what == NOTIFICATION_PREDELETE:
 			if is_instance_valid(timer):
 				timer.queue_free()
+
+static func create_popup_items_dict(popup:PopupMenu):
+	var dict = {}
+	_create_popup_items_dict(popup, dict)
+	return dict
+
+static func _create_popup_items_dict(popup:PopupMenu, dict:Dictionary, path=""):
+	for i in range(popup.item_count):
+		var submenu = popup.get_item_submenu_node(i)
+		if not is_instance_valid(submenu):
+			continue
+		var text = popup.get_item_text(i)
+		var popup_path = text
+		if path != "":
+			popup_path = path.path_join(text)
+		dict[popup_path] = submenu
+		_create_popup_items_dict(submenu, dict, popup_path)
+
+
+static func add_single_item(popup:PopupMenu, popup_path:String, popup_data:Dictionary, popup_items_dict:Dictionary):
+	var path_count = popup_path.count("/")
+	var callable = popup_data.get(ParamKeys.CALLABLE_KEY)
+	var id = popup_data.get("id", -1)
+	
+	var popup_params = PopupMenuPathParams.new(popup_path, popup, callable, popup_items_dict)
+	var icons = popup_data.get(ParamKeys.ICON_KEY)
+	if icons:
+		popup_params.icon_array = icons
+	var tooltip = popup_data.get(ParamKeys.TOOL_TIP_KEY)
+	if tooltip:
+		popup_params.tool_tip_array = tooltip
+	var metadata = popup_data.get(ParamKeys.METADATA_KEY)
+	if metadata:
+		popup_params.metadata = metadata
+	
+	return _parse_popup_menu_path(popup_params, id)
+
 
 static func _get_icon(icon_name:String, theme_type:String="EditorIcons"):
 	return EditorInterface.get_editor_theme().get_icon(icon_name, theme_type)

@@ -8,7 +8,7 @@ const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_fil
 
 var plugin:EditorPlugin
 
-var _check_for_zyx:=false
+#var _check_for_zyx:=false
 
 var _code_completions_instances:Dictionary = {}
 var _context_plugin_instances:Dictionary = {}
@@ -24,7 +24,7 @@ var editor_plugin_paths:Array = []
 
 func _init(_plugin:EditorPlugin, plugins_file_path:="", check_for_zyx:=false) -> void:
 	plugin = _plugin
-	_check_for_zyx = check_for_zyx
+	#_check_for_zyx = check_for_zyx
 	if plugins_file_path != "":
 		load_paths_from_file(plugins_file_path)
 		add_plugins()
@@ -81,11 +81,11 @@ func _remove_code_completions() -> void:
 
 #region Context Menu Plugins
 func add_context_menu_plugins(context_menu_plugins=null) -> void:
-	if _check_for_zyx:
-		if PLUGIN_EXPORT_FLAT and UFile.relative_file_exists("zyx_popup_wrapper_plugin_logic.gd"):
-			return
-		if DirAccess.dir_exists_absolute("res://addons/zyx_popup_wrapper"):
-			return
+	#if _check_for_zyx: # I THINK THIS CAN BE DEPRECATED
+		#if PLUGIN_EXPORT_FLAT and UFile.plugin_exported_file_exists("zyx_popup_wrapper_plugin_logic.gd"):
+			#return
+		#if DirAccess.dir_exists_absolute("res://addons/zyx_popup_wrapper"):
+			#return
 	
 	if context_menu_plugins == null:
 		context_menu_plugins = context_menu_plugin_paths
@@ -96,10 +96,10 @@ func add_context_menu_plugins(context_menu_plugins=null) -> void:
 			continue
 		var path = script_data[0]
 		var script:Script = script_data[1]
-		if "Slot" in script:
+		if "SLOT" in script:
 			var ins = script.new()
 			if ins is EditorContextMenuPlugin:
-				plugin.add_context_menu_plugin(ins.Slot, ins)
+				plugin.add_context_menu_plugin(ins.SLOT, ins)
 				_context_plugin_instances[path] = ins
 			else:
 				ins.queue_free()
@@ -210,7 +210,7 @@ func _get_plugin_script(path) -> Array:
 		path = script.resource_path
 	elif path is String:
 		if not FileAccess.file_exists(path):
-			path = UFile.path_from_relative(path, false, PLUGIN_EXPORTED)
+			path = UFile.get_plugin_exported_path(path, false, PLUGIN_EXPORTED)
 			if path == "":
 				return []
 		
