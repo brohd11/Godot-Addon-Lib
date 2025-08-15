@@ -9,6 +9,10 @@ static func get_popup():
 	var popup = current.get_child(1)
 	return popup
 
+static func get_current_script():
+	var current = EditorInterface.get_script_editor().get_current_script()
+	return current
+
 #static func get_menu_bar():
 	#var current = get_current_script_editor()
 	#var menu_bar = current.get_parent().get_parent().get_parent().get_parent().get_child(0)
