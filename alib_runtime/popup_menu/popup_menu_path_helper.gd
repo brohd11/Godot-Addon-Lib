@@ -2,6 +2,8 @@ extends PopupMenu
 
 var popup_items_dict:Dictionary = {}
 
+var mouse_helper :MouseHelper
+
 signal item_pressed_parsed_menu_path(menu_path)
 signal item_pressed_parsed(id_text)
 signal item_pressed(id, popup)
@@ -16,8 +18,7 @@ static func parse_id_text(id, popup:PopupMenu):
 	return popup.get_item_text(index)
 
 static func parse_menu_path(id:int, popup:PopupMenu):
-	var index = popup.get_item_index(id)
-	var metadata = popup.get_item_metadata(index)
+	var metadata = get_metadata(id, popup)
 	return metadata.get("menu_path")
 
 static func parse_callable(id, popup, dict, callable_key=ParamKeys.CALLABLE_KEY):
@@ -26,6 +27,10 @@ static func parse_callable(id, popup, dict, callable_key=ParamKeys.CALLABLE_KEY)
 	var callable = data.get(callable_key)
 	if callable:
 		callable.call()
+
+static func get_metadata(id, popup:PopupMenu):
+	var index = popup.get_item_index(id)
+	return popup.get_item_metadata(index)
 
 static func set_popup_description(popup:PopupMenu, id:int, text:String):
 	var index = popup.get_item_index(id)
@@ -38,6 +43,10 @@ func _init(path_dict=null, mouse_signal_node=null, base_id=-1) -> void:
 
 
 func parse_dict(path_dict, mouse_signal_node, base_id=-1, extra_args=[]):
+	if mouse_signal_node == null:
+		popup_hide.connect(_on_popup_hide.bind(self))
+		mouse_helper = MouseHelper.new(self)
+		mouse_signal_node = mouse_helper
 	_parse_dict(path_dict, self, _parse_item_clicked, popup_items_dict, base_id, extra_args)
 	connect_mouse_signals(popup_items_dict, mouse_signal_node)
 
@@ -118,6 +127,10 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 		var slice = popup_menu_path.get_slice("/", i)
 		working_menu_path = working_menu_path.path_join(slice)
 		if  i == slice_count - 1: # THIS IS THE CLICKABLE
+			if working_menu_path.begins_with("sep"):
+				parent_popup.add_separator()
+				break
+			
 			_create_popup_item(parent_popup, slice, tool_tip, icon, icon_color, current_id)
 			var popup_index = parent_popup.item_count - 1
 			var metadata = {
@@ -179,6 +192,8 @@ static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id,
 			#var popup_index = popup.item_count - 1
 			#popup.set_item_tooltip(popup_index, tool_tip)
 
+static func _on_popup_hide(popup): # if no mouse signal node, free popup
+	popup.queue_free()
 
 class ParamKeys:
 	const ICON_KEY = "ICON_KEY"
@@ -316,6 +331,9 @@ static func add_single_item(popup:PopupMenu, popup_path:String, popup_data:Dicti
 	
 	return _parse_popup_menu_path(popup_params, id)
 
+static func set_popup_position(popup:PopupMenu, offset:=Vector2i.ZERO):
+	offset = offset * EditorInterface.get_editor_scale()
+	popup.position = DisplayServer.mouse_get_position() - offset
 
 static func _get_icon(icon_name:String, theme_type:String="EditorIcons"):
 	return EditorInterface.get_editor_theme().get_icon(icon_name, theme_type)

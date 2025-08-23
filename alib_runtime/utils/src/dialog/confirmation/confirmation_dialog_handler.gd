@@ -1,4 +1,5 @@
 @tool
+class_name ConfirmationDialogHandler
 extends "res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/handler_base.gd"
 
 var cancel_button:Button
@@ -32,6 +33,9 @@ func _create_dialog(dialog_text) -> void:
 
 func is_acknowledge():
 	cancel_button.hide()
+
+func non_exclusive():
+	dialog.exclusive = false
 
 func _on_confirmed():
 	self.handled.emit(true)

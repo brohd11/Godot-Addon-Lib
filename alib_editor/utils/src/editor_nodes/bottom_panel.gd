@@ -42,3 +42,9 @@ static func show_first_panel():
 			c.toggled.emit(true)
 			#c.toggled.emit(false)
 			break
+
+static func get_filter_line_edit():
+	var editor_log = get_panel("EditorLog")
+	var vbox = editor_log.get_child(1)
+	var line_edit = vbox.get_child(1)
+	return line_edit

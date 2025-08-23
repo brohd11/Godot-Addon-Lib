@@ -1,3 +1,4 @@
+class_name UTimeFunction
 extends RefCounted
 
 var _one_shot := true
