@@ -23,3 +23,4 @@ static func get_theme_color(color_type=Type.BASE):
 	
 	color = base_control.get_theme_color(color_string, &"Editor")
 	return color
+

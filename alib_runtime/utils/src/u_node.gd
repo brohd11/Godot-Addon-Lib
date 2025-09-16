@@ -44,3 +44,4 @@ static func connect_signal(callable:Callable, _signal:Signal):
 static func disconnect_signal(callable:Callable, _signal:Signal):
 	if _signal.is_connected(callable):
 		_signal.disconnect(callable)
+

@@ -9,7 +9,9 @@ static func get_current_script():
 
 static func get_popup():
 	var current = get_current_script_editor()
-	if UVersion.get_minor_version() == 4: #4.4
+	if not is_instance_valid(current):
+		return
+	if UVersion.get_minor_version() <= 4: #4.4
 		return current.get_child(1)
 	elif UVersion.get_minor_version() == 5:
 		return current.get_child(2)

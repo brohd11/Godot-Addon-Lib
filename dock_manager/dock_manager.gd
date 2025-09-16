@@ -1,4 +1,5 @@
 @tool
+class_name DockManager
 extends Node
 
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
@@ -115,6 +116,9 @@ func clean_up():
 
 func free_instance():
 	clean_up()
+
+func get_plugin_control():
+	return plugin_control
 
 func load_layout_data():
 	if not FileAccess.file_exists(_get_layout_file_path()):

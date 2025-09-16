@@ -22,3 +22,4 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
 		if is_instance_valid(dialog):
 			dialog.queue_free()
+

@@ -96,3 +96,4 @@ func hide_and_free():
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
 		pass
+

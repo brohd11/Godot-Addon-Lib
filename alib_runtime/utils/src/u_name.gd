@@ -58,3 +58,4 @@ static func incremental_name_check_in_nodes(name:String, parent_node:Node) -> St
 		count += 1
 	
 	return new_name
+

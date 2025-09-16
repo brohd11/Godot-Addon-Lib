@@ -87,3 +87,4 @@ class can_drop_data:
 				if ext in extensions:
 					return true
 		return false
+

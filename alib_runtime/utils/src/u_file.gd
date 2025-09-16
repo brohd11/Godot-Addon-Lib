@@ -81,6 +81,17 @@ static func _case_insensitive_compare(a: String, b: String) -> int:
 	else:
 		return false
 
+static func sort_file_paths_dirs_first(a: String, b: String) -> int:
+	var a_is_dir = a.get_extension() == ""
+	var b_is_dir = b.get_extension() == ""
+	
+	if a_is_dir and not b_is_dir:
+		return true  # a comes before b
+	elif not a_is_dir and b_is_dir:
+		return false  # b comes before a
+	else:
+		return a < b  # Sort alphabetically if both are files or both are directories
+
 static func write_to_json_exported(data:Variant, path:String, export_flag, access=FileAccess.WRITE_READ):
 	if export_flag:
 		path = path_from_relative(path, true)
@@ -202,8 +213,8 @@ static func get_relative_path(from_path: String, to_path: String) -> String:
 	# We iterate while the components of both paths match.
 	var common_path_len = 0
 	while (common_path_len < from_parts.size() and
-		   common_path_len < to_parts.size() and
-		   from_parts[common_path_len] == to_parts[common_path_len]):
+		common_path_len < to_parts.size() and
+		from_parts[common_path_len] == to_parts[common_path_len]):
 		common_path_len += 1
 	
 	var relative_parts: Array = []

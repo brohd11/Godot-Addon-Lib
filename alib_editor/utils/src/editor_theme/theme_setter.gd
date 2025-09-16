@@ -1,6 +1,8 @@
 @tool
 extends Node
 
+const BACKPORTED = 100
+
 const ThemeColor = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_color.gd")
 const UNode = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_node.gd")
 
@@ -49,26 +51,6 @@ static func set_theme_color(node, overide_color_type:=ThemeColor.Type.NONE, colo
 		var stylebox:StyleBoxFlat = node.get_theme_stylebox(style_box_type).duplicate()
 		stylebox.bg_color = color
 		node.add_theme_stylebox_override(style_box_type, stylebox)
-
-func list_editor_theme_colors():
-	#var tree = Tree.new()
-	#add_child(tree)
-	#var _n = tree.get_theme_stylebox("panel") as StyleBoxFlat
-	#print(_n.bg_color)
-	#tree.queue_free()
-	var theme_names = EditorInterface.get_editor_theme().get_stylebox_list(&"Tree")
-	for n in theme_names:
-		var sb = EditorInterface.get_editor_theme().get_stylebox(n, &"Tree")
-		print(n)
-		if not "bg_color" in sb:
-			continue
-		var color = sb.bg_color
-		
-		print(color)
-		if color == Color(0.1, 0.1, 0.1, 0.6):
-			print("YERp")
-		print("************")
-	print(theme_names)
 
 static func set_theme_setters_in_scene(root_node):
 	var nodes = UNode.recursive_get_nodes(root_node)

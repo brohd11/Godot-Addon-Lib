@@ -21,3 +21,4 @@ static func get_button_theme():
 	else:
 		button = get_title_bar().get_child(2).get_child(0) as Button
 	return button.theme_type_variation
+

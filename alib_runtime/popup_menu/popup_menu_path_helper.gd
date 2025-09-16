@@ -1,5 +1,7 @@
 extends PopupMenu
 
+const BACKPORTED = 100
+
 var popup_items_dict:Dictionary = {}
 
 var mouse_helper :MouseHelper
@@ -37,7 +39,7 @@ static func set_popup_description(popup:PopupMenu, id:int, text:String):
 	popup.set_item_metadata(index, {"description": text})
 
 func _init(path_dict=null, mouse_signal_node=null, base_id=-1) -> void:
-	if not path_dict:
+	if path_dict == null:
 		return
 	parse_dict(path_dict, mouse_signal_node, base_id)
 
@@ -256,7 +258,8 @@ class MouseHelper:
 		
 		if selected_node is PopupMenu:
 			selected_node.popup_hide.connect(stop_timer)
-			timer_elapsed.connect(hide_popup)
+			if BACKPORTED >= 4:
+				timer_elapsed.connect(hide_popup)
 		else:
 			if not callable:
 				print("No callable set for Popup Mouse Helper.")

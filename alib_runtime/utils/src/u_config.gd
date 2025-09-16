@@ -44,3 +44,4 @@ static func load_val_from_config(section, setting, default_val, config_file_path
 	
 	var setting_val = config.get_value(section, setting, default_val)
 	return setting_val
+

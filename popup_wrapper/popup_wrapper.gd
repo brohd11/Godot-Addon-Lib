@@ -1,4 +1,7 @@
 extends RefCounted
+
+#const BACKPORTED = 100
+
 const EditorNodes = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/u_editor_nodes.gd")
 const ScriptEd = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/script_editor.gd")
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
@@ -203,9 +206,10 @@ static func popup_cleanup(popup:PopupMenu):
 
 
 static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_editor, menu_items:Dictionary, context_menu_callable):
+	
 	var fs_popup:PopupMenu
 	if "SLOT" in plugin:
-		if plugin.SLOT == plugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE:
+		if plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE:
 			fs_popup = ScriptEd.get_popup()
 	
 	var meta_dict = {}
@@ -214,7 +218,9 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 	var multi_popup_groups = {}
 	menu_items = menu_items.duplicate(true)
 	
+	
 	for menu_path:String in menu_items:
+		
 		var slice_count = menu_path.get_slice_count("/")
 		if slice_count > 1:
 			var first_slice = menu_path.get_slice("/", 0)
@@ -243,7 +249,9 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 	for group in multi_popup_groups:
 		var group_data = multi_popup_groups.get(group)
 		var popup = PopupMenu.new()
-		popup.id_pressed.connect(_context_plugin_submenu_pressed.bind(popup, script_editor, context_menu_callable))
+		var _submenu_pressed = func(id, popup, se, callable): callable.call(se, PopupHelper.parse_menu_path(id, popup))
+		popup.id_pressed.connect(_submenu_pressed.bind(popup, script_editor, context_menu_callable))
+		#popup.id_pressed.connect(_context_plugin_submenu_pressed.bind(popup, script_editor, context_menu_callable)) # old
 		popup_items[group] = popup
 		var icon = null
 		var first_item = false
@@ -256,18 +264,21 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 					icon = icons[0]
 				if icon is String:
 					icon = PopupHelper._get_icon(icon)
-			popup_data[ItemParams.CALLABLE_KEY] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable)
+			popup_data[ItemParams.CALLABLE_KEY] = _submenu_pressed.bind(script_editor, context_menu_callable)
+			#popup_data[ItemParams.CALLABLE_KEY] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable) # old
 			PopupHelper.add_single_item(popup, menu_path, popup_data, popup_items)
 		
 		plugin.add_context_submenu_item(group, popup, icon)
 	
 	if fs_popup:
-		set_fs_popup_metadata.call_deferred(fs_popup, meta_dict)
+		var set_metadata = func(fs, dict): for i in dict: fs.set_item_metadata(i, dict.get(i))
+		set_metadata.call_deferred(fs_popup, meta_dict)
 
-static func set_fs_popup_metadata(fs_popup:PopupMenu, meta_data_dict): #TODO test on weaker machine
+static func set_fs_popup_metadata(fs_popup:PopupMenu, meta_data_dict): #TODO test on weaker machine, converted to anon above
 	for index in meta_data_dict:
 		var meta = meta_data_dict.get(index)
 		fs_popup.set_item_metadata(index, meta)
+
 
 
 static func _context_plugin_submenu_pressed(id, popup, script_editor, callable):
@@ -313,3 +324,19 @@ static func sort_custom_context_items(all_custom_items, pre_dict, post_dict):
 		var item_path = post_priority_dict[key]
 		post_dict[item_path] = all_custom_items[item_path]
 	
+
+
+#static func create_context_plugin_items_compat(plugin:EditorContextMenuPlugin, script_editor, menu_items:Dictionary, context_menu_callable):
+	#
+	#for menu_path:String in menu_items.keys():
+		#var path_data = menu_items.get(menu_path)
+		#var item_name = menu_path
+		#if menu_path.find("/") > -1:
+			#var slice_count = menu_path.get_slice_count("/")
+			#item_name = menu_path.get_slice("/", slice_count - 1)
+		#
+		#var icons = path_data.get(ItemParams.ICON_KEY, [])
+		#var icon
+		#if not icons.is_empty():
+			#icon = icons[icons.size() - 1]
+		#plugin.add_context_menu_item(item_name, context_menu_callable.bind(item_name).bind(script_editor), icon)

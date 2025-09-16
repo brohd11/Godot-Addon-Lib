@@ -2,9 +2,9 @@ extends RefCounted
 
 const node = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_node.gd")
 
-class PopupNode extends Node: #>class
+class PopupNode extends Node:
 	pass
-class DialogsNode extends Node: #>class
+class DialogsNode extends Node:
 	pass
 static var dialogs_node:DialogsNode
 static var popup_node:PopupNode
@@ -86,7 +86,7 @@ static func _recursive_scan_tree_item(item: TreeItem, FileSystemItemDict, FileDa
 	var file_path = item.get_metadata(0)
 	if file_path != null:
 		if file_path.ends_with("/") and not file_path == "res://":
-			file_path = file_path.erase(file_path.length() - 1)
+			file_path = file_path.trim_suffix("/")
 		FileSystemItemDict[file_path] = item
 		
 		var icon = item.get_icon(0)

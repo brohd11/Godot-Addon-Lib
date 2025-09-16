@@ -1,7 +1,6 @@
 extends RefCounted
 
 const DOCK_POPUP = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup.tscn")
-#const DockPopup = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup.gd")
 
 const FREE_VALUE = 20
 
