@@ -1,4 +1,3 @@
-#extends "res://addons/addon_lib/brohd/alib_editor/utils/src/dialog/editor_file/class/editor_file_base.gd"
 
 const File = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/dialog/editor_file/class/editor_file_dialog_file.gd")
 const Files = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/dialog/editor_file/class/editor_file_dialog_files.gd")
