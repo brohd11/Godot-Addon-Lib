@@ -16,6 +16,12 @@ static func get_popup():
 	elif UVersion.get_minor_version() == 5:
 		return current.get_child(2)
 
+static func get_script_list_popup():
+	var current = get_current_script_editor()
+	if not is_instance_valid(current):
+		return
+	var popup = current.get_child(1)
+	print(popup)
 
 static func get_menu_bar():
 	var script_editor = get_current_script_editor()

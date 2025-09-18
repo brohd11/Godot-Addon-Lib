@@ -48,4 +48,3 @@ static func get_filter_line_edit():
 	var vbox = editor_log.get_child(1)
 	var line_edit = vbox.get_child(1)
 	return line_edit
-

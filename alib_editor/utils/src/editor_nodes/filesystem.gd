@@ -2,67 +2,30 @@ extends RefCounted
 
 const node = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_node.gd")
 
-class PopupNode extends Node:
-	pass
-class DialogsNode extends Node:
-	pass
-static var dialogs_node:DialogsNode
-static var popup_node:PopupNode
-
-static func get_dialogs():
-	if is_instance_valid(dialogs_node):
-		return dialogs_node
-	else:
-		var nodes = node.recursive_get_nodes(EditorInterface.get_file_system_dock())
-		for n in nodes:
-			if n is DialogsNode:
-				dialogs_node = n
-				return n
-		
-		printerr("Error getting FileSystem Dialogs.")
-
 static func get_tree():
-	var tree = EditorInterface.get_file_system_dock().get_child(3).get_child(0)
-	if tree is not Tree:
-		tree = EditorInterface.get_file_system_dock().get_child(2).get_child(0)
-	if tree is Tree:
-		return tree
-	else:
-		printerr("Error getting FileSystem Tree.")
+	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
 
 static func get_tree_line_edit():
-	var tree = get_tree()
-	var line = tree.get_child(1, true).get_child(0, true).get_child(0, true)
-	if line is LineEdit:
-		return line
-	else:
-		print("Not a line edit.")
+	var tree = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
+	var nodes = tree.get_child(1, true).find_children("*", "LineEdit", true, false)
+	return nodes[0]
 
 static func populate_popup(calling_node:Control):
-	get_popup()
-	if calling_node.get_window() != popup_node.get_window():
-		popup_node.reparent(calling_node.get_window().get_child(0))
-	var tree = get_tree() as Tree
+	var popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
+	if calling_node.get_window() != popup.get_window():
+		popup.reparent(calling_node.get_window().get_child(0))
+	var tree = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
+	
 	tree.item_mouse_selected.emit(Vector2.ZERO, 2)
-	var popup = popup_node.get_child(0)
 	popup.hide()
-	popup_node.reparent(EditorInterface.get_file_system_dock())
+	popup.reparent(EditorInterface.get_file_system_dock())
+
 
 static func get_popup():
-	if is_instance_valid(popup_node):
-		return popup_node.get_child(0)
-	else:
-		var nodes = node.recursive_get_nodes(EditorInterface.get_file_system_dock())
-		for n in nodes:
-			if n is PopupNode:
-				popup_node = n
-				return n.get_child(0)
-		
-		printerr("Error getting FileSystem Popup.")
+	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 
-static func reset_dialogs():
-	if is_instance_valid(dialogs_node):
-		dialogs_node.reparent(EditorInterface.get_file_system_dock())
+static func get_create_popup():
+	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
 
 
 static func scan_fs_dock(FileSystemItemDict, FileDataDict, preview_object=null):

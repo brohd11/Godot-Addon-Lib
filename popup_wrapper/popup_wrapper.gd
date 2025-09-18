@@ -1,6 +1,5 @@
+class_name PopupWrapper
 extends RefCounted
-
-#const BACKPORTED = 100
 
 const EditorNodes = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/u_editor_nodes.gd")
 const ScriptEd = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/script_editor.gd")
@@ -16,9 +15,12 @@ class ItemParams extends PopupHelper.ParamKeys:
 
 class WrapperParams:
 	var fs_popup_callable = null
-	var items_to_skip = []
-	var show_shortcuts = false
-	var custom_context_item_data = {}
+	var connect_callable:= true
+	var items_to_skip:= []
+	var show_shortcuts:= false
+	var custom_context_item_data:= {}
+	var sorted_custom_item_data:= {}
+	var existing_item_dict:= {}
 	
 	var non_plugin_base_id = 5000
 	var non_plugin_pre_scripts_data = {}
@@ -27,49 +29,55 @@ class WrapperParams:
 static func popup_wrapper(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_params=null):
 	if wrapper_params == null:
 		wrapper_params = WrapperParams.new()
-	if wrapper_params.fs_popup_callable == null:
+	if wrapper_params.fs_popup_callable == null:# and wrapper_params.connect_callable:
 		wrapper_params.fs_popup_callable = _on_wrapper_pressed
 	if wrapper_params.custom_context_item_data.is_empty():
 		wrapper_params.custom_context_item_data = get_custom_context_items(popup_to_copy)
-		wrapper_params.items_to_skip.append_array(wrapper_params.custom_context_item_data.keys())
+		
 	
-	var popup_item_dict = PopupHelper.create_popup_items_dict(new_popup)
-	var top_custom_item_data = {}
-	var bottom_custom_item_data = {}
-	sort_custom_context_items(wrapper_params.custom_context_item_data, top_custom_item_data, bottom_custom_item_data)
+	wrapper_params.existing_item_dict = PopupHelper.create_popup_items_dict(new_popup)
 	
-	for item_path in top_custom_item_data.keys():
-		var item_data = top_custom_item_data.get(item_path)
-		_add_custom_item(new_popup, item_path, item_data, popup_item_dict)
+	wrapper_params.sorted_custom_item_data = sort_custom_context_items(wrapper_params.custom_context_item_data)#, top_custom_item_data, bottom_custom_item_data)
 	
-	if not top_custom_item_data.is_empty():
-		new_popup.add_separator()
-	
+	## ALERT NEed to rethink this for only filesystem create really. Maybe pass throuh dict Popup:custom items, then place before and after in _copy_popup?
 	_copy_popup(new_popup, popup_to_copy, wrapper_params)
 	
-	if not bottom_custom_item_data.is_empty():
-		new_popup.add_separator()
-	
-	for item_path in bottom_custom_item_data:
-		var item_data = bottom_custom_item_data.get(item_path)
-		_add_custom_item(new_popup, item_path, item_data, {})
-	
-	new_popup.id_pressed.connect(wrapper_params.fs_popup_callable.bind(new_popup, popup_to_copy))
+	if wrapper_params.connect_callable:
+		new_popup.id_pressed.connect(wrapper_params.fs_popup_callable.bind(new_popup, popup_to_copy))
 
 
 static func _copy_popup(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_params:WrapperParams):
 	var callable = wrapper_params.fs_popup_callable
-	var items_to_skip = wrapper_params.items_to_skip
 	var shortcuts = wrapper_params.show_shortcuts
+	var unsorted_popup_data = wrapper_params.custom_context_item_data.get(popup_to_copy)
+	var items_to_skip = unsorted_popup_data.keys()
+	var sorted_popup_data = wrapper_params.sorted_custom_item_data.get(popup_to_copy, {})
+	
+	## add custom pre
+	var pre_items_dict = sorted_popup_data.get("pre", {})
+	var post_items_dict = sorted_popup_data.get("post", {})
+	for item_path in pre_items_dict.keys():
+		var item_data = pre_items_dict.get(item_path)
+		_add_custom_item(new_popup, item_path, item_data, wrapper_params.existing_item_dict)
+	
+	if not pre_items_dict.is_empty():
+		new_popup.add_separator()
+	##
+	
 	var base_index = new_popup.item_count
 	var new_popup_count = 0
 	for i in range(popup_to_copy.item_count):
 		var new_popup_index = base_index + new_popup_count
 		var is_sep = popup_to_copy.is_item_separator(i)
 		if is_sep:
-			if new_popup_index > 0 and not new_popup.is_item_separator(new_popup_index - 1):
-				new_popup.add_separator()
-				new_popup_count += 1
+			if new_popup_index == 0:
+				continue
+			if new_popup.is_item_separator(new_popup_index - 1):
+				continue
+			if new_popup_index == popup_to_copy.item_count:
+				continue
+			new_popup.add_separator()
+			new_popup_count += 1
 			continue
 		
 		var id = popup_to_copy.get_item_id(i)
@@ -77,6 +85,7 @@ static func _copy_popup(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_pa
 		
 		if text in items_to_skip:
 			continue
+		
 		new_popup_count += 1
 		
 		var submenu = popup_to_copy.get_item_submenu_node(i)
@@ -97,16 +106,27 @@ static func _copy_popup(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_pa
 			new_popup.set_item_icon(new_popup_index, icon)
 			var mod = popup_to_copy.get_item_icon_modulate(i)
 			new_popup.set_item_icon_modulate(new_popup_index, mod)
+	
+	## add custom post
+	if not post_items_dict.is_empty():
+		new_popup.add_separator()
+	
+	for item_path in post_items_dict:
+		var item_data = post_items_dict.get(item_path)
+		_add_custom_item(new_popup, item_path, item_data, {})
+	##
 
 
 static func get_custom_context_items(popup_to_copy:PopupMenu):
 	var custom_item_data = {}
-	_scan_popup_for_custom_items(popup_to_copy, custom_item_data)
+	_scan_popup_for_custom_items(popup_to_copy, popup_to_copy, custom_item_data)
 	return custom_item_data
 
-static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, custom_item_data:Dictionary, 
+
+static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:PopupMenu, custom_item_data:Dictionary, 
 						custom_ancestor:bool=false, parent_data:Dictionary={}):
-	
+	#var popup_data = {}
+	custom_item_data[popup_to_copy] = {}
 	var custom_item_start_id = 2000
 	for i in range(popup_to_copy.item_count):
 		var is_sep = popup_to_copy.is_item_separator(i)
@@ -118,8 +138,11 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, custom_item_da
 		var submenu = popup_to_copy.get_item_submenu_node(i)
 		if is_instance_valid(submenu):
 			if id >= custom_item_start_id: # don't want to ignore standard submenus
-				custom_item_data[path] = {}
-				custom_item_data[path]["submenu"] = true
+				var target_popup = popup_to_copy
+				if custom_ancestor: # ALERT
+					target_popup = top_popup
+				custom_item_data[target_popup][path] = {}
+				custom_item_data[target_popup][path]["submenu"] = true
 			var icon = popup_to_copy.get_item_icon(i)
 			var submenu_data = {
 				"popup_path": path,
@@ -133,15 +156,25 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, custom_item_da
 					submenu_data["popup_path"] = path
 				if ItemParams.ICON_KEY in parent_data:
 					submenu_data[ItemParams.ICON_KEY] = parent_data[ItemParams.ICON_KEY].duplicate()
-			submenu_data[ItemParams.ICON_KEY].append(icon)
 			
-			_scan_popup_for_custom_items(submenu, custom_item_data, is_custom, submenu_data)
+			#submenu_data[ItemParams.ICON_KEY].append(icon)
+			
+			_scan_popup_for_custom_items(submenu, top_popup, custom_item_data, is_custom, submenu_data)
 		else:
 			if id >= custom_item_start_id or custom_ancestor:
+				var target_popup = popup_to_copy
 				if custom_ancestor:
+					target_popup = top_popup
 					var popup_path = parent_data.get("popup_path")
 					if popup_path:
 						path = popup_path.path_join(text)
+				#else: # TESTING
+					#var popup_path = parent_data.get("popup_path")
+					#if popup_path:
+						#path = popup_path.path_join(text)
+					#print(path)
+					#print(parent_data)
+					##TESTING
 				var signal_connections = popup_to_copy.get_signal_connection_list("id_pressed")
 				if signal_connections.is_empty():
 					print("--- POPUP HAS NO CONNECTIONS ---")
@@ -161,13 +194,15 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, custom_item_da
 				if metadata != null:
 					user_metadata = metadata
 				
-				custom_item_data[path] = {
+				custom_item_data[target_popup][path] = {
 					"id": id,
 					PopupHelper.ParamKeys.CALLABLE_KEY: callable,
 					#"args": callable.get_bound_arguments(),
 					PopupHelper.ParamKeys.ICON_KEY: icons,
 					PopupHelper.ParamKeys.METADATA_KEY: user_metadata,
 				}
+	#custom_item_data[popup_to_copy] = popup_data
+
 
 static func _add_custom_item(popup, item_path, item_data, popup_item_dict):
 	var submenu = item_data.get("submenu", false)
@@ -210,7 +245,19 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 	var fs_popup:PopupMenu
 	if "SLOT" in plugin:
 		if plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE:
-			fs_popup = ScriptEd.get_popup()
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCRIPT_EDITOR_CODE_POPUP)
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR:
+			fs_popup = ScriptEd.get_script_list_popup()
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM:
+			pass
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM_CREATE:
+			pass
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCENE_TABS:
+			pass
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCENE_TREE:
+			pass
+		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_2D_EDITOR:
+			pass
 	
 	var meta_dict = {}
 	var count = 0
@@ -288,55 +335,85 @@ static func _context_plugin_submenu_pressed(id, popup, script_editor, callable):
 static func _on_wrapper_pressed(id:int, wrapper_popup:PopupMenu, fs_popup:PopupMenu):
 	if id >= 5000:
 		return
+	print("POPUP WRAPPER PRESSED")
 	fs_popup.id_pressed.emit(id)
 
-static func sort_custom_context_items(all_custom_items, pre_dict, post_dict):
-	var pre_priority_dict = {}
-	var post_priority_dict = {}
-	for item_path in all_custom_items:
-		var item_data = all_custom_items.get(item_path)
-		var meta = item_data.get(ItemParams.METADATA_KEY)
-		if meta is Dictionary:
-			var priority = meta.get(ItemParams.PRIORITY, 1000)
-			var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
-			if position == ItemParams.Position.TOP:
-				var pre_priority_keys = pre_priority_dict.keys()
-				while priority in pre_priority_keys:
-					priority += 1
-				pre_priority_dict[priority] = item_path
-				pass
-			elif position == ItemParams.Position.BOTTOM:
-				var post_priority_keys = post_priority_dict.keys()
-				while priority in post_priority_keys:
-					priority += 1
-				post_priority_dict[priority] = item_path
+static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, post_dict):
+	var all_sorted_data = {}
+	for popup in all_custom_items.keys():
+		var sorted_data = {}
+		sorted_data["pre"] = {}
+		sorted_data["post"] = {}
+		var pre_priority_dict = {}
+		var post_priority_dict = {}
+		var popup_data = all_custom_items.get(popup)
+		for item_path in popup_data:
+			var item_data = popup_data.get(item_path)
+			var meta = item_data.get(ItemParams.METADATA_KEY)
+			if meta is Dictionary:
+				var priority = meta.get(ItemParams.PRIORITY, 1000)
+				var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
+				if position == ItemParams.Position.TOP:
+					var pre_priority_keys = pre_priority_dict.keys()
+					while priority in pre_priority_keys:
+						priority += 1
+					pre_priority_dict[priority] = item_path
+					pass
+				elif position == ItemParams.Position.BOTTOM:
+					var post_priority_keys = post_priority_dict.keys()
+					while priority in post_priority_keys:
+						priority += 1
+					post_priority_dict[priority] = item_path
+		
+		var pre_priority_keys = pre_priority_dict.keys()
+		pre_priority_keys.sort()
+		
+		for key in pre_priority_keys:
+			var item_path = pre_priority_dict[key]
+			sorted_data["pre"][item_path] = popup_data[item_path]
+		
+		var post_priority_keys = post_priority_dict.keys()
+		post_priority_keys.sort()
+		for key in post_priority_keys:
+			var item_path = post_priority_dict[key]
+			sorted_data["post"][item_path] = popup_data[item_path]
+		
+		all_sorted_data[popup] = sorted_data
 	
-	var pre_priority_keys = pre_priority_dict.keys()
-	pre_priority_keys.sort()
-	
-	for key in pre_priority_keys:
-		var item_path = pre_priority_dict[key]
-		pre_dict[item_path] = all_custom_items[item_path]
-	
-	var post_priority_keys = post_priority_dict.keys()
-	post_priority_keys.sort()
-	for key in post_priority_keys:
-		var item_path = post_priority_dict[key]
-		post_dict[item_path] = all_custom_items[item_path]
-	
+	return all_sorted_data
 
-
-#static func create_context_plugin_items_compat(plugin:EditorContextMenuPlugin, script_editor, menu_items:Dictionary, context_menu_callable):
+#static func sort_custom_context_items(all_custom_items:Dictionary, pre_dict, post_dict):
+	#var pre_priority_dict = {}
+	#var post_priority_dict = {}
+	#print("^&^&^&")
+	#print(all_custom_items)
+	#for item_path in all_custom_items:
+		#var item_data = all_custom_items.get(item_path)
+		#var meta = item_data.get(ItemParams.METADATA_KEY)
+		#if meta is Dictionary:
+			#var priority = meta.get(ItemParams.PRIORITY, 1000)
+			#var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
+			#if position == ItemParams.Position.TOP:
+				#var pre_priority_keys = pre_priority_dict.keys()
+				#while priority in pre_priority_keys:
+					#priority += 1
+				#pre_priority_dict[priority] = item_path
+				#pass
+			#elif position == ItemParams.Position.BOTTOM:
+				#var post_priority_keys = post_priority_dict.keys()
+				#while priority in post_priority_keys:
+					#priority += 1
+				#post_priority_dict[priority] = item_path
 	#
-	#for menu_path:String in menu_items.keys():
-		#var path_data = menu_items.get(menu_path)
-		#var item_name = menu_path
-		#if menu_path.find("/") > -1:
-			#var slice_count = menu_path.get_slice_count("/")
-			#item_name = menu_path.get_slice("/", slice_count - 1)
-		#
-		#var icons = path_data.get(ItemParams.ICON_KEY, [])
-		#var icon
-		#if not icons.is_empty():
-			#icon = icons[icons.size() - 1]
-		#plugin.add_context_menu_item(item_name, context_menu_callable.bind(item_name).bind(script_editor), icon)
+	#var pre_priority_keys = pre_priority_dict.keys()
+	#pre_priority_keys.sort()
+	#
+	#for key in pre_priority_keys:
+		#var item_path = pre_priority_dict[key]
+		#pre_dict[item_path] = all_custom_items[item_path]
+	#
+	#var post_priority_keys = post_priority_dict.keys()
+	#post_priority_keys.sort()
+	#for key in post_priority_keys:
+		#var item_path = post_priority_dict[key]
+		#post_dict[item_path] = all_custom_items[item_path]

@@ -64,6 +64,17 @@ static func get_click_data_standard(selected_items):
 	
 	return item_data_array
 
+static func find_item_by_meta(start_item: TreeItem, meta_value) -> TreeItem:
+	var metadata = start_item.get_metadata(0)
+	if metadata == meta_value:
+		return start_item
+	
+	for child in start_item.get_children():
+		var found_item = find_item_by_meta(child, meta_value)
+		if found_item:
+			return found_item
+	
+	return null
 
 class get_drop_data:
 	static func files(selected_item_paths, from_node):
@@ -87,4 +98,3 @@ class can_drop_data:
 				if ext in extensions:
 					return true
 		return false
-

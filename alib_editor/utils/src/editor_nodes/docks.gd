@@ -91,3 +91,16 @@ static func get_current_dock_control(control):
 		return parent
 	elif parent == MainScreen.get_main_screen():
 		return parent
+
+static func get_all_docks() -> Array:
+	var docks = [
+		get_left_ul(),
+		get_left_ur(),
+		get_left_bl(),
+		get_left_br(),
+		get_right_ul(),
+		get_right_ur(),
+		get_right_bl(),
+		get_right_br()
+	]
+	return docks

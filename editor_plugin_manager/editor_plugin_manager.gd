@@ -1,14 +1,12 @@
 @tool
+class_name EditorPluginManager
 extends RefCounted
 
 const PLUGIN_EXPORTED = false
-const PLUGIN_EXPORT_FLAT = false
 
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 
 var plugin:EditorPlugin
-
-#var _check_for_zyx:=false
 
 var _code_completions_instances:Dictionary = {}
 var _context_plugin_instances:Dictionary = {}
@@ -22,9 +20,9 @@ var inspector_plugin_paths:Array = []
 var syntax_highlighter_paths:Array = []
 var editor_plugin_paths:Array = []
 
-func _init(_plugin:EditorPlugin, plugins_file_path:="", check_for_zyx:=false) -> void:
+func _init(_plugin:EditorPlugin, plugins_file_path:="") -> void:
 	plugin = _plugin
-	#_check_for_zyx = check_for_zyx
+	
 	if plugins_file_path != "":
 		load_paths_from_file(plugins_file_path)
 		add_plugins()
@@ -81,12 +79,6 @@ func _remove_code_completions() -> void:
 
 #region Context Menu Plugins
 func add_context_menu_plugins(context_menu_plugins=null) -> void:
-	#if _check_for_zyx: # I THINK THIS CAN BE DEPRECATED
-		#if PLUGIN_EXPORT_FLAT and UFile.plugin_exported_file_exists("zyx_popup_wrapper_plugin_logic.gd"):
-			#return
-		#if DirAccess.dir_exists_absolute("res://addons/zyx_popup_wrapper"):
-			#return
-	
 	if context_menu_plugins == null:
 		context_menu_plugins = context_menu_plugin_paths
 	
@@ -103,6 +95,8 @@ func add_context_menu_plugins(context_menu_plugins=null) -> void:
 				_context_plugin_instances[path] = ins
 			else:
 				ins.queue_free()
+		else:
+			print("Could not find 'SLOT' in script: %s" % path)
 
 func _remove_context_menu_plugins() -> void:
 	if not PLUGIN_EXPORTED:
