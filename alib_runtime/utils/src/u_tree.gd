@@ -78,12 +78,12 @@ static func find_item_by_meta(start_item: TreeItem, meta_value) -> TreeItem:
 
 class get_drop_data:
 	static func files(selected_item_paths, from_node):
-		var selected_paths = []
-		for path in selected_item_paths:
-			if path.get_extension() != "":
-				selected_paths.append(path)
-		var data = {"type":"files", "files":selected_paths, "from":from_node}
-		
+		#var selected_paths = []
+		#for path in selected_item_paths:
+			#if path.get_extension() != "": # not sure about this TODO
+				#selected_paths.append(path)
+		#var data = {"type":"files", "files":selected_paths, "from":from_node}
+		var data = {"type":"files", "files":selected_item_paths, "from":from_node}
 		return data
 
 class can_drop_data:

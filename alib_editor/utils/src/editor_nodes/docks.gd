@@ -1,81 +1,25 @@
-extends RefCounted
-
-const BottomPanel = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/bottom_panel.gd")
-const MainScreen = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/main_screen.gd")
-
-static func get_left_h_split():
-	var split = EditorInterface.get_base_control().get_child(0).get_child(1)
-	return split
-
-static func get_left_ul() -> TabContainer:
-	var split = get_left_h_split()
-	var tab = split.get_child(0).get_child(0)
-	return tab
-
-static func get_left_bl():
-	var split = get_left_h_split()
-	var tab = split.get_child(0).get_child(1)
-	return tab
-
-static func get_left_ur():
-	var split = get_left_h_split()
-	var tab = split.get_child(1).get_child(0).get_child(0)
-	return tab
-
-static func get_left_br():
-	var split = get_left_h_split()
-	var tab = split.get_child(1).get_child(0).get_child(1)
-	return tab
-
-static func get_right_h_split():
-	var left_split = get_left_h_split()
-	var split = left_split.get_child(1).get_child(1).get_child(1)
-	return split
-
-static func get_right_ul():
-	var split = get_right_h_split()
-	var tab = split.get_child(0).get_child(0)
-	return tab
-
-static func get_right_bl():
-	var split = get_right_h_split()
-	var tab = split.get_child(0).get_child(1)
-	return tab
-
-static func get_right_ur():
-	var split = get_right_h_split()
-	var tab = split.get_child(1).get_child(0)
-	return tab
-
-static func get_right_br():
-	var split = get_right_h_split()
-	var tab = split.get_child(1).get_child(1)
-	return tab
 
 static func get_current_dock(control):
 	var parent = control.get_parent()
 	if not parent:
 		#print("Parent is null. Get dock.")
 		return
-	if parent == get_left_ul():
-		return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_UL
-	elif parent == get_left_bl():
-		return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_BL
-	elif parent == get_left_ur():
-		return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_UR
-	elif parent == get_left_br():
-		return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_BR
-	elif parent == get_right_ul():
-		return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_UL
-	elif parent == get_right_bl():
-		return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BL
-	elif parent == get_right_ur():
-		return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_UR
-	elif parent == get_right_br():
-		return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BR
-	elif parent == BottomPanel.get_bottom_panel():
+	var docks = get_all_docks()
+	if parent in docks:
+		var dock_slot = parent.name.get_slice("DockSlot", 1)
+		match dock_slot:
+			"LeftUL": return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_UL
+			"LeftBL": return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_BL
+			"LeftUR": return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_UR
+			"LeftBR": return EditorPlugin.DockSlot.DOCK_SLOT_LEFT_BR
+			"RightUL": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_UL
+			"RightBL": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BL
+			"RightUR": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_UR
+			"RightBR": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BR
+		
+	elif parent == EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL):
 		return -2
-	elif parent == MainScreen.get_main_screen():
+	elif parent == EditorInterface.get_editor_main_screen():
 		return -1
 	else:
 		return -3
@@ -87,20 +31,10 @@ static func get_current_dock_control(control):
 		return
 	if parent is TabContainer:
 		return parent
-	elif parent == BottomPanel.get_bottom_panel():
+	elif parent == EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL):
 		return parent
-	elif parent == MainScreen.get_main_screen():
+	elif parent == EditorInterface.get_editor_main_screen():
 		return parent
 
 static func get_all_docks() -> Array:
-	var docks = [
-		get_left_ul(),
-		get_left_ur(),
-		get_left_bl(),
-		get_left_br(),
-		get_right_ul(),
-		get_right_ur(),
-		get_right_bl(),
-		get_right_br()
-	]
-	return docks
+	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.DOCKS)

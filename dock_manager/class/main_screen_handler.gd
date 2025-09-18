@@ -8,6 +8,9 @@ var plugin_control:Control
 var main_screen_button:Button
 
 static func hide_main_screen_button(_editor_plugin):
+	EditorNodeRef.call_on_ready(_hide_main_screen_button.bind(_editor_plugin))
+
+static func _hide_main_screen_button(_editor_plugin):
 	var bar_children = MainScreen.get_button_container()
 	for child in bar_children.get_children():
 		if String(child.name) == _editor_plugin._get_plugin_name():
@@ -17,6 +20,9 @@ static func hide_main_screen_button(_editor_plugin):
 func _init(_editor_plugin, _plugin_control) -> void:
 	editor_plugin = _editor_plugin
 	plugin_control = _plugin_control
+	EditorNodeRef.call_on_ready(_setup)
+
+func _setup():
 	_connect_buttons()
 	var main_bar = MainScreen.get_button_container()
 	main_bar.child_entered_tree.connect(_child_entered_tree)

@@ -28,10 +28,10 @@ static func get_create_popup():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
 
 
-static func scan_fs_dock(FileSystemItemDict, FileDataDict, preview_object=null):
-	FileSystemItemDict.clear()
-	FileDataDict.clear()
-	var EditorResSys = EditorInterface.get_resource_filesystem()
+static func scan_fs_dock(file_system_item_dict, file_data_dict, preview_object=null):
+	file_system_item_dict.clear()
+	file_data_dict.clear()
+	
 	var fs_tree: Tree = get_tree()
 	if not fs_tree:
 		printerr("FileSystemDock Tree not found.")
@@ -41,23 +41,24 @@ static func scan_fs_dock(FileSystemItemDict, FileDataDict, preview_object=null):
 		printerr("FileSystemDock Tree has no root item.")
 		return
 	
-	_recursive_scan_tree_item(root, FileSystemItemDict, FileDataDict, EditorResSys, preview_object)
+	_recursive_scan_tree_item(root, file_system_item_dict, file_data_dict, preview_object)
 
-static func _recursive_scan_tree_item(item: TreeItem, FileSystemItemDict, FileDataDict, EditorResSys, preview_object=null):
+
+static func _recursive_scan_tree_item(item: TreeItem, file_system_item_dict, file_data_dict, preview_object=null):
 	if item == null:
 		return
 	var file_path = item.get_metadata(0)
 	if file_path != null:
-		if file_path.ends_with("/") and not file_path == "res://":
+		if not file_path == "res://":
+		#if file_path.ends_with("/") and not file_path == "res://":
 			file_path = file_path.trim_suffix("/")
-		FileSystemItemDict[file_path] = item
+		file_system_item_dict[file_path] = item
 		
 		var icon = item.get_icon(0)
-		var file_type = EditorResSys.get_file_type(file_path)
+		var file_type = EditorInterface.get_resource_filesystem().get_file_type(file_path)
 		if file_type == "":
 			file_type = "Folder"
 		
-		#print(file_type)
 		var file_data = {
 			"item_path": file_path,
 			"File Icon": icon,
@@ -66,10 +67,10 @@ static func _recursive_scan_tree_item(item: TreeItem, FileSystemItemDict, FileDa
 		}
 		if preview_object != null:
 			EditorInterface.get_resource_previewer().queue_resource_preview(file_path, preview_object, "_receive_previews", file_data)
-		FileDataDict[file_path] = file_data
+		file_data_dict[file_path] = file_data
 		
 	
 	var child: TreeItem = item.get_first_child()
 	while child != null:
-		_recursive_scan_tree_item(child, FileSystemItemDict, FileDataDict, EditorResSys, preview_object)
+		_recursive_scan_tree_item(child, file_system_item_dict, file_data_dict, preview_object)
 		child = child.get_next() # Move to the next sibling

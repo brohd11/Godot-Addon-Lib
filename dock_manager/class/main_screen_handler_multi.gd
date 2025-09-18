@@ -11,7 +11,9 @@ var plugin_buttons = {}
 
 func _init(_editor_plugin) -> void:
 	editor_plugin = _editor_plugin
-	
+	EditorNodeRef.call_on_ready(_setup)
+
+func _setup():
 	_connect_buttons()
 	var main_bar = MainScreen.get_button_container()
 	main_bar.child_entered_tree.connect(_child_entered_tree)
