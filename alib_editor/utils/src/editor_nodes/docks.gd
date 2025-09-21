@@ -16,11 +16,11 @@ static func get_current_dock(control):
 			"RightBL": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BL
 			"RightUR": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_UR
 			"RightBR": return EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BR
-		
-	elif parent == EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL):
-		return -2
+	
 	elif parent == EditorInterface.get_editor_main_screen():
 		return -1
+	elif parent == EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL):
+		return -2
 	else:
 		return -3
 

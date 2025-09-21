@@ -11,6 +11,7 @@ var plugin_buttons = {}
 
 func _init(_editor_plugin) -> void:
 	editor_plugin = _editor_plugin
+	editor_plugin.add_child(self)
 	EditorNodeRef.call_on_ready(_setup)
 
 func _setup():
@@ -31,6 +32,7 @@ func clean_up():
 	for button in plugin_buttons.keys():
 		if is_instance_valid(button):
 			button.queue_free()
+
 
 func _child_entered_tree(c):
 	_connect_buttons()
@@ -119,6 +121,9 @@ func remove_main_screen_control(control):
 	EditorInterface.get_editor_main_screen().remove_child(control)
 	EditorInterface.set_main_screen_editor("Script")
 
+func remove_main_screen_button(control):
+	_remove_main_screen_button(control)
+
 func _remove_main_screen_button(control):
 	for plugin_button in plugin_buttons.keys():
 		var plugin_control = plugin_buttons.get(plugin_button)
@@ -139,4 +144,3 @@ func _get_control_icon(panel_control):
 		return plugin_base_control.plugin_icon
 	else:
 		return EditorInterface.get_base_control().get_theme_icon("Node", &"EditorIcons")
-	

@@ -1,7 +1,7 @@
 extends RefCounted
 
 static func get_bottom_panel() -> Control:
-	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL).get_child(0)
+	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL)
 
 static func get_button_top_hbox():
 	var buttons = EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL_BUTTONS)
@@ -21,6 +21,7 @@ static func get_panel(_class_name):
 static func show_first_panel():
 	var hbox = get_button_hbox()
 	for c in hbox.get_children():
+		
 		if not c is Button:
 			continue
 		if c.visible:

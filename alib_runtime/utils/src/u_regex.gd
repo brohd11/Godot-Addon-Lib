@@ -20,7 +20,7 @@ static func get_const_name():
 	regex.compile("^\\s*const\\s+([a-zA-Z_][a-zA-Z0-9_]*)\\s*(:=|=)")
 	return regex
 
-static func get_strings(): # for use with string_safe_regex_sub
+static func get_strings(): # for use with string_safe_regex_sub, gets all strings
 	var regex = RegEx.new()
 	regex.compile("\"(?:\\\\.|[^\"\\\\])*\"|'(?:\\\\.|[^'\\\\])*'")
 	return regex

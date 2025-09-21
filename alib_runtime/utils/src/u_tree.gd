@@ -78,21 +78,27 @@ static func find_item_by_meta(start_item: TreeItem, meta_value) -> TreeItem:
 
 class get_drop_data:
 	static func files(selected_item_paths, from_node):
-		#var selected_paths = []
-		#for path in selected_item_paths:
-			#if path.get_extension() != "": # not sure about this TODO
-				#selected_paths.append(path)
-		#var data = {"type":"files", "files":selected_paths, "from":from_node}
-		var data = {"type":"files", "files":selected_item_paths, "from":from_node}
+		var data_type = "files"
+		var selected_paths = []
+		for path in selected_item_paths:
+			if DirAccess.dir_exists_absolute(path):
+				data_type = "files_and_dirs"
+				if not path.ends_with("/"):
+					path = path + "/"
+				selected_paths.append(path)
+			else:
+				selected_paths.append(path)
+		var data = {"type": data_type, "files": selected_paths, "from": from_node}
+		
 		return data
 
 class can_drop_data:
 	static func files(at_position: Vector2, data: Variant, extensions:Array=[]) -> bool:
 		var type = data.get("type")
-		if type == "files":
+		if type == "files" or type == "files_and_dirs":
 			if extensions == []:
 				return true
-			var files = data.get("files")
+			var files = data.get(type)
 			for f in files:
 				var ext = f.get_extension()
 				if ext in extensions:
