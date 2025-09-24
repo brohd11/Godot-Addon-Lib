@@ -1,5 +1,6 @@
 class_name UClassDetail
 extends RefCounted
+#! namespace ALib.Editor.UClassDetail
 
 const _MEMBER_ARGS = ["signal", "property", "method", "enum", "const"]
 

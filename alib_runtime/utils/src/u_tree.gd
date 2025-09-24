@@ -1,4 +1,5 @@
 extends RefCounted
+#! namespace ALib.Runtime.UTree
 
 static func get_all_children_items(tree_item:TreeItem) -> Array[TreeItem]:
 	return _get_all_children_items(tree_item)
@@ -18,7 +19,7 @@ static func _get_all_children_items(tree_item:TreeItem, limit_to_visible:=false)
 			else:
 				items.append(c)
 				items.append_array(_get_all_children_items(c, limit_to_visible))
-		
+	
 	return items
 
 

@@ -1,4 +1,5 @@
 extends RefCounted
+#! namespace ALib.Runtime.UFile
 
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 
@@ -98,7 +99,7 @@ static func write_to_json_exported(data:Variant, path:String, export_flag, acces
 	
 	write_to_json(data, path, access)
 
-static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE_READ) -> void:
+static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> void:
 	var data_string = JSON.stringify(data,"\t")
 	var json_file = FileAccess.open(path, access)
 	json_file.store_string(data_string)

@@ -1,4 +1,5 @@
 class_name UVersion
+#! namespace ALib.Runtime.UVersion
 
 static func get_major_version():
 	var godot_ver = Engine.get_version_info()

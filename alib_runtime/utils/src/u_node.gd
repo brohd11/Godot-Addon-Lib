@@ -1,4 +1,5 @@
 extends RefCounted
+#! namespace ALib.Runtime.UNode
 
 static func recursive_set_owner(node:Node, current_root:Node, new_root:Node) -> void:
 	if node.owner == current_root:
@@ -44,4 +45,3 @@ static func connect_signal(callable:Callable, _signal:Signal):
 static func disconnect_signal(callable:Callable, _signal:Signal):
 	if _signal.is_connected(callable):
 		_signal.disconnect(callable)
-
