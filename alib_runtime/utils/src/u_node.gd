@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UNode
+#! namespace ALib.Runtime class UNode
 
 static func recursive_set_owner(node:Node, current_root:Node, new_root:Node) -> void:
 	if node.owner == current_root:

@@ -54,11 +54,14 @@ static func scan_for_files(dir:String,file_types:Array, include_dirs=false, igno
 	return file_array
 
 
-static func scan_for_dirs(dir:String,seperate_stacks:bool=false):
+static func scan_for_dirs(dir:String,seperate_stacks:bool=false, include_hidden:=true):
 	var folders = [] # seperate stacks to get all directories in a hierachy as a seperate array
 	var dir_stacks = [] # then can reverse each array and iterate bottom up for deletion
-	if DirAccess.dir_exists_absolute(dir):
-		folders = DirAccess.get_directories_at(dir)
+	if not DirAccess.dir_exists_absolute(dir):
+		return dir_stacks
+	var dir_access = DirAccess.open(dir)
+	dir_access.include_hidden = include_hidden
+	folders = dir_access.get_directories()
 	for f in folders:
 		var dir_array = []
 		var current_dir = dir.path_join(f)
@@ -72,6 +75,31 @@ static func scan_for_dirs(dir:String,seperate_stacks:bool=false):
 			dir_stacks.append_array(dir_array)
 	
 	return dir_stacks
+
+static func recursive_delete_in_dir(directory:String, include_hidden:=true) -> bool:
+	if not DirAccess.dir_exists_absolute(directory):
+		return false
+	
+	var dir_arrays = scan_for_dirs(directory, true, include_hidden)
+	for array in dir_arrays:
+		array.reverse()
+		for dir in array:
+			var dir_access = DirAccess.open(dir)
+			dir_access.include_hidden = include_hidden
+			var files = dir_access.get_files()
+			for f in files:
+				var file_path = dir.path_join(f)
+				DirAccess.remove_absolute(file_path)
+			DirAccess.remove_absolute(dir)
+	
+	var dir_access = DirAccess.open(directory)
+	dir_access.include_hidden = include_hidden
+	var files = dir_access.get_files()
+	for file in files:
+		var path = directory.path_join(file)
+		DirAccess.remove_absolute(path)
+	
+	return true
 
 
 static func _case_insensitive_compare(a: String, b: String) -> int:

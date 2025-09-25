@@ -16,8 +16,8 @@ static var _singleton_node_parents:Dictionary = {}
 static func get_singleton_name() -> String:
 	return "SingletonBase"
 
-static func _get_singleton_node_path() -> String:
-	return "EditorNode/EditorSingletons"
+static func _get_singleton_node_path() -> String: # <t> will check if node is of type using Node.get_class()
+	return "EditorNode<t>/EditorSingletons"
 
 static func _get_singleton_type():
 	return SingletonType.STANDARD
@@ -43,7 +43,7 @@ static func _get_instance(script:Script) -> Node:
 
 static func _get_singleton_node_or_null(script:Script, node_path:String, create:=true, registered_node=null):
 	var root = Engine.get_main_loop().root
-	var current_node = root
+	var current_node:Node = root
 	
 	if _singleton_node_parents.has(node_path):
 		current_node = _singleton_node_parents.get(node_path)
@@ -54,10 +54,14 @@ static func _get_singleton_node_or_null(script:Script, node_path:String, create:
 			if part != "":
 				path_parts.append(part)
 		
-		for part in path_parts:
+		for part:String in path_parts:
 			var child_node
-			if current_node == root and part == "EditorNode" and Engine.is_editor_hint():
-				child_node = current_node.get_child(0)
+			if part.ends_with("<t>"):
+				part = part.trim_suffix("<t>")
+				for c in current_node.get_children():
+					if c.get_class() == part:
+						child_node = c
+						break
 			else:
 				child_node = current_node.get_node_or_null(part)
 			
