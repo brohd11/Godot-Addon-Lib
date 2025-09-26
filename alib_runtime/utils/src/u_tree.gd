@@ -1,4 +1,3 @@
-extends RefCounted
 #! namespace ALib.Runtime class UTree
 
 static func get_all_children_items(tree_item:TreeItem) -> Array[TreeItem]:
