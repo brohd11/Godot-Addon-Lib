@@ -44,6 +44,8 @@ func add_plugins() -> void:
 	add_editor_plugins()
 
 func remove_plugins() -> void:
+	if not is_instance_valid(plugin):
+		return
 	_remove_code_completions()
 	_remove_context_menu_plugins()
 	_remove_inspector_plugins()

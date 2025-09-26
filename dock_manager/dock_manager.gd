@@ -253,6 +253,10 @@ func _on_window_mouse_entered(window):
 func _on_window_mouse_exited():
 	EditorInterface.get_base_control().get_window().grab_focus()
 
+func on_plugin_make_visible(visible:bool):
+	main_screen_handler.on_plugin_make_visible(visible)
+	pass
+
 class PanelWrapper extends PanelContainer:
 	func _init(control) -> void:
 		add_child(control)

@@ -128,6 +128,8 @@ static func write_to_json_exported(data:Variant, path:String, export_flag, acces
 	write_to_json(data, path, access)
 
 static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> void:
+	if not DirAccess.dir_exists_absolute(path.get_base_dir()):
+		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var data_string = JSON.stringify(data,"\t")
 	var json_file = FileAccess.open(path, access)
 	json_file.store_string(data_string)
@@ -265,6 +267,8 @@ static func path_from_relative(path_or_name:String, new_file:=false, print_err:=
 	return get_plugin_exported_path(path_or_name, new_file, print_err)
 
 static func get_plugin_exported_path(path_or_name:String, new_file:=false, print_err:=true) -> String:
+	print("File doesn't exists, attempted to find %s. THIS METHOD IS DEPRECATED YOU SHOULD NOT SEE THIS" % path_or_name)
+	return ""
 	var script_dir = _get_script_dir()
 	var file_name = path_or_name.get_file()
 	var script_rel_path = script_dir.path_join(file_name)
@@ -279,7 +283,7 @@ static func get_plugin_exported_path(path_or_name:String, new_file:=false, print
 				new_path = script_rel_path
 			else:
 				if print_err:
-					print("File doesn't exist: %s - Or relative path: %s" % [path_or_name, script_rel_path])
+					print("File doesn't exists, attempted to find %s %s" % [path_or_name, script_rel_path])
 	
 	return new_path
 

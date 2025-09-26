@@ -85,7 +85,6 @@ static func _get_singleton_node_or_null(script:Script, node_path:String, create:
 		if PLUGIN_EXPORTED:
 			script = _get_latest_version(script)
 		if registered_node == null:
-			print(script.resource_path)
 			singleton = script.new()
 		else:
 			singleton = script.new(registered_node)
