@@ -1,5 +1,4 @@
-class_name UTimeFunction
-extends RefCounted
+#! namespace ALibRuntime.Utils.UProfile class TimeFunction
 
 var _one_shot := true
 var iterations:int = 10

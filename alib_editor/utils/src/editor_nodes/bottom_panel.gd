@@ -1,4 +1,5 @@
 extends RefCounted
+#! namespace ALibEditor.Nodes class BottomPanel
 
 static func get_bottom_panel() -> Control:
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.BOTTOM_PANEL)

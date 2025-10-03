@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UResource
+#! namespace ALibRuntime.Utils class UResource
 
 static func save_resource_to_path(res:Resource,path:String, name_overide:String="") -> void:
 	if name_overide == "":

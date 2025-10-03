@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UFile
+#! namespace ALibRuntime.Utils class UFile
 
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 

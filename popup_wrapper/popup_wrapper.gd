@@ -1,8 +1,6 @@
 class_name PopupWrapper
 extends RefCounted
 
-const EditorNodes = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/u_editor_nodes.gd")
-const ScriptEd = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/script_editor.gd")
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
 
 class ItemParams extends PopupHelper.ParamKeys:
@@ -128,16 +126,22 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 	#var popup_data = {}
 	custom_item_data[popup_to_copy] = {}
 	var custom_item_start_id = 2000
+	var custom_item_end_id = 3000  ## can these be different?
 	for i in range(popup_to_copy.item_count):
 		var is_sep = popup_to_copy.is_item_separator(i)
 		if is_sep:
 			continue
 		var id = popup_to_copy.get_item_id(i)
 		var text = popup_to_copy.get_item_text(i)
+		
+		var custom_id = (id >= custom_item_start_id and id < custom_item_end_id)# or id >= 5000
+		var is_custom = custom_id or custom_ancestor
+		
 		var path = text
 		var submenu = popup_to_copy.get_item_submenu_node(i)
 		if is_instance_valid(submenu):
-			if id >= custom_item_start_id: # don't want to ignore standard submenus
+			
+			if custom_id: # don't want to ignore standard submenus
 				var target_popup = popup_to_copy
 				if custom_ancestor: # ALERT
 					target_popup = top_popup
@@ -148,7 +152,7 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				"popup_path": path,
 				ItemParams.ICON_KEY: []
 			}
-			var is_custom = id >= custom_item_start_id or custom_ancestor
+			
 			if custom_ancestor:
 				var popup_path = parent_data.get("popup_path")
 				if popup_path:
@@ -161,7 +165,7 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 			
 			_scan_popup_for_custom_items(submenu, top_popup, custom_item_data, is_custom, submenu_data)
 		else:
-			if id >= custom_item_start_id or custom_ancestor:
+			if is_custom:
 				var target_popup = popup_to_copy
 				if custom_ancestor:
 					target_popup = top_popup
@@ -214,7 +218,7 @@ static func _add_custom_item(popup, item_path, item_data, popup_item_dict):
 	if callable == null:
 		return
 	var parent = PopupHelper.add_single_item(popup, item_path, item_data, popup_item_dict)
-	if id < 2000:
+	if id < 2000: # does this need to be changed to account for scene tags 3000
 		if not parent.id_pressed.is_connected(callable):
 			parent.id_pressed.connect(callable)
 
@@ -240,24 +244,24 @@ static func popup_cleanup(popup:PopupMenu):
 		popup.remove_item(popup.item_count - 1)
 
 
-static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_editor, menu_items:Dictionary, context_menu_callable):
-	
+static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_args, menu_items:Dictionary, context_menu_callable):
 	var fs_popup:PopupMenu
 	if "SLOT" in plugin:
 		if plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE:
 			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCRIPT_EDITOR_CODE_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR:
-			fs_popup = ScriptEd.get_script_list_popup()
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCRIPT_EDITOR_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM:
-			pass
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_FILESYSTEM_CREATE:
-			pass
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCENE_TABS:
-			pass
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCENE_TABS_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCENE_TREE:
-			pass
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCENE_TREE_POPUP)
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_2D_EDITOR:
-			pass
+			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.EDITOR_2D_POPUP)
+	
 	
 	var meta_dict = {}
 	var count = 0
@@ -297,7 +301,7 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 		var group_data = multi_popup_groups.get(group)
 		var popup = PopupMenu.new()
 		var _submenu_pressed = func(id, popup, se, callable): callable.call(se, PopupHelper.parse_menu_path(id, popup))
-		popup.id_pressed.connect(_submenu_pressed.bind(popup, script_editor, context_menu_callable))
+		popup.id_pressed.connect(_submenu_pressed.bind(popup, popup_args, context_menu_callable))
 		#popup.id_pressed.connect(_context_plugin_submenu_pressed.bind(popup, script_editor, context_menu_callable)) # old
 		popup_items[group] = popup
 		var icon = null
@@ -311,7 +315,7 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, script_e
 					icon = icons[0]
 				if icon is String:
 					icon = PopupHelper._get_icon(icon)
-			popup_data[ItemParams.CALLABLE_KEY] = _submenu_pressed.bind(script_editor, context_menu_callable)
+			popup_data[ItemParams.CALLABLE_KEY] = _submenu_pressed.bind(popup_args, context_menu_callable)
 			#popup_data[ItemParams.CALLABLE_KEY] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable) # old
 			PopupHelper.add_single_item(popup, menu_path, popup_data, popup_items)
 		
@@ -328,9 +332,9 @@ static func set_fs_popup_metadata(fs_popup:PopupMenu, meta_data_dict): #TODO tes
 
 
 
-static func _context_plugin_submenu_pressed(id, popup, script_editor, callable):
+static func _context_plugin_submenu_pressed(id, popup, popup_args, callable):
 	var path = PopupHelper.parse_menu_path(id, popup)
-	callable.call(script_editor, path)
+	callable.call(popup_args, path)
 
 static func _on_wrapper_pressed(id:int, wrapper_popup:PopupMenu, fs_popup:PopupMenu):
 	if id >= 5000:

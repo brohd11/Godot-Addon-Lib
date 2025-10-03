@@ -1,5 +1,5 @@
 extends RefCounted
-
+#! namespace ALibRuntime class TreeHelperBase
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
 
 var tree_node:Tree = null

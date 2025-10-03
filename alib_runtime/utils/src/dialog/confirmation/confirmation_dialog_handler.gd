@@ -1,6 +1,7 @@
 @tool
-class_name ConfirmationDialogHandler
 extends "res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/handler_base.gd"
+
+#! namespace ALibRuntime.Dialog class ConfirmationDialogHandler
 
 var cancel_button:Button
 

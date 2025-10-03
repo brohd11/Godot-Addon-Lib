@@ -1,4 +1,4 @@
-class_name UStaticProfiler
+#! namespace ALibRuntime.Utils.UProfile class StaticProfiler
 
 static var _desired_iterations = 0
 static var _iteration_count = 0

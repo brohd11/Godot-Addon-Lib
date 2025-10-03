@@ -1,4 +1,4 @@
-#! namespace ALib.Runtime class UTree
+#! namespace ALibRuntime.Utils class UTree
 
 static func get_all_children_items(tree_item:TreeItem) -> Array[TreeItem]:
 	return _get_all_children_items(tree_item)

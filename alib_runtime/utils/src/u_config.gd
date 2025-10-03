@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UConfig
+#! namespace ALibRuntime.Utils class UConfig
 
 static func load_config_data(config_file_path):
 	if not FileAccess.file_exists(config_file_path):

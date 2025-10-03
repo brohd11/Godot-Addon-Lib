@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Editor.UEditorTheme
+#! namespace ALibEditor.Utils class UEditorTheme
 
 const BACKPORTED = 100
 

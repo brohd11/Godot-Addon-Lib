@@ -1,6 +1,5 @@
-extends RefCounted
 
-const node = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_node.gd")
+#! namespace ALibEditor.Nodes class FileSystem
 
 static func get_tree():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)

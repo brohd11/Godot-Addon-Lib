@@ -1,6 +1,8 @@
 @tool
 extends "res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/handler_base.gd"
 
+#! namespace ALibRuntime.Dialog class ProgressWindowHandler
+
 const PROGRESS_WINDOW_SCENE = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/progress/class/progress_window.tscn")
 
 func _init(message:String,_root_node=null):

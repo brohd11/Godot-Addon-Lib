@@ -1,5 +1,5 @@
 extends PopupMenu
-#! namespace ALib.Runtime.PopupHelper
+#! namespace ALibRuntime class PopupHelper
 
 const BACKPORTED = 100
 

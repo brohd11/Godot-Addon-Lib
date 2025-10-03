@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UDialog
+#! namespace ALibRuntime.Utils class UDialog
 
 const DialogBase = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/general/class/dialog_base.gd")
 

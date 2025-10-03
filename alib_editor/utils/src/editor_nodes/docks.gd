@@ -1,4 +1,6 @@
 
+#! namespace ALibEditor.Nodes class Docks
+
 static func get_current_dock(control):
 	var parent = control.get_parent()
 	if not parent:

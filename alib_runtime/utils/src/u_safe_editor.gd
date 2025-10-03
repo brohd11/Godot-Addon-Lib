@@ -1,4 +1,5 @@
 extends RefCounted
+#! namespace ALibRuntime.Utils class USafeEditor
 
 static func get_editor_interface():
 	var ed_interface = Engine.get_singleton(&"EditorInterface")

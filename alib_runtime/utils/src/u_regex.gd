@@ -1,4 +1,4 @@
-#! namespace ALib.Runtime class URegex
+#! namespace ALibRuntime.Utils class URegex
 
 static func escape_regex_meta_characters(text: String) -> String:
 	var output: PackedStringArray = []

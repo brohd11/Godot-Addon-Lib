@@ -1,5 +1,5 @@
 extends RefCounted
-#! namespace ALib.Runtime.UName
+#! namespace ALibRuntime.Utils class UName
 
 static func incremental_name_check(save_path:String) -> String:
 

@@ -44,40 +44,13 @@ func _connect_buttons():
 	for button:Button in main_bar.get_children():
 		if not button.pressed.is_connected(_on_main_screen_bar_button_pressed):
 			button.pressed.connect(_on_main_screen_bar_button_pressed.bind(button))
-	
-	## Part of below
-	#for child in EditorInterface.get_editor_main_screen().get_children(): 
-		#if child is Control:
-			#if not child.visibility_changed.is_connected(_on_main_screen_control_vis_changed):
-				#child.visibility_changed.connect(_on_main_screen_control_vis_changed.bind(child))
 
-func _on_main_screen_control_vis_changed(main_screen_control):
-	return ## May be able to eliminate func
-	#if main_screen_control.get_class() == "WindowWrapper": # TEST MAY OR MAY NOT WORK
-		#return
-	if not main_screen_control.visible:
-		return
-	if not main_screen_control in plugin_buttons.values():
-		#_on_main_screen_bar_button_pressed(MainScreen.get_button_container().get_child(0)) ## TEST
-		return
-	for button in plugin_buttons:
-		var plugin_control = plugin_buttons.get(button)
-		if plugin_control.get_parent() != EditorInterface.get_editor_main_screen():
-			continue
-		if main_screen_control != plugin_control and main_screen_control.visible:
-			plugin_control.hide()
 
 func _on_main_screen_bar_button_pressed(button:Button):
 	if button == main_screen_button and main_screen_button.button_pressed:
 		return
 	if not button in plugin_buttons:
-		for plugin_button in plugin_buttons.keys():
-			var plugin_control = plugin_buttons.get(plugin_button)
-			plugin_control.hide()
-			plugin_button.button_pressed = false
-		
-		await get_tree().process_frame # needed for windowed script editor
-		current_visible_button = null
+		_hide_plugin_controls()
 		return
 	for plugin_button:Button in plugin_buttons.keys():
 		var plugin_control = plugin_buttons.get(plugin_button)
@@ -86,6 +59,15 @@ func _on_main_screen_bar_button_pressed(button:Button):
 			plugin_button.button_pressed = false
 		else:
 			_set_custom_main_screen(plugin_button)
+
+func _hide_plugin_controls():
+	for plugin_button in plugin_buttons.keys():
+		var plugin_control = plugin_buttons.get(plugin_button)
+		plugin_control.hide()
+		plugin_button.button_pressed = false
+	
+	await get_tree().process_frame # needed for windowed script editor
+	current_visible_button = null
 
 
 func add_main_screen_control(control):
@@ -125,11 +107,6 @@ func _remove_main_screen_button(control):
 			continue
 		plugin_buttons.erase(plugin_button)
 		plugin_button.queue_free()
-		
-		## Dont think I need now
-		#if is_instance_valid(main_screen_button):
-			#main_screen_button.hide()
-			#main_screen_button.text = editor_plugin._get_plugin_name()
 		return
 
 func _get_control_icon(panel_control):
@@ -145,6 +122,7 @@ func on_plugin_make_visible(visible:bool):
 	if not is_instance_valid(main_screen_button):
 		return
 	main_screen_button.show()
+	
 	await get_tree().process_frame
 	if visible:
 		if current_visible_button != null:
@@ -154,6 +132,9 @@ func on_plugin_make_visible(visible:bool):
 				return
 			var button = plugin_buttons.keys()[0]
 			_set_custom_main_screen(button)
+	else:
+		_hide_plugin_controls()
+	
 	main_screen_button.hide()
 
 func _set_custom_main_screen(button:Button) -> void:

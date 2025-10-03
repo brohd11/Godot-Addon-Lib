@@ -1,4 +1,4 @@
-extends RefCounted
+#! namespace ALibRuntime.Dialog class FileDialogHandler
 
 const File = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/file/class/file_dialog_file.gd")
 const Files = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/file/class/file_dialog_files.gd")
