@@ -21,7 +21,9 @@ var default_dock:int
 var last_dock:int
 var can_be_freed:bool
 
+var empty_panel:bool = false
 var _default_window_size:= Vector2i(1200,800)
+var save_layout:bool = true
 
 enum Slot{
 	FLOATING,
@@ -50,6 +52,7 @@ const _slot = {
 	Slot.DOCK_SLOT_RIGHT_BR: EditorPlugin.DockSlot.DOCK_SLOT_RIGHT_BR,
 }
 
+signal dock_changed(dock_manager)
 signal free_requested(dock_manager)
 
 static func hide_main_screen_button(_plugin):
@@ -63,7 +66,11 @@ _can_be_freed:=false, _main_screen_handler=null, add_to_tree:=true) -> void:
 	elif _control is PackedScene:
 		plugin_control = _control.instantiate()
 	
-	default_dock = _slot.get(_dock)
+	if _dock is int:
+		default_dock = _dock
+	else:
+		default_dock = _slot.get(_dock)
+	
 	last_dock = default_dock
 	can_be_freed = _can_be_freed
 	
@@ -74,6 +81,9 @@ _can_be_freed:=false, _main_screen_handler=null, add_to_tree:=true) -> void:
 	if add_to_tree:
 		post_init()
 
+func add_to_tree():
+	await post_init()
+
 func post_init():
 	plugin.add_child(plugin_control)
 	await plugin.get_tree().process_frame
@@ -83,12 +93,16 @@ func post_init():
 		dock_button = plugin_control.dock_button
 		dock_button.icon = EditorInterface.get_base_control().get_theme_icon("MakeFloating", &"EditorIcons")
 		dock_button.pressed.connect(_on_dock_button_pressed)
+		dock_button.show()
 	else:
 		print("Need dock button in scene to use Dock Manager.")
+		plugin_control.queue_free()
+		return
 	if not is_instance_valid(main_screen_handler):
 		plugin_control.name = plugin._get_plugin_name()
 		main_screen_handler = MainScreenHandler.new(plugin, plugin_control)
 		plugin.add_child(main_screen_handler)
+	
 	
 	var layout_data = load_layout_data()
 	var dock_target = layout_data.get("current_dock", default_dock)
@@ -123,6 +137,8 @@ func get_plugin_control():
 	return plugin_control
 
 func load_layout_data():
+	if not save_layout:
+		return {}
 	if not FileAccess.file_exists(_get_layout_file_path()):
 		var dir = _get_layout_file_path().get_base_dir()
 		if not DirAccess.dir_exists_absolute(dir):
@@ -134,6 +150,8 @@ func load_layout_data():
 	return scene_data
 
 func save_layout_data():
+	if not save_layout:
+		return
 	if not is_instance_valid(plugin_control):
 		return
 	var current_dock = _get_current_dock()
@@ -172,8 +190,9 @@ func _on_dock_button_pressed():
 		return
 	
 	if handled == 20:
+		free_requested.emit(self)
 		free_instance.call_deferred()
-		#free_requested.emit(self)
+		
 	
 	elif handled == _slot.get(Slot.FLOATING):
 		undock_instance()
@@ -194,7 +213,7 @@ func dock_instance(target_dock:int):
 	if target_dock > -1:
 		plugin.add_control_to_dock(target_dock, plugin_control)
 	elif target_dock == -1:
-		var panel_wrapper = PanelWrapper.new(plugin_control)
+		var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
 		panel_wrapper.name = plugin_control.name
 		main_screen_handler.add_main_screen_control(panel_wrapper)
 	elif target_dock == -2:
@@ -204,15 +223,18 @@ func dock_instance(target_dock:int):
 	if is_instance_valid(window):
 		if window is PanelWindow:
 			window.queue_free()
+	
+	dock_changed.emit(self)
 
 
 func undock_instance():
 	_remove_control_from_parent()
-	var window = PanelWindow.new(plugin_control, true, _default_window_size)
+	var window = PanelWindow.new(plugin_control, empty_panel, _default_window_size)
 	window.close_requested.connect(window_close_requested)
 	#window.mouse_entered.connect(_on_window_mouse_entered.bind(window))
 	#window.mouse_exited.connect(_on_window_mouse_exited)
 	
+	dock_changed.emit(self)
 	return window
 
 func _remove_control_from_parent():
@@ -257,13 +279,32 @@ func on_plugin_make_visible(visible:bool):
 	main_screen_handler.on_plugin_make_visible(visible)
 	pass
 
+static func clean_dock_manager_array(dock_manager_instances:Array):
+	var invalid_positions = []
+	for i in range(dock_manager_instances.size()):
+		if is_instance_valid(dock_manager_instances[i]):
+			continue
+		invalid_positions.append(i)
+	
+	invalid_positions.reverse()
+	for i in invalid_positions:
+		dock_manager_instances.remove_at(i)
+
+
 class PanelWrapper extends PanelContainer:
-	func _init(control) -> void:
+	var _empty_pan := false
+	func _init(control, _empty_panel:= false) -> void:
 		add_child(control)
+		_empty_pan = _empty_panel
 		size_flags_vertical = Control.SIZE_EXPAND_FILL
 		
 	func _ready() -> void:
-		var panel_sb = get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-		panel_sb.content_margin_left = 4
-		panel_sb.content_margin_right = 4
+		var panel_sb
+		if _empty_pan:
+			panel_sb = StyleBoxEmpty.new()
+		else:
+			panel_sb = get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+			panel_sb.content_margin_left = 4
+			panel_sb.content_margin_right = 4
+		
 		add_theme_stylebox_override("panel", panel_sb)

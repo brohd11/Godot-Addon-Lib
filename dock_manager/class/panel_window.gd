@@ -2,7 +2,7 @@ extends Window
 
 const ThemeSetter = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_setter.gd")
 
-func _init(control, empty_panel:=true, window_size:=Vector2i(1200, 800)) -> void:
+func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800)) -> void:
 	
 	initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
 	size = window_size
@@ -21,9 +21,9 @@ func _init(control, empty_panel:=true, window_size:=Vector2i(1200, 800)) -> void
 	
 	ThemeSetter.set_theme_color(panel, ThemeSetter.ThemeColor.Type.BASE)
 	
-	#if empty_panel:
-		#var panel_sb = StyleBoxEmpty.new()
-		#panel.add_theme_stylebox_override("panel", panel_sb)
+	if empty_panel:
+		panel_sb = StyleBoxEmpty.new()
+		panel.add_theme_stylebox_override("panel", panel_sb)
 	
 	if is_instance_valid(control.get_parent()):
 		control.reparent(panel)
