@@ -21,6 +21,7 @@ var default_dock:int
 var last_dock:int
 var can_be_freed:bool
 
+var window_title:String = ""
 var empty_panel:bool = false
 var _default_window_size:= Vector2i(1200,800)
 var save_layout:bool = true
@@ -85,9 +86,10 @@ func add_to_tree():
 	await post_init()
 
 func post_init():
-	plugin.add_child(plugin_control)
-	await plugin.get_tree().process_frame
-	plugin.remove_child(plugin_control)
+	if not plugin_control.is_node_ready():
+		plugin.add_child(plugin_control)
+		await plugin.get_tree().process_frame
+		plugin.remove_child(plugin_control)
 	
 	if "dock_button" in plugin_control:
 		dock_button = plugin_control.dock_button
@@ -98,11 +100,14 @@ func post_init():
 		print("Need dock button in scene to use Dock Manager.")
 		plugin_control.queue_free()
 		return
+	
 	if not is_instance_valid(main_screen_handler):
 		plugin_control.name = plugin._get_plugin_name()
 		main_screen_handler = MainScreenHandler.new(plugin, plugin_control)
 		plugin.add_child(main_screen_handler)
 	
+	if window_title == "":
+		window_title = plugin_control.name
 	
 	var layout_data = load_layout_data()
 	var dock_target = layout_data.get("current_dock", default_dock)
@@ -115,6 +120,9 @@ func post_init():
 
 func set_default_window_size(size:Vector2i):
 	_default_window_size = size
+
+func set_window_title(title:String):
+	window_title = title
 
 func _ready() -> void:
 	plugin.add_child(self)
@@ -230,6 +238,7 @@ func dock_instance(target_dock:int):
 func undock_instance():
 	_remove_control_from_parent()
 	var window = PanelWindow.new(plugin_control, empty_panel, _default_window_size)
+	window.title = window_title
 	window.close_requested.connect(window_close_requested)
 	#window.mouse_entered.connect(_on_window_mouse_entered.bind(window))
 	#window.mouse_exited.connect(_on_window_mouse_exited)

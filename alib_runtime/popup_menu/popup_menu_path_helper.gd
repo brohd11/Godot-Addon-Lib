@@ -1,6 +1,8 @@
 extends PopupMenu
 #! namespace ALibRuntime class PopupHelper
 
+const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/button_helper.gd")
+
 const BACKPORTED = 100
 
 var popup_items_dict:Dictionary = {}

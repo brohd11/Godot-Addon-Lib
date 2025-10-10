@@ -27,3 +27,16 @@ static func set_menu_button_to_editor_theme(menu_button:MenuButton):
 	for o in overides:
 		menu_button.add_theme_stylebox_override(o, b.get_theme_stylebox(o))
 	b.queue_free()
+
+static func get_size_of_control_type(type):
+	var ins = type.new()
+	EditorInterface.get_base_control().add_child(ins)
+	var new_size = ins.size
+	ins.hide()
+	ins.queue_free()
+	return new_size
+
+static func get_test():
+	print(EditorInterface.get_editor_theme().get_stylebox_type_list())
+	print(EditorInterface.get_editor_theme().get_constant_list("SplitContainer"))
+	pass

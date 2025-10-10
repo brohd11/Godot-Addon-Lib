@@ -3,6 +3,7 @@ extends PopupPanel
 
 const CANCEL_STRING = "CANCEL_STRING"
 
+@onready var panels_h_box: HBoxContainer = %PanelsHBox
 @onready var left_ul: Button = %LeftUL
 @onready var left_bl: Button = %LeftBL
 @onready var left_ur: Button = %LeftUR
@@ -51,6 +52,9 @@ func _ready() -> void:
 		make_floating_button.icon = EditorInterface.get_editor_theme().get_icon("MakeFloating", &"EditorIcons")
 		free_instance_button.icon = EditorInterface.get_editor_theme().get_icon("Clear", &"EditorIcons")
 		
+		var editor_scale = EditorInterface.get_editor_scale()
+		size = size * editor_scale
+
 
 func disable_main_screen():
 	main_screen.disabled = true
@@ -96,4 +100,3 @@ func hide_and_free():
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE:
 		pass
-
