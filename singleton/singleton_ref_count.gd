@@ -13,7 +13,7 @@ static func _get_instance(script:Script, print_err:=true):
 	if print_err:
 		print("Could not get %s instance." % script.get_singleton_name())
 
-static func _register_node(script:Script, node:Node):
+static func _register_node(script:Script, node):
 	var instance = _get_singleton_node_or_null(script, script._get_singleton_node_path(), true, node)
 	instance.instance_refs.append(node)
 	return instance
@@ -22,7 +22,7 @@ static func _register_node(script:Script, node:Node):
 
 var instance_refs = []
 
-func unregister_node(node:Node):
+func unregister_node(node):
 	instance_refs.erase(node)
 	if instance_refs.is_empty():
 		_all_unregistered_callback()
@@ -31,7 +31,7 @@ func unregister_node(node:Node):
 func _all_unregistered_callback():
 	pass
 
-func _init(node:Node):
+func _init(node):
 	pass
 
 
