@@ -2,6 +2,7 @@ class_name PopupWrapper
 extends RefCounted
 
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
+const USort = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_sort.gd")
 
 class ItemParams extends PopupHelper.ParamKeys:
 	const POSITION = "POSITION"
@@ -37,7 +38,6 @@ static func popup_wrapper(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_
 	
 	wrapper_params.sorted_custom_item_data = sort_custom_context_items(wrapper_params.custom_context_item_data)#, top_custom_item_data, bottom_custom_item_data)
 	
-	## ALERT NEed to rethink this for only filesystem create really. Maybe pass throuh dict Popup:custom items, then place before and after in _copy_popup?
 	_copy_popup(new_popup, popup_to_copy, wrapper_params)
 	
 	if wrapper_params.connect_callable:
@@ -358,33 +358,66 @@ static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, 
 				var priority = meta.get(ItemParams.PRIORITY, 1000)
 				var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
 				if position == ItemParams.Position.TOP:
-					var pre_priority_keys = pre_priority_dict.keys()
-					while priority in pre_priority_keys:
-						priority += 1
-					pre_priority_dict[priority] = item_path
-					pass
+					pre_priority_dict[item_path] = priority
 				elif position == ItemParams.Position.BOTTOM:
-					var post_priority_keys = post_priority_dict.keys()
-					while priority in post_priority_keys:
-						priority += 1
-					post_priority_dict[priority] = item_path
+					post_priority_dict[item_path] = priority
 		
-		var pre_priority_keys = pre_priority_dict.keys()
-		pre_priority_keys.sort()
+		var sorted_pre = USort.sort_priority_dict(pre_priority_dict)
+		for key in sorted_pre.keys():
+			sorted_data["pre"][key] = popup_data[key]
 		
-		for key in pre_priority_keys:
-			var item_path = pre_priority_dict[key]
-			sorted_data["pre"][item_path] = popup_data[item_path]
-		
-		var post_priority_keys = post_priority_dict.keys()
-		post_priority_keys.sort()
-		for key in post_priority_keys:
-			var item_path = post_priority_dict[key]
-			sorted_data["post"][item_path] = popup_data[item_path]
+		var sorted_post = USort.sort_priority_dict(post_priority_dict)
+		for key in sorted_post.keys():
+			sorted_data["post"][key] = popup_data[key]
 		
 		all_sorted_data[popup] = sorted_data
 	
 	return all_sorted_data
+
+
+#static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, post_dict):
+	#var all_sorted_data = {}
+	#for popup in all_custom_items.keys():
+		#var sorted_data = {}
+		#sorted_data["pre"] = {}
+		#sorted_data["post"] = {}
+		#var pre_priority_dict = {}
+		#var post_priority_dict = {}
+		#var popup_data = all_custom_items.get(popup)
+		#for item_path in popup_data:
+			#var item_data = popup_data.get(item_path)
+			#var meta = item_data.get(ItemParams.METADATA_KEY)
+			#if meta is Dictionary:
+				#var priority = meta.get(ItemParams.PRIORITY, 1000)
+				#var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
+				#if position == ItemParams.Position.TOP:
+					#var pre_priority_keys = pre_priority_dict.keys()
+					#while priority in pre_priority_keys:
+						#priority += 1
+					#pre_priority_dict[priority] = item_path
+					#pass
+				#elif position == ItemParams.Position.BOTTOM:
+					#var post_priority_keys = post_priority_dict.keys()
+					#while priority in post_priority_keys:
+						#priority += 1
+					#post_priority_dict[priority] = item_path
+		#
+		#var pre_priority_keys = pre_priority_dict.keys()
+		#pre_priority_keys.sort()
+		#
+		#for key in pre_priority_keys:
+			#var item_path = pre_priority_dict[key]
+			#sorted_data["pre"][item_path] = popup_data[item_path]
+		#
+		#var post_priority_keys = post_priority_dict.keys()
+		#post_priority_keys.sort()
+		#for key in post_priority_keys:
+			#var item_path = post_priority_dict[key]
+			#sorted_data["post"][item_path] = popup_data[item_path]
+		#
+		#all_sorted_data[popup] = sorted_data
+	#
+	#return all_sorted_data
 
 #static func sort_custom_context_items(all_custom_items:Dictionary, pre_dict, post_dict):
 	#var pre_priority_dict = {}

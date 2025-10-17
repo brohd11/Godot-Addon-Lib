@@ -72,21 +72,9 @@ static func _parse_dict(path_dict, popup:PopupMenu, callable:Callable, item_dict
 	var current_id = base_id
 	for key in path_dict:
 		var menu_path = key
-		var data = path_dict.get(key)
-		var icons = data.get(ParamKeys.ICON_KEY)
-		var icon_colors = data.get(ParamKeys.ICON_COLOR_KEY)
-		var tool_tips = data.get(ParamKeys.TOOL_TIP_KEY)
-		var metadata = data.get(ParamKeys.METADATA_KEY)
+		var data = path_dict.get(key, {})
 		
-		var params = PopupMenuPathParams.new(menu_path, popup, callable, item_dict)
-		if icons:
-			params.icon_array = icons
-		if icon_colors:
-			params.icon_color_array = icon_colors
-		if tool_tips:
-			params.tool_tip_array = tool_tips
-		if metadata:
-			params.metadata = metadata
+		var params = PopupMenuPathParams.new(menu_path, popup, callable, item_dict, data)
 		_parse_popup_menu_path(params, current_id, extra_args)
 		
 		if base_id != -1:
@@ -208,11 +196,29 @@ class ParamKeys:
 	const METADATA_KEY = "METADATA_KEY"
 
 class PopupMenuPathParams:
-	func _init(_popup_menu_path, _base_popup, _callable, _popup_items_dict) -> void:
+	func _init(_popup_menu_path, _base_popup, _callable, _popup_items_dict, popup_data=null) -> void:
 		popup_menu_path = clean_menu_path(_popup_menu_path)
 		base_popup = _base_popup
 		signal_callable = _callable
 		popup_items_dict = _popup_items_dict
+		
+		if popup_data == null:
+			return
+		for key in popup_data.keys():
+			var value = popup_data.get(key)
+			if key == ParamKeys.ICON_KEY:
+				icon_array = value
+			elif key == ParamKeys.ICON_COLOR_KEY:
+				icon_color_array = value
+			elif key == ParamKeys.TOOL_TIP_KEY:
+				tool_tip_array = value
+			elif key == ParamKeys.METADATA_KEY:
+				if value is not Dictionary:
+					print("Metadata must be dictionary for popup: %s" % _popup_menu_path)
+					continue
+				metadata.merge(value)
+			else:
+				metadata[key] = value
 	
 	var popup_menu_path:String
 	var base_popup:PopupMenu
@@ -324,17 +330,7 @@ static func add_single_item(popup:PopupMenu, popup_path:String, popup_data:Dicti
 	var callable = popup_data.get(ParamKeys.CALLABLE_KEY)
 	var id = popup_data.get("id", -1)
 	
-	var popup_params = PopupMenuPathParams.new(popup_path, popup, callable, popup_items_dict)
-	var icons = popup_data.get(ParamKeys.ICON_KEY)
-	if icons:
-		popup_params.icon_array = icons
-	var tooltip = popup_data.get(ParamKeys.TOOL_TIP_KEY)
-	if tooltip:
-		popup_params.tool_tip_array = tooltip
-	var metadata = popup_data.get(ParamKeys.METADATA_KEY)
-	if metadata:
-		popup_params.metadata = metadata
-	
+	var popup_params = PopupMenuPathParams.new(popup_path, popup, callable, popup_items_dict, popup_data)
 	return _parse_popup_menu_path(popup_params, id)
 
 static func set_popup_position(popup:PopupMenu, offset:=Vector2i.ZERO):
