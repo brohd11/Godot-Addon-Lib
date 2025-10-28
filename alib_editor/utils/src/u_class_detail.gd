@@ -1,6 +1,13 @@
 extends RefCounted
 #! namespace ALibEditor.Utils class UClassDetail
 
+enum IncludeInheritance{
+	NONE,
+	SCRIPTS_ONLY,
+	ALL,
+	
+}
+
 const _MEMBER_ARGS = ["signal", "property", "method", "enum", "const"]
 const _INVALID_DATA = "__INVALID_DATA__"
 
@@ -8,7 +15,7 @@ static func class_get_all_members(script:GDScript=null):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script)
 	return members
 
@@ -16,7 +23,7 @@ static func class_get_all_signals(script):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script, ["signal"])
 	return members
 
@@ -24,7 +31,7 @@ static func class_get_all_properties(script):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script, ["property"])
 	return members
 
@@ -32,7 +39,7 @@ static func class_get_all_methods(script):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script, ["method"])
 	return members
 
@@ -40,7 +47,7 @@ static func class_get_all_constants(script):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script, ["const"])
 	return members
 
@@ -48,7 +55,7 @@ static func class_get_all_enums(script):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _recur_get_class_members(script, ["enum"])
 	return members
 
@@ -59,7 +66,7 @@ static func _recur_get_class_members(script:Script, desired_members:=_MEMBER_ARG
 	if get_class_data:
 		var instance_type = script.get_instance_base_type()
 		if instance_type == null:
-			return []
+			return {}
 		if "signal" in desired_members:
 			var class_signals = ClassDB.class_get_signal_list(instance_type)
 			for data in class_signals:
@@ -100,68 +107,80 @@ static func _recur_get_class_members(script:Script, desired_members:=_MEMBER_ARG
 	for i in recurs_dict.keys():
 		members_dict[i] = recurs_dict[i]
 	
-	#var members_array = members_dict.keys()
 	return members_dict
 
 
-static func script_get_all_members(script:Script, include_inheritance:=false):
+static func script_get_all_members(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script)
-	if include_inheritance:
-		members.merge(class_get_all_members(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,_MEMBER_ARGS))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,_MEMBER_ARGS, false))
+	
 	return members
 
-static func script_get_all_signals(script:Script, include_inheritance:=false):
+static func script_get_all_signals(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script, ["signal"])
-	if include_inheritance:
-		members.merge(class_get_all_signals(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,["signal"]))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,["signal"], false))
 	return members
 
-static func script_get_all_properties(script:Script, include_inheritance:=false):
+static func script_get_all_properties(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script, ["property"])
-	if include_inheritance:
-		members.merge(class_get_all_properties(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,["property"]))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,["property"], false))
 	return members
 
-static func script_get_all_methods(script:Script, include_inheritance:=false):
+static func script_get_all_methods(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script, ["method"])
-	if include_inheritance:
-		members.merge(class_get_all_methods(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,["method"]))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,["method"], false))
 	return members
 
-static func script_get_all_constants(script:Script, include_inheritance:=false):
+static func script_get_all_constants(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script, ["const"])
-	if include_inheritance:
-		members.merge(class_get_all_constants(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,["const"]))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,["const"], false))
 	return members
 
-static func script_get_all_enums(script:Script, include_inheritance:=false):
+static func script_get_all_enums(script:Script, include_inheritance:=IncludeInheritance.NONE):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
-		return []
+		return {}
 	var members = _get_script_members(script, ["enum"])
-	if include_inheritance:
-		members.merge(class_get_all_enums(script))
+	if include_inheritance == IncludeInheritance.ALL:
+		members.merge(_recur_get_class_members(script,["enum"]))
+	elif include_inheritance == IncludeInheritance.SCRIPTS_ONLY:
+		members.merge(_recur_get_class_members(script,["enum"], false))
 	return members
 
 
@@ -196,8 +215,6 @@ static func _get_script_members(script:Script, desired_members:=_MEMBER_ARGS):
 			if _check_dict_is_enum(value):
 				members_dict[name] = value
 	
-	var members_array = members_dict.keys()
-	
 	return members_dict
 
 static func _check_dict_is_enum(dict:Dictionary) -> bool:
@@ -210,11 +227,14 @@ static func _check_dict_is_enum(dict:Dictionary) -> bool:
 		count += 1
 	return true
 
-static func get_member_info_by_path(script, member_name:String, member_hint:String = "", print_err:=false):
+static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, print_err:=false):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
 		return null
+	
+	if member_hints_array.find("const") == -1: # I think add this so you can search through classes
+		member_hints_array.append("const")
 	
 	var current_script = script as Script
 	var final_val
@@ -231,7 +251,7 @@ static func get_member_info_by_path(script, member_name:String, member_hint:Stri
 			current_script = static_member
 			continue
 		
-		var member_info = get_member_info(current_script, part, member_hint)
+		var member_info = get_member_info(current_script, part, member_hints_array)
 		final_val = member_info
 		if member_info == null:
 			if i == 0:
@@ -270,19 +290,15 @@ static func get_member_info_by_path(script, member_name:String, member_hint:Stri
 	return final_val
 
 
-static func get_member_info(script, member_name:String, member_hint:String = ""):
-	return _get_member_info(script, member_name, member_hint)
+static func get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS):
+	return _get_member_info(script, member_name, member_hints_array)
 
 
-static func _get_member_info(script, member_name:String, member_hint:String = ""):
+static func _get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
 		return null
-	
-	var member_hints_array = _MEMBER_ARGS
-	if member_hint in _MEMBER_ARGS:
-		member_hints_array = [member_hint]
 	
 	var class_check = _get_member_data_class(script, member_name, member_hints_array)
 	if class_check is String and class_check != _INVALID_DATA:
@@ -304,28 +320,16 @@ static func _get_member_info(script, member_name:String, member_hint:String = ""
 
 
 static func _get_member_data_script(script:Script, member_name:String, member_hints_array:Array):
-	if "signal" in member_hints_array:
-		var script_members = script.get_script_signal_list()
-		for data in script_members:
-			var name = data.get("name")
-			if name == member_name:
-				return data
-	if "method" in member_hints_array:
-		var script_method_list = script.get_script_method_list()
-		for data in script_method_list:
-			var name = data.get("name")
-			if name == member_name:
-				return data
+	if "const" in member_hints_array:
+		var const_dict = script.get_script_constant_map()
+		if const_dict.has(member_name):
+			return const_dict.get(member_name)
 	if "property" in member_hints_array:
 		var script_property_list = script.get_script_property_list()
 		for data in script_property_list:
 			var name = data.get("name")
 			if name == member_name:
 				return data
-	if "const" in member_hints_array:
-		var const_dict = script.get_script_constant_map()
-		if const_dict.has(member_name):
-			return const_dict.get(member_name)
 	if "enum" in member_hints_array:
 		var const_dict = script.get_script_constant_map()
 		if const_dict.has(member_name):
@@ -333,6 +337,18 @@ static func _get_member_data_script(script:Script, member_name:String, member_hi
 			if value is Dictionary:
 				if _check_dict_is_enum(value):
 					return const_dict.get(member_name)
+	if "method" in member_hints_array:
+		var script_method_list = script.get_script_method_list()
+		for data in script_method_list:
+			var name = data.get("name")
+			if name == member_name:
+				return data
+	if "signal" in member_hints_array:
+		var script_members = script.get_script_signal_list()
+		for data in script_members:
+			var name = data.get("name")
+			if name == member_name:
+				return data
 	
 	return _INVALID_DATA
 
@@ -342,10 +358,16 @@ static func _get_member_data_class(script:Script, member_name:String, member_hin
 	if instance_type == null:
 		return _INVALID_DATA
 	
-	if "signal" in member_hints_array:
-		if ClassDB.class_has_signal(instance_type, member_name):
-			var class_signals = ClassDB.class_get_signal_list(instance_type)
-			for data in class_signals:
+	if "const" in member_hints_array:
+		if ClassDB.class_has_integer_constant(instance_type, member_name):
+			return ClassDB.class_get_integer_constant(instance_type, member_name)
+	if "enum" in member_hints_array:
+		if ClassDB.class_has_enum(instance_type, member_name):
+			return ClassDB.class_get_enum_constants(instance_type, member_name)
+	if "method" in member_hints_array:
+		if ClassDB.class_has_method(instance_type, member_name):
+			var class_methods = ClassDB.class_get_method_list(instance_type)
+			for data in class_methods:
 				var name = data.get("name")
 				if name == member_name:
 					return data
@@ -355,22 +377,17 @@ static func _get_member_data_class(script:Script, member_name:String, member_hin
 			var name = data.get("name")
 			if name == member_name:
 				return data
-	if "method" in member_hints_array:
-		if ClassDB.class_has_method(instance_type, member_name):
-			var class_methods = ClassDB.class_get_method_list(instance_type)
-			for data in class_methods:
+	if "signal" in member_hints_array:
+		if ClassDB.class_has_signal(instance_type, member_name):
+			var class_signals = ClassDB.class_get_signal_list(instance_type)
+			for data in class_signals:
 				var name = data.get("name")
 				if name == member_name:
 					return data
-	if "enum" in member_hints_array:
-		if ClassDB.class_has_enum(instance_type, member_name):
-			return ClassDB.class_get_enum_constants(instance_type, member_name)
-	if "const" in member_hints_array:
-		if ClassDB.class_has_integer_constant(instance_type, member_name):
-			return ClassDB.class_get_integer_constant(instance_type, member_name)
 	
 	return _INVALID_DATA
 
+## Returns dictionary of all classes [name, path]
 static func get_all_global_class_paths():
 	var class_dict = {}
 	var global_class_list = ProjectSettings.get_global_class_list()
@@ -389,7 +406,7 @@ static func get_global_class_path(class_nm:String):
 	
 	return ""
 
-static func script_get_member_by_value(script, value:Variant, member_hints:=_MEMBER_ARGS, deep:=false, checked:={}):
+static func _script_get_member_by_value_recur(script, value:Variant, deep:=false, member_hints:=_MEMBER_ARGS, checked:={}):
 	if checked.has(script):
 		return null
 	checked[script] = true
@@ -400,14 +417,58 @@ static func script_get_member_by_value(script, value:Variant, member_hints:=_MEM
 	if member != null:
 		return member
 	
-	var constants = script_get_all_constants(script)
-	for c in constants.keys():
+	var constants = script_get_all_constants(script, IncludeInheritance.SCRIPTS_ONLY)
+	var constants_keys = constants.keys()
+	for c in constants_keys:
 		var val = constants.get(c)
 		if not val is GDScript:
 			continue
-		var next_member = script_get_member_by_value(val, value, member_hints, deep, checked)
+		
+		var next_member = _script_get_member_by_value_recur(val, value, deep, member_hints, checked)
 		if next_member != null:
 			return c + "." + next_member
+	
+	return null
+
+static func script_get_member_by_value(script, value:Variant, deep:=false, member_hints:=_MEMBER_ARGS, breadth_first:=true):
+	# For a non-deep search, just check the top-level script
+	if not deep:
+		return _script_get_member_by_value(script, value, member_hints)
+	
+	if breadth_first:
+		return _script_get_member_by_value_breadth(script, value, member_hints)
+	else:
+		return _script_get_member_by_value_recur(script, value, deep, member_hints)
+
+
+static func _script_get_member_by_value_breadth(start_script, value: Variant, member_hints:=_MEMBER_ARGS):
+	var queue: Array = [{"script": start_script, "path": ""}]
+	
+	var checked: Dictionary = {start_script: true}
+	while not queue.is_empty():
+		var current_item = queue.pop_front()
+		var current_script = current_item.script
+		var current_path = current_item.path as String
+		
+		var member_name = _script_get_member_by_value(current_script, value, member_hints)
+		
+		if member_name != null:
+			if current_path.is_empty():
+				return member_name
+			else:
+				return current_path + "." + member_name
+		
+		var constants = script_get_all_constants(current_script, IncludeInheritance.ALL) # TEST, this was set to scripts only, may have some side effects
+		for const_name in constants:
+			var child_script = constants[const_name]
+			if child_script is GDScript and not checked.has(child_script):
+				checked[child_script] = true
+				
+				var next_path = const_name
+				if not current_path.is_empty():
+					next_path = current_path + "." + const_name
+				
+				queue.push_back({"script": child_script, "path": next_path})
 	
 	return null
 
@@ -416,11 +477,11 @@ static func _script_get_member_by_value(script, value:Variant, member_hints:=_ME
 	var value_type = typeof(value)
 	for hint in member_hints:
 		var members
-		if hint == "const": members = script_get_all_constants(script, true)
-		elif hint == "enum": members = script_get_all_enums(script, true)
-		elif hint == "method": members = script_get_all_methods(script, true)
-		elif hint == "signal": members = script_get_all_signals(script, true)
-		elif hint == "property": members = script_get_all_properties(script, true)
+		if hint == "const": members = script_get_all_constants(script, IncludeInheritance.ALL)
+		elif hint == "enum": members = script_get_all_enums(script, IncludeInheritance.ALL)
+		elif hint == "method": members = script_get_all_methods(script, IncludeInheritance.ALL)
+		elif hint == "signal": members = script_get_all_signals(script, IncludeInheritance.ALL)
+		elif hint == "property": members = script_get_all_properties(script, IncludeInheritance.ALL)
 		if not members:
 			continue
 		var _check = _check_member_value(members, value, value_type)
@@ -428,13 +489,68 @@ static func _script_get_member_by_value(script, value:Variant, member_hints:=_ME
 			return _check
 	return null
 
-
-
-
 static func _check_member_value(members:Dictionary, value, value_type:int):
 	for member in members.keys():
 		var member_info = members.get(member)
 		if value_type == typeof(member_info):
+			#print("IS SAME: ", is_same(member_info, value))
+			#print("COMPARE: ", member_info == value)
 			if member_info == value:
+			#if is_same(member_info, value):
 				return member
 	return null
+
+## Return an array of paths including the path of script passed.
+static func script_get_inherited_script_paths(script:GDScript) -> Array:
+	var paths = []
+	while script != null:
+		paths.append(script.resource_path)
+		script = script.get_base_script()
+	return paths
+
+static func script_get_inherited_scripts(script:GDScript) -> Array:
+	var scripts = []
+	while script != null:
+		scripts.append(script)
+		script = script.get_base_script()
+	return scripts
+
+static func script_get_preloads(script:GDScript, deep:=false, include_inner:=false):
+	if deep:
+		return _script_get_preloads_bfs(script, include_inner)
+	
+	var constants = script_get_all_constants(script, IncludeInheritance.SCRIPTS_ONLY)
+	var preloads = {}
+	for c in constants.keys():
+		var val = constants.get(c)
+		if not val is GDScript:
+			continue
+		if val.resource_path != "" or include_inner:
+			preloads[c] = val
+	
+	return preloads
+
+static func _script_get_preloads_bfs(script:GDScript, include_inner:=false):
+	var preloads = {}
+	var queue: Array = [{"script": script, "path": ""}]
+	
+	var checked = {script: true}
+	while not queue.is_empty():
+		var current_item = queue.pop_front()
+		var current_script = current_item.script
+		var current_path = current_item.path as String
+		
+		var constants = script_get_all_constants(current_script, IncludeInheritance.ALL)
+		for const_name in constants:
+			var child_script = constants[const_name]
+			if child_script is GDScript and not checked.has(child_script):
+				checked[child_script] = true
+				
+				var next_path = const_name
+				if not current_path.is_empty():
+					next_path = current_path + "." + const_name
+				preloads[next_path] = child_script
+				queue.push_back({"script": child_script, "path": next_path})
+	
+	
+	return preloads

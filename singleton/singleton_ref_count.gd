@@ -2,7 +2,7 @@
 extends Singleton.Base
 
 
-static func _get_singleton_type():
+static func _get_singleton_type() -> SingletonType:
 	return SingletonType.REF_COUNT
 
 static func _get_instance(script:Script, print_err:=true):

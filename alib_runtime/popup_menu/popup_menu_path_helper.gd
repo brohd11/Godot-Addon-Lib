@@ -3,6 +3,10 @@ extends PopupMenu
 
 const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/button_helper.gd")
 
+const UResource = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_resource.gd")
+
+const ICON_DEFAULT_SIZE = Vector2(16,16)
+
 const BACKPORTED = 100
 
 var popup_items_dict:Dictionary = {}
@@ -173,6 +177,11 @@ static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id,
 		if icon:
 			if icon is String:
 				icon = _get_icon(icon)
+			icon = icon as Texture2D
+			if icon.get_size() != ICON_DEFAULT_SIZE * EditorInterface.get_editor_scale():
+				print("RESIZE")
+				var icon_size = 16 * EditorInterface.get_editor_scale()
+				icon = UResource.resize_texture(icon, icon_size)
 			popup.add_icon_item(icon, text, id)
 			var popup_index = popup.item_count - 1
 			if color:
@@ -184,6 +193,9 @@ static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id,
 		#if tool_tip:
 			#var popup_index = popup.item_count - 1
 			#popup.set_item_tooltip(popup_index, tool_tip)
+
+static func test():
+	print(EditorInterface.get_editor_theme().get_constant_list("Popup"))
 
 static func _on_popup_hide(popup): # if no mouse signal node, free popup
 	popup.queue_free()

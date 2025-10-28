@@ -19,7 +19,7 @@ static func get_singleton_name() -> String:
 static func _get_singleton_node_path() -> String: # <t> will check if node is of type using Node.get_class()
 	return "EditorNode<t>/EditorSingletons"
 
-static func _get_singleton_type():
+static func _get_singleton_type() -> SingletonType:
 	return SingletonType.STANDARD
 
 #static func instance_valid():
