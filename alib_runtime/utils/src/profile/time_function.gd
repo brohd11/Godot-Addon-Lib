@@ -17,9 +17,9 @@ var _current_time_count:int = 0
 
 var callable:Callable
 
-func _init(msg="", _ts:TimeScale=TimeScale.MSEC, one_shot:=true, _callable=null) -> void:
+func _init(msg="", _ts:TimeScale=TimeScale.USEC, one_shot:=true, _callable=null) -> void:
 	_message = msg
-	_one_shot = _one_shot
+	_one_shot = one_shot
 	_time_scale = _ts
 	
 	if _callable:

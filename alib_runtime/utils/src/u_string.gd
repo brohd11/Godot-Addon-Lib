@@ -3,11 +3,12 @@
 const INDENTIFIER_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 const NUMBERS = "0123456789"
 
-static func get_member_access_front(text:String):
+static func get_member_access_front(text:String, string_map:StringMap=null):
 	var dot_idx = text.find(".")
 	if dot_idx > -1:
 		if text.find("(") > -1:
-			var string_map = StringMap.new(text)
+			if string_map == null:
+				string_map = StringMap.new(text)
 			var count = 0
 			while count < text.length():
 				if string_map.bracket_map.has(count):
@@ -23,11 +24,12 @@ static func get_member_access_front(text:String):
 		return text.substr(0, dot_idx)
 	return text
 
-static func get_member_access_back(text:String):
+static func get_member_access_back(text:String, string_map:StringMap=null):
 	var dot_idx = text.rfind(".")
 	if dot_idx > -1:
 		if text.find("(") > -1:
-			var string_map = StringMap.new(text)
+			if string_map == null:
+				string_map = StringMap.new(text)
 			var count = text.length() -1
 			while count >= 0:
 				if string_map.bracket_map.has(count):
@@ -43,6 +45,47 @@ static func get_member_access_back(text:String):
 		return text.substr(dot_idx + 1)
 	return text
 
+static func trim_member_access_front(text:String, string_map:StringMap=null):
+	var dot_idx = text.find(".")
+	if dot_idx > -1:
+		if text.find("(") > -1:
+			if string_map == null:
+				string_map = StringMap.new(text)
+			var count = 0
+			while count < text.length():
+				if string_map.bracket_map.has(count):
+					var next = string_map.bracket_map[count]
+					if next > count:
+						count = next
+						continue
+				var char = text[count]
+				if char == ".":
+					break
+				count += 1
+			dot_idx = count
+		return text.substr(dot_idx + 1)
+	return text
+
+static func trim_member_access_back(text:String, string_map:StringMap=null):
+	var dot_idx = text.rfind(".")
+	if dot_idx > -1:
+		if text.find("(") > -1:
+			if string_map == null:
+				string_map = StringMap.new(text)
+			var count = text.length() -1
+			while count >= 0:
+				if string_map.bracket_map.has(count):
+					var next = string_map.bracket_map[count]
+					if next < count:
+						count = next
+						continue
+				var char = text[count]
+				if char == ".":
+					break
+				count -= 1
+			dot_idx = count
+		return text.substr(0, dot_idx)
+	return text
 
 static func get_string_indexes(text:String):
 	var string_mask = PackedByteArray()
@@ -100,25 +143,46 @@ static func string_safe_rfind(text:String, find:String, start:=-1, string_mask=n
 		idx = text.rfind(find, idx - 1)
 	return idx
 
+static func remove_comment(text:String, string_safe:=false):
+	if not string_safe:
+		return text.get_slice("#", 0)
+	else:
+		var comment_index = string_safe_find(text, "#")
+		if comment_index > -1:
+			text = text.substr(0, comment_index)
+	return text
 
 static func get_word_at_index(text:String, idx:int):
 	
 	pass
 
 
+
+
 static func test():
 	var line = "string_safe_find(text:String, find:String, start:=0, reverse:=false, find:String string_indexes=null)"
-	print(string_safe_find(line, "find:S", 31))
-	print(string_safe_rfind(line, "find:S", 68))
-	print(string_safe_count(line, "find:S"))
+	var line_len = line.length() - 1
+	var lines = []
+	for i in range(1000):
+		var new_line = line
+		new_line[randi_range(0, line_len)] = "#"
+		lines.append(new_line)
+	var t = ALibRuntime.Utils.UProfile.TimeFunction.new("REMOVE", ALibRuntime.Utils.UProfile.TimeFunction.TimeScale.USEC, false)
+	t.iterations = lines.size() / 2
+	print(t.iterations)
+	
+	for i in range(lines.size()):
+		var liune_test = lines[i]
+		t.start()
+		remove_comment(liune_test)
+		t.stop()
+	
 	pass
 
 
 static func get_func_name_in_line(stripped_line_text:String) -> String:
 	if not (stripped_line_text.begins_with("func ") or stripped_line_text.begins_with("static func ")):
 		return ""
-	#if stripped_line_text.find(":") == -1:
-		#return ""
 	var func_name = stripped_line_text.get_slice("func ", 1).get_slice("(", 0)
 	return func_name
 
@@ -129,24 +193,6 @@ static func get_class_name_in_line(stripped_line_text:String) -> String:
 	if _class.find("extends ") > -1: #  "" <- parser
 		_class = _class.get_slice("extends ", 0) #  "" <- parser
 	return _class.strip_edges()
-
-### Strip edges and comment before passing
-#static func get_var_name_in_line(stripped_line_text:String):
-	#var var_idx = stripped_line_text.find("var ")
-	#if var_idx > -1:
-		#if var_idx == 0 or var_idx == 7: # start with or static
-			#var var_dec = stripped_line_text.substr(var_idx + 4) # +4 to strip var
-			#var _name = var_dec[0]
-			#var idx = 1
-			#while idx < var_dec.length():
-				#var n = _name + var_dec[idx]
-				#if n.is_valid_ascii_identifier():
-					#_name = n
-				#else:
-					#break
-				#idx += 1
-			#return _name
-	#return ""
 
 static func get_var_name_and_type_hint_in_line(stripped_line_text:String): # for local vars
 	var var_idx = stripped_line_text.find("var ")

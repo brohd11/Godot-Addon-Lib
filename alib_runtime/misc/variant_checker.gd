@@ -54,6 +54,7 @@ const BUILT_IN_VARIANTS: Dictionary = {
 	"PackedVector4Array": true,
 	}
 
+## Return boolean if string is built in type.
 static func check_type(type:String):
 	if BUILT_IN_VARIANTS.has(type):
 		return true

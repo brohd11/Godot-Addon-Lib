@@ -1,6 +1,8 @@
 extends RefCounted
 #! namespace ALibEditor.Utils class UClassDetail
 
+const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_string.gd")
+
 enum IncludeInheritance{
 	NONE,
 	SCRIPTS_ONLY,
@@ -10,6 +12,23 @@ enum IncludeInheritance{
 
 const _MEMBER_ARGS = ["signal", "property", "method", "enum", "const"]
 const _INVALID_DATA = "__INVALID_DATA__"
+
+static var global_class_registry:Dictionary = {}
+static var initialized := false
+
+
+static func connect_fs_signal():
+	if initialized:
+		return
+	initialized = true
+	var fs = EditorInterface.get_resource_filesystem()
+	if not fs.filesystem_changed.is_connected(_build_global_class_registry):
+		_build_global_class_registry()
+		fs.filesystem_changed.connect(_build_global_class_registry)
+
+static func _build_global_class_registry():
+	global_class_registry = get_all_global_class_paths()
+
 
 static func class_get_all_members(script:GDScript=null):
 	if script == null:
@@ -227,13 +246,15 @@ static func _check_dict_is_enum(dict:Dictionary) -> bool:
 		count += 1
 	return true
 
-static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, print_err:=false):
+
+static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, 
+				print_err:=false, force_script_conversion:=false, check_class:=true, check_global:=true):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
 		return null
 	
-	if member_hints_array.find("const") == -1: # I think add this so you can search through classes
+	if not member_hints_array.has("const"): # I think add this so you can search through classes
 		member_hints_array.append("const")
 	
 	var current_script = script as Script
@@ -251,11 +272,17 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 			current_script = static_member
 			continue
 		
-		var member_info = get_member_info(current_script, part, member_hints_array)
+		var member_info = get_member_info(current_script, part, member_hints_array, check_class)
 		final_val = member_info
 		if member_info == null:
 			if i == 0:
+				if not check_global:
+					if print_err:
+						printerr("Could not find member in script or global classes: %s" % part)
+					return null
+				var t = ALibRuntime.Utils.UProfile.TimeFunction.new("GLOBAL CLASS PATHS", )
 				var global_class_path = get_global_class_path(part)
+				t.stop()
 				if global_class_path == "":
 					if print_err:
 						printerr("Could not find member in script or global classes: %s" % part)
@@ -271,40 +298,84 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 			current_script = member_info
 			continue
 		else:
-			if i == parts_size -1:
+			if not force_script_conversion and i == parts_size -1:
 				break
 			
 			var _class_name = member_info.get("class_name", "")
 			if _class_name != "":
-				var class_path = ""
-				if not _class_name.begins_with("res://"):
-					class_path = get_global_class_path(_class_name)
-					if class_path == "": # built in class, abort
-						return null
-				else:
-					class_path = _class_name
-				current_script = load(class_path)
+				var next_script = get_script_from_property_info(member_info, current_script)
+				if next_script == null:
+					return null
+				current_script = next_script
 				final_val = current_script
 				continue
 	
 	return final_val
 
 
-static func get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS):
-	return _get_member_info(script, member_name, member_hints_array)
+## Load script from property info. Godot built-in returns null. Pass the parent script to parse the source code
+## for situations like preload typed vars.
+static func get_script_from_property_info(data:Dictionary, parent_script:GDScript=null):
+	var _class = data.get("class_name", "")
+	if _class != "":
+		if _class.begins_with("res://"):
+			if _class.find(".gd.") > -1:
+				_class = _class.substr(0, _class.find(".gd.") + 3) # + 3 for the extension
+			return load(_class)
+		else:
+			if not ClassDB.class_exists(_class):
+				var trimmed = UString.get_member_access_front(_class) # load the global class
+				var path = get_global_class_path(trimmed)
+				if path != "":
+					return load(path)
+	
+	if parent_script == null:
+		return parent_script
+	var inherited_scripts = script_get_inherited_scripts(parent_script)
+	inherited_scripts.reverse()
+	var property_name = data.get("name")
+	var target_script = parent_script
+	## SEEM THIS IS NOT NEEDED
+	#for s in inherited_scripts:
+		#print(s.resource_path)
+		#var properties = script_get_all_properties(s, IncludeInheritance.NONE)
+		#if properties.has(property_name):
+			#print("HAS: ", property_name)
+			#target_script = s
+			#break
+	
+	#script_get_all_properties(script )
+	print("DOING DEEP SEARCH")
+	var script_source = target_script.source_code
+	var var_declaration_idx = script_source.find("var " + property_name)
+	var var_declaration = script_source.substr(var_declaration_idx, script_source.find("\n", var_declaration_idx) - var_declaration_idx)
+	if var_declaration.find(";") > -1:
+		var_declaration = var_declaration.get_slice(";", 0)
+	var var_data = UString.get_var_name_and_type_hint_in_line(var_declaration)
+	if var_data != null:
+		var type = var_data[1]
+		var new_member_info = get_member_info_by_path(target_script, type)
+		if new_member_info is GDScript:
+			return new_member_info
+	
+	return null
+
+static func get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS, check_class:=true):
+	return _get_member_info(script, member_name, member_hints_array, check_class)
 
 
-static func _get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS):
+static func _get_member_info(script, member_name:String, member_hints_array:=_MEMBER_ARGS, check_class:=true):
 	if script == null:
 		script = EditorInterface.get_script_editor().get_current_script()
 	if script == null:
 		return null
 	
-	var class_check = _get_member_data_class(script, member_name, member_hints_array)
-	if class_check is String and class_check != _INVALID_DATA:
-		return class_check
-	if class_check is not String:
-		return class_check
+	if check_class:
+		var class_check = _get_member_data_class(script, member_name, member_hints_array)
+		if class_check is String and class_check != _INVALID_DATA:
+			return class_check
+		if class_check is not String:
+			return class_check
 	
 	var current_script = script
 	while current_script != null:
@@ -398,13 +469,8 @@ static func get_all_global_class_paths():
 	return class_dict
 
 static func get_global_class_path(class_nm:String):
-	var global_class_list = ProjectSettings.get_global_class_list()
-	for dict in global_class_list:
-		var name = dict.get("class")
-		if name == class_nm:
-			return dict.get("path", "")
-	
-	return ""
+	connect_fs_signal()
+	return global_class_registry.get(class_nm, "")
 
 static func _script_get_member_by_value_recur(script, value:Variant, deep:=false, member_hints:=_MEMBER_ARGS, checked:={}):
 	if checked.has(script):
@@ -430,6 +496,7 @@ static func _script_get_member_by_value_recur(script, value:Variant, deep:=false
 	
 	return null
 
+## Get access path to a value in the script. Pass value_parent_script to ensure duplicate values from other scripts are not returned.
 static func script_get_member_by_value(script, value:Variant, deep:=false, member_hints:=_MEMBER_ARGS, breadth_first:=true):
 	# For a non-deep search, just check the top-level script
 	if not deep:
@@ -515,6 +582,7 @@ static func script_get_inherited_scripts(script:GDScript) -> Array:
 		script = script.get_base_script()
 	return scripts
 
+## Returns a Dictionary[name, script] of GDScript constants.
 static func script_get_preloads(script:GDScript, deep:=false, include_inner:=false):
 	if deep:
 		return _script_get_preloads_bfs(script, include_inner)
