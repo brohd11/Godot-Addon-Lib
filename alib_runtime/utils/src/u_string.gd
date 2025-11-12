@@ -87,6 +87,47 @@ static func trim_member_access_back(text:String, string_map:StringMap=null):
 		return text.substr(0, dot_idx)
 	return text
 
+static func split_member_access(text:String, string_map:StringMap=null):
+	if string_map == null:
+		string_map = StringMap.new(text)
+	var member_parts = []
+	var working_member_name = ""
+	var count = 0
+	while count < text.length():
+		#if string_map.bracket_map.has(count):
+			#var next = string_map.bracket_map[count]
+			#if next > count:
+				#count = next
+				#continue
+		var char = text[count]
+		if char == ".":
+			if string_map.string_mask[count] == 0:
+				member_parts.append(working_member_name)
+				working_member_name = ""
+				count += 1
+				continue
+		working_member_name += char
+		count += 1
+	
+	if working_member_name != "":
+		member_parts.append(working_member_name)
+	
+	return member_parts
+
+
+static func find_indentifier_in_line(line_text:String, identifier:String) -> int:
+	var line_length = line_text.length()
+	var idx = line_text.find(identifier)
+	var i = idx + identifier.length()
+	while idx != -1 and i < line_length:
+		var next_char = line_text[i]
+		var full_id:String = identifier + next_char
+		if not full_id.is_valid_ascii_identifier():
+			break
+		idx = line_text.find(identifier, idx + 1)
+		i = idx + identifier.length()
+	return idx
+
 static func get_string_indexes(text:String):
 	var string_mask = PackedByteArray()
 	string_mask.resize(text.length())

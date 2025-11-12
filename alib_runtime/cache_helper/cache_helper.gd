@@ -1,4 +1,4 @@
-
+## Args: Key, Value, CacheDict, FilePathArray=[]
 static func store_data(key, value, data_cache:Dictionary, file_paths:=[]):
 	var mod_data = {}
 	for path in file_paths:
@@ -8,6 +8,7 @@ static func store_data(key, value, data_cache:Dictionary, file_paths:=[]):
 	"modified": mod_data}
 	data_cache[key] = data
 
+## Args: Keys, CacheDict
 static func get_cached_data(key, data_cache:Dictionary):
 	if not data_cache.has(key):
 		return null

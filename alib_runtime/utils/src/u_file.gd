@@ -3,6 +3,9 @@ extends RefCounted
 
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 
+const _UID = "uid" + "://"
+const _UID_INVALID = _UID + "<invalid>"
+
 static func scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> Array:
 	var file_array:Array = []
 	var files:Array = []
@@ -176,15 +179,15 @@ static func copy_file(from:String, to:String, overwrite:bool=false) -> Error:
 	return err
 
 static func uid_to_path(uid:String):
-	if not uid.begins_with("uid://"):
+	if not uid.begins_with(_UID):
 		return uid
 	return ResourceUID.get_id_path(ResourceUID.text_to_id(uid))
 
 static func path_to_uid(path:String):
-	if path.begins_with("uid://"):
+	if path.begins_with(_UID):
 		return path
 	var uid = ResourceUID.id_to_text(ResourceLoader.get_resource_uid(path))
-	if uid == "uid://<invalid>":
+	if uid == _UID_INVALID:
 		uid = path
 	return uid
 

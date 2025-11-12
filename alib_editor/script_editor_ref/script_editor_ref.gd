@@ -56,12 +56,18 @@ static func get_current_code_edit():
 		instance._set_refs()
 	return instance._current_code_edit
 
+static func get_current_script():
+	var instance = get_instance()
+	if not is_instance_valid(instance._current_script):
+		instance._set_refs()
+	return instance._current_script
 
 # instance vars
 
 var _current_script_text_editor:ScriptEditorBase
 var _current_code_text_editor
 var _current_code_edit:CodeEdit
+var _current_script
 
 #ScriptEditor
 signal editor_script_changed(script)
@@ -119,6 +125,8 @@ func _set_refs():
 	
 	_current_code_text_editor = _get_code_text_editor(_current_script_text_editor)
 	_current_code_edit = _current_script_text_editor.get_base_editor()
+	
+	_current_script = EditorInterface.get_script_editor().get_current_script()
 
  
 

@@ -280,9 +280,7 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 					if print_err:
 						printerr("Could not find member in script or global classes: %s" % part)
 					return null
-				var t = ALibRuntime.Utils.UProfile.TimeFunction.new("GLOBAL CLASS PATHS", )
 				var global_class_path = get_global_class_path(part)
-				t.stop()
 				if global_class_path == "":
 					if print_err:
 						printerr("Could not find member in script or global classes: %s" % part)
