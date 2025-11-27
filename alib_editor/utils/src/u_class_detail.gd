@@ -236,6 +236,9 @@ static func _get_script_members(script:Script, desired_members:=_MEMBER_ARGS):
 	
 	return members_dict
 
+static func check_dict_is_enum(dict:Dictionary) -> bool:
+	return _check_dict_is_enum(dict)
+
 static func _check_dict_is_enum(dict:Dictionary) -> bool:
 	var count = 0
 	for i in dict.values():
@@ -295,7 +298,7 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 		elif member_info is GDScript:
 			current_script = member_info
 			continue
-		else:
+		elif member_info is Dictionary:
 			if not force_script_conversion and i == parts_size -1:
 				break
 			
@@ -307,6 +310,9 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 				current_script = next_script
 				final_val = current_script
 				continue
+		else:
+			#printerr("Unhandled class detail - Line 314: ", member_info)
+			pass
 	
 	return final_val
 

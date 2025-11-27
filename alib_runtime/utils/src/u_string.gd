@@ -193,33 +193,6 @@ static func remove_comment(text:String, string_safe:=false):
 			text = text.substr(0, comment_index)
 	return text
 
-static func get_word_at_index(text:String, idx:int):
-	
-	pass
-
-
-
-
-static func test():
-	var line = "string_safe_find(text:String, find:String, start:=0, reverse:=false, find:String string_indexes=null)"
-	var line_len = line.length() - 1
-	var lines = []
-	for i in range(1000):
-		var new_line = line
-		new_line[randi_range(0, line_len)] = "#"
-		lines.append(new_line)
-	var t = ALibRuntime.Utils.UProfile.TimeFunction.new("REMOVE", ALibRuntime.Utils.UProfile.TimeFunction.TimeScale.USEC, false)
-	t.iterations = lines.size() / 2
-	print(t.iterations)
-	
-	for i in range(lines.size()):
-		var liune_test = lines[i]
-		t.start()
-		remove_comment(liune_test)
-		t.stop()
-	
-	pass
-
 
 static func get_func_name_in_line(stripped_line_text:String) -> String:
 	if not (stripped_line_text.begins_with("func ") or stripped_line_text.begins_with("static func ")):
@@ -326,7 +299,6 @@ class StringMap:
 		
 	
 	func _parse(text: String, print_err:=false):
-		var t = ALibRuntime.Utils.UProfile.TimeFunction.new("Parse", ALibRuntime.Utils.UProfile.TimeFunction.TimeScale.USEC)
 		var text_length = text.length()
 		string_mask.resize(text_length)
 		
@@ -373,22 +345,6 @@ class StringMap:
 						else:
 							has_errors = true
 							break
-				
-				
-				
-				#elif char in BRACKETS:
-					#bracket_stack.push_back(i)
-				#elif char in bracket_values:# bracket closing
-					#if bracket_stack.is_empty():
-						#has_errors = true
-						#break
-					#var open_idx = bracket_stack.pop_back()
-					#if BRACKETS[text[open_idx]] == char:
-						#bracket_map[open_idx] = i
-						#bracket_map[i] = open_idx
-					#else:
-						#has_errors = true
-						#break
 		
 		# after loop
 		if in_string:
@@ -399,8 +355,6 @@ class StringMap:
 			if print_err:
 				printerr("Unclosed opening bracket at index ", bracket_stack.front())
 			has_errors = true
-		
-		t.stop()
 
 
 

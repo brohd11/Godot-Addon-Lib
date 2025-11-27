@@ -14,6 +14,8 @@ const PanelWindow = preload("res://addons/addon_lib/brohd/dock_manager/class/pan
 var main_screen_handler
 var external_main_screen_flag := false
 
+var dock_tab_style:= 0
+
 var plugin:EditorPlugin
 var plugin_control:Control
 var dock_button:Button
@@ -79,6 +81,9 @@ _can_be_freed:=false, _main_screen_handler=null, add_to_tree:=true) -> void:
 		main_screen_handler = _main_screen_handler
 		external_main_screen_flag = true
 	
+	_set_editor_settings()
+	EditorInterface.get_editor_settings().settings_changed.connect(_set_editor_settings)
+	
 	if add_to_tree:
 		post_init()
 
@@ -117,6 +122,10 @@ func post_init():
 		dock_instance(int(dock_target))
 	else:
 		undock_instance()
+
+func _set_editor_settings():
+	var ed_settings = EditorInterface.get_editor_settings()
+	dock_tab_style = ed_settings.get_setting(EditorSet.DOCK_TAB_STYLE)
 
 func set_default_window_size(size:Vector2i):
 	_default_window_size = size
@@ -220,6 +229,7 @@ func dock_instance(target_dock:int):
 	_remove_control_from_parent()
 	if target_dock > -1:
 		plugin.add_control_to_dock(target_dock, plugin_control)
+		_set_dock_tab_style()
 	elif target_dock == -1:
 		var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
 		panel_wrapper.name = plugin_control.name
@@ -288,6 +298,33 @@ func on_plugin_make_visible(visible:bool):
 	main_screen_handler.on_plugin_make_visible(visible)
 	pass
 
+func _get_plugin_icon():
+	if not external_main_screen_flag:
+		if plugin.has_method("_get_plugin_icon"):
+			return plugin._get_plugin_icon()
+	if "icon" in plugin_control:
+		return plugin_control.get("icon")
+	elif "plugin_icon" in plugin_control:
+		return plugin_control.get("plugin_icon")
+	return null
+
+func _set_dock_tab_style():
+	var dock = Docks.get_current_dock_control(plugin_control) as TabContainer
+	var idx = dock.get_tab_idx_from_control(plugin_control)
+	var plugin_name = plugin_control.name
+	if not external_main_screen_flag:
+		plugin_name = plugin._get_plugin_name()
+	var icon = _get_plugin_icon()
+	if dock_tab_style == 0 or icon == null: #^ text
+		dock.set_tab_title(idx, plugin_name)
+		dock.set_tab_icon(idx, null)
+	elif dock_tab_style == 1: #^ icon
+		dock.set_tab_title(idx, "")
+		dock.set_tab_icon(idx, icon)
+	elif dock_tab_style == 2: #^ text and icon
+		dock.set_tab_title(idx, plugin_name)
+		dock.set_tab_icon(idx, icon)
+
 static func clean_dock_manager_array(dock_manager_instances:Array):
 	var invalid_positions = []
 	for i in range(dock_manager_instances.size()):
@@ -317,3 +354,6 @@ class PanelWrapper extends PanelContainer:
 			panel_sb.content_margin_right = 4
 		
 		add_theme_stylebox_override("panel", panel_sb)
+
+class EditorSet:
+	const DOCK_TAB_STYLE = &"interface/editor/dock_tab_style"

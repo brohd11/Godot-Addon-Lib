@@ -15,35 +15,38 @@ var mouse_helper :MouseHelper
 
 signal item_pressed_parsed_menu_path(menu_path)
 signal item_pressed_parsed(id_text)
-signal item_pressed(id, popup)
+signal item_pressed(id, _popup)
 
-func _parse_item_clicked(id, popup:PopupMenu):
-	item_pressed.emit(id,popup)
-	item_pressed_parsed.emit(parse_id_text(id, popup))
-	item_pressed_parsed_menu_path.emit(parse_menu_path(id, popup))
+func _parse_item_clicked(id, _popup:PopupMenu):
+	item_pressed.emit(id,_popup)
+	item_pressed_parsed.emit(parse_id_text(id, _popup))
+	item_pressed_parsed_menu_path.emit(parse_menu_path(id, _popup))
 
-static func parse_id_text(id, popup:PopupMenu):
-	var index = popup.get_item_index(id)
-	return popup.get_item_text(index)
+static func parse_id_text(id, _popup:PopupMenu):
+	var index = _popup.get_item_index(id)
+	return _popup.get_item_text(index)
 
-static func parse_menu_path(id:int, popup:PopupMenu):
-	var metadata = get_metadata(id, popup)
+static func parse_metadata(id:int, _popup:PopupMenu):
+	return get_metadata(id, _popup)
+
+static func parse_menu_path(id:int, _popup:PopupMenu):
+	var metadata = get_metadata(id, _popup)
 	return metadata.get("menu_path")
 
-static func parse_callable(id, popup, dict, callable_key=ParamKeys.CALLABLE_KEY):
-	var menu_path = parse_menu_path(id, popup)
+static func parse_callable(id, _popup, dict, callable_key=ParamKeys.CALLABLE_KEY):
+	var menu_path = parse_menu_path(id, _popup)
 	var data = dict.get(menu_path, {})
 	var callable = data.get(callable_key)
 	if callable:
 		callable.call()
 
-static func get_metadata(id, popup:PopupMenu):
-	var index = popup.get_item_index(id)
-	return popup.get_item_metadata(index)
+static func get_metadata(id:int, _popup:PopupMenu):
+	var index = _popup.get_item_index(id)
+	return _popup.get_item_metadata(index)
 
-static func set_popup_description(popup:PopupMenu, id:int, text:String):
-	var index = popup.get_item_index(id)
-	popup.set_item_metadata(index, {"description": text})
+static func set_popup_description(_popup:PopupMenu, id:int, text:String):
+	var index = _popup.get_item_index(id)
+	_popup.set_item_metadata(index, {"description": text})
 
 func _init(path_dict=null, mouse_signal_node=null, base_id=-1) -> void:
 	if path_dict == null:
@@ -59,26 +62,26 @@ func parse_dict(path_dict, mouse_signal_node, base_id=-1, extra_args=[]):
 	_parse_dict(path_dict, self, _parse_item_clicked, popup_items_dict, base_id, extra_args)
 	connect_mouse_signals(popup_items_dict, mouse_signal_node)
 
-# use static func to process an existing popup
-static func parse_dict_static(path_dict, popup, callable,  mouse_signal_node=null, base_id=-1, extra_args=[]):
+# use static func to process an existing _popup
+static func parse_dict_static(path_dict, _popup, callable,  mouse_signal_node=null, base_id=-1, extra_args=[]):
 	var item_dict = {}
-	_parse_dict(path_dict, popup, callable ,item_dict, base_id, extra_args)
+	_parse_dict(path_dict, _popup, callable ,item_dict, base_id, extra_args)
 	connect_mouse_signals(item_dict, mouse_signal_node)
 
 
-static func _parse_dict(path_dict, popup:PopupMenu, callable:Callable, item_dict, base_id=-1, extra_args=[]):
-	if not popup.id_pressed.is_connected(callable):
+static func _parse_dict(path_dict, _popup:PopupMenu, callable:Callable, item_dict, base_id=-1, extra_args=[]):
+	if not _popup.id_pressed.is_connected(callable):
 		if extra_args.is_empty():
-			popup.id_pressed.connect(callable.bind(popup))
+			_popup.id_pressed.connect(callable.bind(_popup))
 		else:
-			popup.id_pressed.connect(callable.bindv(extra_args).bind(popup))
-	item_dict["ZZ_ROOT_POPUP_MENU_ZZ"] = popup # adds popup to dict to include in connect_signals
+			_popup.id_pressed.connect(callable.bindv(extra_args).bind(_popup))
+	item_dict["ZZ_ROOT_POPUP_MENU_ZZ"] = _popup # adds _popup to dict to include in connect_signals
 	var current_id = base_id
 	for key in path_dict:
 		var menu_path = key
 		var data = path_dict.get(key, {})
 		
-		var params = PopupMenuPathParams.new(menu_path, popup, callable, item_dict, data)
+		var params = PopupMenuPathParams.new(menu_path, _popup, callable, item_dict, data)
 		_parse_popup_menu_path(params, current_id, extra_args)
 		
 		if base_id != -1:
@@ -88,11 +91,11 @@ static func _parse_dict(path_dict, popup:PopupMenu, callable:Callable, item_dict
 static func connect_mouse_signals(item_dict, mouse_signal_node):
 	if not mouse_signal_node:
 		return
-	for popup:PopupMenu in item_dict.values():
-		if not popup.mouse_entered.is_connected(mouse_signal_node._on_mouse_entered):
-			popup.mouse_entered.connect(mouse_signal_node._on_mouse_entered)
-		if not popup.mouse_exited.is_connected(mouse_signal_node._on_mouse_exited):
-			popup.mouse_exited.connect(mouse_signal_node._on_mouse_exited)
+	for _popup:PopupMenu in item_dict.values():
+		if not _popup.mouse_entered.is_connected(mouse_signal_node._on_mouse_entered):
+			_popup.mouse_entered.connect(mouse_signal_node._on_mouse_entered)
+		if not _popup.mouse_exited.is_connected(mouse_signal_node._on_mouse_exited):
+			_popup.mouse_exited.connect(mouse_signal_node._on_mouse_exited)
 
 
 static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, current_id, extra_args=[]):
@@ -160,19 +163,19 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 	
 	return parent_popup
 
-static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id, submenu_node:PopupMenu=null):
+static func _create_popup_item(_popup:PopupMenu, text, tool_tip, icon, color, id, submenu_node:PopupMenu=null):
 	if submenu_node:
-		popup.add_submenu_node_item(text, submenu_node)
-		var popup_index = popup.item_count - 1
+		_popup.add_submenu_node_item(text, submenu_node)
+		var popup_index = _popup.item_count - 1
 		if icon:
 			if icon is String:
 				icon = _get_icon(icon)
-			popup.set_item_icon(popup_index, icon)
+			_popup.set_item_icon(popup_index, icon)
 			if color:
-				popup.set_item_icon_modulate(popup_index, color)
+				_popup.set_item_icon_modulate(popup_index, color)
 		if tool_tip:
-			popup.set_item_metadata(popup_index, {"description":tool_tip})
-			#popup.set_item_tooltip(popup_index, tool_tip) # this doesn't seem to work
+			_popup.set_item_metadata(popup_index, {"description":tool_tip})
+			#_popup.set_item_tooltip(popup_index, tool_tip) # this doesn't seem to work
 	else:
 		if icon:
 			if icon is String:
@@ -182,23 +185,23 @@ static func _create_popup_item(popup:PopupMenu, text, tool_tip, icon, color, id,
 				print("RESIZE")
 				var icon_size = 16 * EditorInterface.get_editor_scale()
 				icon = UResource.resize_texture(icon, icon_size)
-			popup.add_icon_item(icon, text, id)
-			var popup_index = popup.item_count - 1
+			_popup.add_icon_item(icon, text, id)
+			var popup_index = _popup.item_count - 1
 			if color:
-				popup.set_item_icon_modulate(popup_index, color)
+				_popup.set_item_icon_modulate(popup_index, color)
 			#if tool_tip:
-				#popup.set_item_tooltip(popup_index, tool_tip)
+				#_popup.set_item_tooltip(popup_index, tool_tip)
 		else:
-			popup.add_item(text, id)
+			_popup.add_item(text, id)
 		#if tool_tip:
-			#var popup_index = popup.item_count - 1
-			#popup.set_item_tooltip(popup_index, tool_tip)
+			#var popup_index = _popup.item_count - 1
+			#_popup.set_item_tooltip(popup_index, tool_tip)
 
 static func test():
 	print(EditorInterface.get_editor_theme().get_constant_list("Popup"))
 
-static func _on_popup_hide(popup): # if no mouse signal node, free popup
-	popup.queue_free()
+static func _on_popup_hide(_popup): # if no mouse signal node, free _popup
+	_popup.queue_free()
 
 class ParamKeys:
 	const ICON_KEY = "ICON_KEY"
@@ -319,17 +322,17 @@ class MouseHelper:
 			if is_instance_valid(timer):
 				timer.queue_free()
 
-static func create_popup_items_dict(popup:PopupMenu):
+static func create_popup_items_dict(_popup:PopupMenu):
 	var dict = {}
-	_create_popup_items_dict(popup, dict)
+	_create_popup_items_dict(_popup, dict)
 	return dict
 
-static func _create_popup_items_dict(popup:PopupMenu, dict:Dictionary, path=""):
-	for i in range(popup.item_count):
-		var submenu = popup.get_item_submenu_node(i)
+static func _create_popup_items_dict(_popup:PopupMenu, dict:Dictionary, path=""):
+	for i in range(_popup.item_count):
+		var submenu = _popup.get_item_submenu_node(i)
 		if not is_instance_valid(submenu):
 			continue
-		var text = popup.get_item_text(i)
+		var text = _popup.get_item_text(i)
 		var popup_path = text
 		if path != "":
 			popup_path = path.path_join(text)
@@ -337,24 +340,24 @@ static func _create_popup_items_dict(popup:PopupMenu, dict:Dictionary, path=""):
 		_create_popup_items_dict(submenu, dict, popup_path)
 
 
-static func add_single_item(popup:PopupMenu, popup_path:String, popup_data:Dictionary, popup_items_dict:Dictionary):
+static func add_single_item(_popup:PopupMenu, popup_path:String, popup_data:Dictionary, popup_items_dict:Dictionary):
 	var path_count = popup_path.count("/")
 	var callable = popup_data.get(ParamKeys.CALLABLE_KEY)
 	var id = popup_data.get("id", -1)
 	
-	var popup_params = PopupMenuPathParams.new(popup_path, popup, callable, popup_items_dict, popup_data)
+	var popup_params = PopupMenuPathParams.new(popup_path, _popup, callable, popup_items_dict, popup_data)
 	return _parse_popup_menu_path(popup_params, id)
 
-static func set_popup_position(popup:PopupMenu, offset:=Vector2i.ZERO):
+static func set_popup_position(_popup:PopupMenu, offset:=Vector2i.ZERO):
 	offset = offset * EditorInterface.get_editor_scale()
-	popup.position = DisplayServer.mouse_get_position() - offset
+	_popup.position = DisplayServer.mouse_get_position() - offset
 
 static func _get_icon(icon_name:String, theme_type:String="EditorIcons"):
 	return EditorInterface.get_editor_theme().get_icon(icon_name, theme_type)
 
 ### EXAMPLE
-#func _menu_pressed(btn_id:int, popup:PopupMenu):   # example func for static parse
-	#var layout_name = popup.get_item_text(btn_id)  # popup will be binded to the signal
+#func _menu_pressed(btn_id:int, _popup:PopupMenu):   # example func for static parse
+	#var layout_name = _popup.get_item_text(btn_id)  # _popup will be bound to the signal
 	#_add_browser_window(layout_name)
 
 #var items_dict = {        # example for parse dict.  Note path seperated by '/'.
