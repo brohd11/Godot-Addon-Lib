@@ -89,4 +89,5 @@ func remove_main_screen_control(control):
 
 func on_plugin_make_visible(visible):
 	await get_tree().process_frame
-	plugin_control.visible = visible
+	if is_instance_valid(plugin_control):
+		plugin_control.visible = visible
