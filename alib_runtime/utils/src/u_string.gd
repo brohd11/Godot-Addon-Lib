@@ -356,6 +356,105 @@ class StringMap:
 				printerr("Unclosed opening bracket at index ", bracket_stack.front())
 			has_errors = true
 
+static func get_string_map_multi_line(text:String, _mode:=StringMapMultiLine.Mode.FULL, print_err:=false) -> StringMapMultiLine:
+	return StringMapMultiLine.new(text, _mode, print_err)
+
+class StringMapMultiLine:
+	const BRACKETS = { "(": ")", "[": "]", "{": "}" }
+	enum Mode {
+		FULL,
+		STRING,
+	}
+	## Copy of text that was parsed.
+	var string:String
+	## A mask where 1 means "inside a string" and 0 means "outside".
+	var string_mask: PackedByteArray
+	## A dictionary mapping a quote's index to its matching partner's index.
+	var quote_map: Dictionary
+	## A dictionary mapping each bracket's index to the index of its matching partner.
+	var bracket_map: Dictionary
+	## A flag to indicate if any parsing errors (like mismatched brackets) occurred.
+	var has_errors: bool = false
+	## Select full scan or only string mask
+	var mode:Mode
+	##
+	var comment_mask:PackedByteArray
+	
+	
+	
+	
+	func _init(text:String, _mode:Mode=Mode.FULL, print_err:=false) -> void:
+		string = text
+		mode = _mode
+		_parse(text)
+		
+	
+	func _parse(text: String, print_err:=false):
+		var text_length = text.length()
+		string_mask.resize(text_length)
+		comment_mask.resize(text_length)
+		
+		var bracket_values = BRACKETS.values()
+		var bracket_stack = []
+		var in_comment = false
+		var in_string = false
+		var quote_char = ""
+		var string_start_index = -1
+		
+		var i = -1 # for easy indexing
+		while i + 1 < text_length:
+			i += 1
+			var char = text[i]
+			if in_comment:
+				if char == "\n":
+					in_comment = false
+					#comment_mask[i] = 0
+				else:
+					comment_mask[i] = 1
+			elif in_string:
+				string_mask[i] = 1
+				if char == "\\":
+					if i + 1 < text_length:
+						string_mask[i + 1] = 1
+					i += 1
+				elif char == quote_char:
+					in_string = false
+					quote_map[string_start_index] = i
+					quote_map[i] = string_start_index
+			else: # not in_string
+				if char == '"' or char == "'":
+					in_string = true
+					quote_char = char
+					string_start_index = i
+					string_mask[i] = 1
+				elif char == "#":
+					in_comment = true
+					comment_mask[i] = 1
+				elif mode == Mode.FULL:
+					if char in BRACKETS:
+						bracket_stack.push_back(i)
+					elif char in bracket_values:# bracket closing
+						if bracket_stack.is_empty():
+							has_errors = true
+							break
+						var open_idx = bracket_stack.pop_back()
+						if BRACKETS[text[open_idx]] == char:
+							bracket_map[open_idx] = i
+							bracket_map[i] = open_idx
+						else:
+							has_errors = true
+							break
+		
+		# after loop
+		if in_string:
+			if print_err:
+				printerr("Unterminated string starting at index ", string_start_index)
+			has_errors = true
+		if not bracket_stack.is_empty():
+			if print_err:
+				printerr("Unclosed opening bracket at index ", bracket_stack.front())
+			has_errors = true
+
 
 
 static func run_test():

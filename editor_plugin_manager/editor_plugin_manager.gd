@@ -206,9 +206,11 @@ func _get_plugin_script(path) -> Array:
 		path = script.resource_path
 	elif path is String:
 		if not FileAccess.file_exists(path):
-			path = UFile.get_plugin_exported_path(path, false, PLUGIN_EXPORTED)
-			if path == "":
-				return []
+			# check for relative path?
+			return []
+			#path = UFile.get_plugin_exported_path(path, false, PLUGIN_EXPORTED)
+			#if path == "":
+				#return []
 		
 		script = load(path)
 	return [path, script]

@@ -124,11 +124,6 @@ static func sort_file_paths_dirs_first(a: String, b: String) -> int:
 	else:
 		return a < b  # Sort alphabetically if both are files or both are directories
 
-static func write_to_json_exported(data:Variant, path:String, export_flag, access=FileAccess.WRITE_READ):
-	if export_flag:
-		path = path_from_relative(path, true)
-	
-	write_to_json(data, path, access)
 
 static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> void:
 	if not DirAccess.dir_exists_absolute(path.get_base_dir()):
@@ -139,9 +134,6 @@ static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> v
 
 
 static func read_from_json(path:String,access=FileAccess.READ) -> Dictionary:
-	if not FileAccess.file_exists(path):
-		path = path_from_relative(path)
-	
 	var json_read = JSON.new()
 	var json_load = FileAccess.open(path, access)
 	if json_load == null:
@@ -266,29 +258,36 @@ static func get_relative_path(from_path: String, to_path: String) -> String:
 		final_string = "/".join(relative_parts)
 		return final_string
 
-static func path_from_relative(path_or_name:String, new_file:=false, print_err:=true) -> String: # DEPRECATED
-	return get_plugin_exported_path(path_or_name, new_file, print_err)
+static func path_from_relative(path:String, current_file_path:String) -> String:
+	if path.is_absolute_path():
+		return path
+	var current_dir = current_file_path.get_base_dir()
+	var full_path = current_dir.path_join(path)
+	var simplified = full_path.simplify_path()
+	if not simplified.is_absolute_path():
+		printerr("UFile - path_to_relative: Could not simplify path: %s -> %s" % [path, current_file_path])
+	return simplified
 
 static func get_plugin_exported_path(path_or_name:String, new_file:=false, print_err:=true) -> String:
 	print("File doesn't exists, attempted to find %s. THIS METHOD IS DEPRECATED YOU SHOULD NOT SEE THIS" % path_or_name)
 	return ""
-	var script_dir = _get_script_dir()
-	var file_name = path_or_name.get_file()
-	var script_rel_path = script_dir.path_join(file_name)
-	var new_path = ""
-	if new_file:
-		return script_rel_path
-	else:
-		if FileAccess.file_exists(path_or_name):
-			new_path = path_or_name
-		else:
-			if FileAccess.file_exists(script_rel_path):
-				new_path = script_rel_path
-			else:
-				if print_err:
-					print("File doesn't exists, attempted to find %s %s" % [path_or_name, script_rel_path])
-	
-	return new_path
+	#var script_dir = _get_script_dir()
+	#var file_name = path_or_name.get_file()
+	#var script_rel_path = script_dir.path_join(file_name)
+	#var new_path = ""
+	#if new_file:
+		#return script_rel_path
+	#else:
+		#if FileAccess.file_exists(path_or_name):
+			#new_path = path_or_name
+		#else:
+			#if FileAccess.file_exists(script_rel_path):
+				#new_path = script_rel_path
+			#else:
+				#if print_err:
+					#print("File doesn't exists, attempted to find %s %s" % [path_or_name, script_rel_path])
+	#
+	#return new_path
 
 static func relative_file_exists(path_or_name:String) -> bool: # DEPRECATED
 	return plugin_exported_file_exists(path_or_name)
