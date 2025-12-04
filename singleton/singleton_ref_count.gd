@@ -36,8 +36,9 @@ func _init(node):
 
 
 ## Implement in extended classes
+# Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 #static func register_node(node:Node):
-	#pass _register(SCRIPT, node) # pass the preloaded script of self
+	#pass _register(PE_STRIP_CAST_SCRIPT, node) # pass the preloaded script of self
 
 #static func unregister_node(node:Node):
-	#_unregister(SCRIPT, node) # pass the preloaded script of self
+	#_unregister(PE_STRIP_CAST_SCRIPT, node) # pass the preloaded script of self

@@ -2,16 +2,16 @@ class_name ScriptEditorRef
 extends Singleton.Base
 ## Singleton for accessing script editor nodes and signals. Manages the signals for the current script editor.
 
-const SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/script_editor_ref/script_editor_ref.gd")
+const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/script_editor_ref/script_editor_ref.gd")
 
 static func get_singleton_name() -> String:
 	return "ScriptEditorRef"
 
 static func get_instance() -> ScriptEditorRef:
-	return _get_instance(SCRIPT)
+	return _get_instance(PE_STRIP_CAST_SCRIPT)
 
 static func call_on_ready(callable:Callable):
-	_call_on_ready(SCRIPT, callable)
+	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable)
 
 enum Event{
 	EDITOR_SCRIPT_CHANGED, # some com
