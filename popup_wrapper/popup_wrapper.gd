@@ -339,7 +339,7 @@ static func _context_plugin_submenu_pressed(id, popup, popup_args, callable):
 static func _on_wrapper_pressed(id:int, wrapper_popup:PopupMenu, fs_popup:PopupMenu):
 	if id >= 5000:
 		return
-	print("POPUP WRAPPER PRESSED")
+	#print("POPUP WRAPPER PRESSED")
 	fs_popup.id_pressed.emit(id)
 
 static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, post_dict):
