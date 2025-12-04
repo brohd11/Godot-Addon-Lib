@@ -141,7 +141,7 @@ static func _get_latest_version(script:Script, dir_to_check:String="res://addons
 	
 	var candidates = []
 	for dir in directories:
-		var module_file_path = dir_to_check.path_join(dir).path_join(".export_data.json")
+		var module_file_path = dir_to_check.path_join(dir).path_join(".export_data")
 		if not FileAccess.file_exists(module_file_path):
 			continue
 		var module_data = UFile.read_from_json(module_file_path)
@@ -150,9 +150,7 @@ static func _get_latest_version(script:Script, dir_to_check:String="res://addons
 			var _name = single_module_data.get("name", "")
 			if not _name == singleton_name:
 				continue
-			
-			var singleton_data = single_module_data.get(singleton_name)
-			candidates.append(singleton_data)
+			candidates.append(single_module_data)
 			break
 	
 	if candidates.is_empty():
