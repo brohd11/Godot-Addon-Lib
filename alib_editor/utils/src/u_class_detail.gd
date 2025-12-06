@@ -10,6 +10,8 @@ enum IncludeInheritance{
 	
 }
 
+const _PROP_USAGE_FLAGS = PROPERTY_USAGE_GROUP | PROPERTY_USAGE_SUBGROUP | PROPERTY_USAGE_CATEGORY | PROPERTY_USAGE_INTERNAL
+
 const _MEMBER_ARGS = ["signal", "property", "method", "enum", "const"]
 const _INVALID_DATA = "__INVALID_DATA__"
 
@@ -95,6 +97,12 @@ static func _recur_get_class_members(script:Script, desired_members:=_MEMBER_ARG
 			var class_properties = ClassDB.class_get_property_list(instance_type)
 			for data in class_properties:
 				var name = data.get("name")
+				var usage = data.get("usage")
+				if usage & _PROP_USAGE_FLAGS:
+					continue
+				if name.is_empty():
+					printerr("PROPERTY NM IS BLANK: ", data)
+					continue
 				members_dict[name] = data
 		if "method" in desired_members:
 			var class_methods = ClassDB.class_get_method_list(instance_type)
@@ -219,6 +227,11 @@ static func _get_script_members(script:Script, desired_members:=_MEMBER_ARGS):
 		var script_property_list = script.get_script_property_list()
 		for data in script_property_list:
 			var name = data.get("name")
+			var usage = data.get("usage")
+			if usage & _PROP_USAGE_FLAGS:
+				continue
+			if name.is_empty():
+				continue
 			members_dict[name] = data
 	if "const" in desired_members:
 		var const_dict = script.get_script_constant_map()
