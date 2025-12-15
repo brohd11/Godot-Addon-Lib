@@ -16,6 +16,7 @@ const CANCEL_STRING = "CANCEL_STRING"
 @onready var right_br: Button = %RightBR
 @onready var make_floating_button: Button = %MakeFloatingButton
 @onready var free_instance_button: Button = %FreeInstanceButton
+@onready var reload_scene_button: Button = %ReloadSceneButton
 
 var timer:Timer
 var _mouse_in_panel := true
@@ -47,10 +48,12 @@ func _ready() -> void:
 	
 	make_floating_button.pressed.connect(_button_pressed.bind(-3))
 	free_instance_button.pressed.connect(_button_pressed.bind(20))
+	reload_scene_button.pressed.connect(_button_pressed.bind(30))
 	
 	if not is_part_of_edited_scene():
 		make_floating_button.icon = EditorInterface.get_editor_theme().get_icon("MakeFloating", &"EditorIcons")
 		free_instance_button.icon = EditorInterface.get_editor_theme().get_icon("Clear", &"EditorIcons")
+		reload_scene_button.icon = EditorInterface.get_editor_theme().get_icon("Reload", &"EditorIcons")
 		
 		var editor_scale = EditorInterface.get_editor_scale()
 		size = size * editor_scale
@@ -66,6 +69,10 @@ func hide_make_floating():
 func can_be_freed():
 	size.y = size.y + free_instance_button.size.y
 	free_instance_button.show()
+
+func allow_reload():
+	size.y = size.y + reload_scene_button.size.y
+	reload_scene_button.show()
 
 func _button_pressed(chosen):
 	option_chosen = true

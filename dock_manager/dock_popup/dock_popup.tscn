@@ -178,3 +178,9 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 text = "Free Instance"
+
+[node name="ReloadSceneButton" type="Button" parent="Control/MarginContainer/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+text = "Reload"

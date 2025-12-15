@@ -31,13 +31,14 @@ var plugin_control:Control
 var dock_button:Button
 var default_dock:int
 var last_dock:int
-var can_be_freed:bool
+var can_be_freed:bool = false
 
 var plugin_has_main:bool = false
 var window_title:String = ""
 var empty_panel:bool = false
 var _default_window_size:= Vector2i(1200,800)
 var save_layout:bool = true
+var allow_scene_reload:bool = false
 
 var dock_id:= -1
 var dock_id_key:
@@ -112,7 +113,7 @@ static func get_layout_file_dir(_plugin:EditorPlugin):
 
 
 func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, 
-_can_be_freed:=false, _main_screen_handler=null, _add_to_tree:=true) -> void:
+	_main_screen_handler=null, _add_to_tree:=true) -> void:
 	plugin = _plugin
 	if _control is Control:
 		plugin_control = _control
@@ -128,7 +129,6 @@ _can_be_freed:=false, _main_screen_handler=null, _add_to_tree:=true) -> void:
 	if default_dock == -1 and not plugin_has_main:
 		default_dock = -2 # if cant handle main, set to bottom panel
 	last_dock = default_dock
-	can_be_freed = _can_be_freed
 	
 	if _main_screen_handler != null:
 		main_screen_handler = _main_screen_handler
@@ -227,6 +227,25 @@ func clean_up():
 	plugin_control.queue_free()
 	queue_free()
 
+func reload_control():
+	save_layout_data() # saves before reloading
+	
+	var scene_path = plugin_control.scene_file_path
+	if not FileAccess.file_exists(scene_path):
+		printerr("Scene doesn't exist: %s" % scene_path)
+		return
+	
+	_remove_control_from_parent()
+	plugin_control.queue_free()
+	if main_screen_handler is MainScreenHandler:
+		main_screen_handler.queue_free()
+		main_screen_handler = null
+	var packed:PackedScene = load(scene_path)
+	plugin_control = packed.instantiate()
+	
+	await plugin.get_tree().process_frame
+	add_to_tree()
+
 func free_instance():
 	clean_up()
 	_erase_dock_from_data()
@@ -263,6 +282,8 @@ func save_layout_data():
 		scene_data[Keys.TYPE] = Keys.FREEABLE
 	else:
 		scene_data[Keys.TYPE] = Keys.PERSISTENT
+	if allow_scene_reload:
+		scene_data[Keys.ALLOW_RELOAD] = true
 	
 	if plugin_control.has_method(GET_DOCK_DATA):
 		scene_data[Keys.DOCK_DATA] = plugin_control.call(GET_DOCK_DATA)
@@ -282,6 +303,8 @@ func _on_dock_button_pressed():
 		dock_popup_handler.can_be_freed()
 	if not plugin_has_main:
 		dock_popup_handler.disable_main_screen()
+	if allow_scene_reload:
+		dock_popup_handler.allow_reload()
 	
 	var handled = await dock_popup_handler.handled
 	if handled is String:
@@ -298,6 +321,9 @@ func _on_dock_button_pressed():
 	if handled == 20:
 		free_requested.emit(self)
 		free_instance.call_deferred()
+	elif handled == 30:
+		reload_control()
+		return
 		
 	
 	elif handled == _slot.get(Slot.FLOATING):
@@ -475,7 +501,11 @@ class InstanceManager:
 			var current_dock = data.get(Keys.CURRENT_DOCK)
 			var path = data.get(Keys.SCENE_PATH)
 			var scn = load(path)
-			var ins = DockManager.new(_plugin, scn, current_dock, true, _msh, false)
+			var ins = DockManager.new(_plugin, scn, current_dock, _msh, false)
+			ins.can_be_freed = true
+			var allow_reload = data.get(Keys.ALLOW_RELOAD, false)
+			if allow_reload:
+				ins.allow_scene_reload = true
 			ins.dock_id = id_int
 			ins.add_to_tree()
 			instances.append(ins)
@@ -495,7 +525,8 @@ class InstanceManager:
 					print("Scene already instanced: ", scene.resource_path)
 					return
 		
-		var ins = DockManager.new(_plugin,scene, slot, _can_be_freed, _msh, false)
+		var ins = DockManager.new(_plugin,scene, slot, _msh, false)
+		ins.can_be_freed = _can_be_freed
 		var id = _get_dock_data(scene, _can_be_freed)
 		if id > -1:
 			ins.dock_id = id
@@ -567,6 +598,7 @@ class Keys:
 	const TYPE = "type"
 	const FREEABLE = "freeable"
 	const PERSISTENT = "persistent"
+	const ALLOW_RELOAD = "allow_reload"
 	const SCENE_PATH = "scene_path"
 	const CURRENT_DOCK = "current_dock"
 	const DOCK_DATA = "dock_data"

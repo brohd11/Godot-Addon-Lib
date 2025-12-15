@@ -33,5 +33,8 @@ func disable_main_screen():
 func can_be_freed():
 	dock_popup.can_be_freed()
 
+func allow_reload():
+	dock_popup.allow_reload()
+
 func _on_handled(arg):
 	handled.emit(arg)
