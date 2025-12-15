@@ -48,6 +48,16 @@ static func disconnect_signal(callable:Callable, _signal:Signal):
 	if _signal.is_connected(callable):
 		_signal.disconnect(callable)
 
+static func make_scene_local(node:Node):
+	if node.scene_file_path == "":
+		return
+	var editor_interface = Engine.get_singleton("EditorInterface")
+	if not is_instance_valid(editor_interface):
+		return
+	var edited_scene_root = editor_interface.get_edited_scene_root()
+	node.scene_file_path = ""
+	recursive_set_owner(node, node, edited_scene_root)
+
 
 static func has_static_method_compat(method:String, script:Script) -> bool:
 	if BACKPORTED >= 4:

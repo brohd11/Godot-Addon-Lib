@@ -262,11 +262,8 @@ static func _get_name_and_type_from_line(declaration:String):
 
 
 
-
-
 static func get_string_map(text:String, _mode:StringMap.Mode=StringMap.Mode.FULL, print_err:=false) -> StringMap:
 	return StringMap.new(text, _mode, print_err)
-
 
 class StringMap:
 	const BRACKETS = { "(": ")", "[": "]", "{": "}" }
@@ -381,13 +378,10 @@ class StringMapMultiLine:
 	var comment_mask:PackedByteArray
 	
 	
-	
-	
 	func _init(text:String, _mode:Mode=Mode.FULL, print_err:=false) -> void:
 		string = text
 		mode = _mode
 		_parse(text)
-		
 	
 	func _parse(text: String, print_err:=false):
 		var text_length = text.length()
@@ -464,23 +458,6 @@ class StringMapMultiLine:
 	
 	func get_comment_index(from:int=0):
 		return comment_mask.find(1, from)
-		
-		#var new_line_i = string.find("\n", from)
-		#if new_line_i == -1:
-			#new_line_i = string.length() - 1
-		#var comment_i = string.find("#", from)
-		#if new_line_i < comment_i:
-			#return -1
-		#while comment_i != -1:
-			#if string_mask[comment_i] == 0:
-				#break
-			#comment_i = string.find("#", comment_i + 1)
-			#if comment_i > new_line_i or comment_i == -1:
-				#return -1
-		#
-		#if new_line_i > comment_i or new_line_i == -1:
-			#return comment_i
-		#return -1
 	
 	func get_line_at_index(index:int):
 		var beginning_new_line_i = string.rfind("\n", index)
@@ -490,7 +467,6 @@ class StringMapMultiLine:
 		if end_new_line_i == -1:
 			end_new_line_i = string.length() - 1
 		return string.substr(beginning_new_line_i, end_new_line_i - beginning_new_line_i)
-		
 
 
 

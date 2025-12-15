@@ -282,8 +282,11 @@ class MouseHelper:
 		
 		if selected_node is PopupMenu:
 			selected_node.popup_hide.connect(stop_timer)
-			if BACKPORTED >= 4:
-				timer_elapsed.connect(hide_popup)
+			if callable == null:
+				if BACKPORTED >= 4:
+					timer_elapsed.connect(hide_popup)
+			else:
+				timer_elapsed.connect(callable)
 		else:
 			if not callable:
 				print("No callable set for Popup Mouse Helper.")
@@ -377,3 +380,5 @@ static func _get_icon(icon_name:String, theme_type:String="EditorIcons"):
 		#option_keys.callable_key: on_layout_button_pressed,
 		#}
 	#}
+
+	

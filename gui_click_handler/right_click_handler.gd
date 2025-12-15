@@ -9,6 +9,8 @@ const MouseHelper = PopupHelper.MouseHelper
 var popup:PopupMenu
 var mouse_helper:MouseHelper
 
+var hide_popup_with_timer:bool = false
+
 var _custom_id_pressed_callable:Callable
 
 var _click_debounce_timer:float = 0
@@ -21,7 +23,7 @@ func _ready() -> void:
 	popup.wrap_controls = true
 	popup.submenu_popup_delay = 0
 	_set_popup_parent()
-	mouse_helper = MouseHelper.new(popup)
+	mouse_helper = MouseHelper.new(popup, _on_mouse_helper_timeout)
 	
 	popup.popup_hide.connect(_on_popup_hide)
 
@@ -54,6 +56,10 @@ func _popup_id_pressed(id:int, _popup:PopupMenu):
 	if callable is Callable:
 		callable.call()
 
+
+func _on_mouse_helper_timeout():
+	if hide_popup_with_timer:
+		_hide_popup()
 
 func _hide_popup():
 	popup.hide()

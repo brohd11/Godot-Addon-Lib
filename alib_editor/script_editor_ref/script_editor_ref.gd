@@ -13,8 +13,8 @@ static func get_instance() -> ScriptEditorRef:
 static func call_on_ready(callable:Callable):
 	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable)
 
-enum Event{
-	EDITOR_SCRIPT_CHANGED, # some com
+enum Event {
+	EDITOR_SCRIPT_CHANGED,
 	VALIDATE_SCRIPT,
 	CODE_COMPLETION_REQUESTED,
 	TEXT_CHANGED,
