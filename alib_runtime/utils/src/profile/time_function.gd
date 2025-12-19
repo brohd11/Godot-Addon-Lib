@@ -77,3 +77,9 @@ func run_callable():
 	start()
 	await callable.call()
 	stop()
+
+static func time_func(_callable:Callable, message:="", unit:TimeScale=TimeScale.USEC):
+	var t = new(message, unit)
+	var res = _callable.call()
+	t.stop()
+	return res

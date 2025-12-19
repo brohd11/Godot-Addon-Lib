@@ -28,6 +28,9 @@ static func set_menu_button_to_editor_theme(menu_button:MenuButton):
 		menu_button.add_theme_stylebox_override(o, b.get_theme_stylebox(o))
 	b.queue_free()
 
+static func button_set_main_screen_theme_var(button:Button):
+	button.theme_type_variation = &"MainScreenButton"
+
 static func get_size_of_control_type(type):
 	var ins = type.new()
 	EditorInterface.get_base_control().add_child(ins)

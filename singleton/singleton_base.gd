@@ -22,19 +22,12 @@ static func _get_singleton_node_path() -> String: # <t> will check if node is of
 static func _get_singleton_type() -> SingletonType:
 	return SingletonType.STANDARD
 
-#static func instance_valid():
-	#return false
-
 static func _instance_valid(script:Script) -> bool:
 	var root = Engine.get_main_loop().root
 	var instance = _get_singleton_node_or_null(script, script._get_singleton_node_path(), false)
 	if is_instance_valid(instance):
 		return true
 	return false
-
-
-#static func get_instance():
-	#pass
 
 static func _get_instance(script:Script) -> Node:
 	var root = Engine.get_main_loop().root
@@ -181,3 +174,29 @@ func _get_ready_bool() -> bool:
 func _init(node:Node=null):
 	
 	pass
+
+
+## Implement in extended classes
+
+# Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
+#const PE_STRIP_CAST_SCRIPT = preload("this_file")
+#static func get_singleton_name() -> String:
+	#return "MySingleton"
+#
+#static func get_instance() -> SyntaxPlus:
+	#return _get_instance(PE_STRIP_CAST_SCRIPT)
+#
+#static func instance_valid() -> bool:
+	#return _instance_valid(PE_STRIP_CAST_SCRIPT)
+#
+#static func call_on_ready(callable, print_err:bool=true):
+	#_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
+
+#func _init(node):
+	#pass
+#
+#func _all_unregistered_callback():
+	#pass
+
+#func _get_ready_bool() -> bool:
+	#return is_node_ready()

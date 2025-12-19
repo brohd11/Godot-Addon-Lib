@@ -127,8 +127,12 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 		var slice = popup_menu_path.get_slice("/", i)
 		working_menu_path = working_menu_path.path_join(slice)
 		if  i == slice_count - 1: # THIS IS THE CLICKABLE
-			if working_menu_path.begins_with("sep"):
-				parent_popup.add_separator()
+			if working_menu_path.begins_with("%sep"):
+				var sep_string = ""
+				if working_menu_path.find("--") > -1:
+					sep_string = working_menu_path.get_slice("--", 1)
+				parent_popup.add_separator(sep_string)
+				print("ADDING: ", working_menu_path)
 				break
 			
 			_create_popup_item(parent_popup, slice, tool_tip, icon, icon_color, current_id)
@@ -209,6 +213,14 @@ class ParamKeys:
 	const TOOL_TIP_KEY = "TOOL_TIP_KEY"
 	const CALLABLE_KEY = "CALLABLE_KEY"
 	const METADATA_KEY = "METADATA_KEY"
+	
+	static func add_separator(dict:Dictionary, label:=""):
+		var string = "%sep--" + label
+		var count = 0
+		while dict.has(string):
+			string = "%sep" + str(count) + "--" + label
+			count += 1
+		dict[string] = {}
 
 class PopupMenuPathParams:
 	func _init(_popup_menu_path, _base_popup, _callable, _popup_items_dict, popup_data=null) -> void:

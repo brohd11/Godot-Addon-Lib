@@ -9,7 +9,7 @@ const MouseHelper = PopupHelper.MouseHelper
 var popup:PopupMenu
 var mouse_helper:MouseHelper
 
-var hide_popup_with_timer:bool = false
+var hide_popup_with_timer:bool = true
 
 var _custom_id_pressed_callable:Callable
 
@@ -32,10 +32,14 @@ func set_custom_id_pressed_callable(callable):
 	_custom_id_pressed_callable = callable
 
 
-func display_popup(items_dict:Dictionary):
+func display_popup(options):
+	if options is Options:
+		options = options.get_options()
+	if options.is_empty():
+		return
 	popup.clear(true)
 	
-	PopupHelper.parse_dict_static(items_dict, popup, _popup_id_pressed, mouse_helper)
+	PopupHelper.parse_dict_static(options, popup, _popup_id_pressed, mouse_helper)
 	popup.reset_size()
 	_move_popup()
 
@@ -43,7 +47,8 @@ func display_popup(items_dict:Dictionary):
 func _move_popup():
 	_set_popup_parent()
 	popup.position = DisplayServer.mouse_get_position() - _get_popup_offset()
-	popup.show()
+	#popup.show()
+	popup.popup()
 
 
 func _popup_id_pressed(id:int, _popup:PopupMenu):
@@ -83,8 +88,11 @@ func _set_popup_parent():
 	elif popup.get_window() != get_window():
 		popup.reparent(target_parent)
 
+
+
 func _remove_popup_from_tree():
-	popup.get_parent().remove_child(popup)
+	if is_instance_valid(popup.get_parent()):
+		popup.get_parent().remove_child(popup)
 
 
 func _process(delta: float) -> void:
@@ -102,3 +110,17 @@ func get_double_click():
 
 class Params extends PopupHelper.ParamKeys:
 	const CALLABLE = &"callable"
+
+class Options:
+	var _dict = {}
+	
+	func get_options():
+		return _dict
+	
+	func add_option(menu_path:String, callable, icon_array=null):
+		var data = {}
+		if callable != null:
+			data[Params.CALLABLE] = callable
+		if icon_array != null:
+			data[Params.ICON_KEY] = icon_array
+		_dict[menu_path] = data

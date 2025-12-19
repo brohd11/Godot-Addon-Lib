@@ -36,9 +36,29 @@ func _init(node):
 
 
 ## Implement in extended classes
-# Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
-#static func register_node(node:Node):
-	#pass _register(PE_STRIP_CAST_SCRIPT, node) # pass the preloaded script of self
 
-#static func unregister_node(node:Node):
-	#_unregister(PE_STRIP_CAST_SCRIPT, node) # pass the preloaded script of self
+# Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
+#const PE_STRIP_CAST_SCRIPT = preload("this_file")
+#static func get_singleton_name() -> String:
+	#return "MySingleton"
+#
+#static func get_instance() -> SyntaxPlus:
+	#return _get_instance(PE_STRIP_CAST_SCRIPT)
+#
+#static func instance_valid() -> bool:
+	#return _instance_valid(PE_STRIP_CAST_SCRIPT)
+#
+#static func register_node(node:Node):
+	#return _register_node(PE_STRIP_CAST_SCRIPT, node)
+#
+#static func call_on_ready(callable, print_err:bool=true):
+	#_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
+
+#func _init(node):
+	#pass
+#
+#func _all_unregistered_callback():
+	#pass
+
+#func _get_ready_bool() -> bool:
+	#return is_node_ready()
