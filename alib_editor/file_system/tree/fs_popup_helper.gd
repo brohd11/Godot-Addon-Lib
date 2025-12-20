@@ -7,6 +7,9 @@ const FS_ITEMS_TO_HIDE = ["", "Expand Folder", "Expand Hierarchy", "Collapse Hie
 static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Array=[], other_items:Dictionary={}):
 	ZyxPopupWrapper.Enable.filesystem(false, false)
 	var fs_popup:PopupMenu = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
+	#if not fs_popup.visible: #^ not sure about this, was needed now it seems not?
+		#fs_popup = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_BOTTOM_POPUP)
+	
 	new_popup.id_pressed.connect(callable.bind(new_popup, fs_popup))
 	new_popup.popup_hide.connect(_on_popup_hide)
 	

@@ -19,6 +19,15 @@ static func populate_popup(calling_node:Control):
 	popup.hide()
 	popup.reparent(EditorInterface.get_file_system_dock())
 
+static func populate_bottom_popup(calling_node:Control):
+	var popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_BOTTOM_POPUP)
+	if calling_node.get_window() != popup.get_window():
+		popup.reparent(calling_node.get_window().get_child(0))
+	var tree = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
+	
+	tree.item_mouse_selected.emit(Vector2.ZERO, 2)
+	popup.hide()
+	popup.reparent(EditorInterface.get_file_system_dock())
 
 static func get_popup():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)

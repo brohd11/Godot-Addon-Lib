@@ -1,13 +1,18 @@
 @tool
 extends Tree
 
+const FileSystemTree = preload("res://addons/addon_lib/brohd/alib_editor/file_system/tree/filesystem_tree.gd")
+
+const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
 const FSTreeHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/tree/fs_tree_helper.gd")
 
 const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/tree/fs_popup_helper.gd")
 
+
 const _FS_ID_NEED_RESCAN = []
-const _FS_ID_NEED_HANDLE = [0, 21, 22]
+const _FS_ID_NEED_HANDLE = [0, 21, 22, 10]
+
 
 @export var filters:Array[LineEdit] = []
 
@@ -36,25 +41,38 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
+	allow_rmb_select = true
+	allow_reselect = true
+	select_mode = Tree.SELECT_MULTI
+	hide_root = true
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
 	filesystem_singleton = FileSystemSingleton.get_instance()
 	filesystem_singleton.filesystem_changed.connect(_on_scan_files_complete, 1)
+	_new_tree_helper()
 	
 	for lineedit:LineEdit in filters:
 		lineedit.right_icon = EditorInterface.get_base_control().get_theme_icon("Search", "EditorIcons")
+		lineedit.placeholder_text = "Filter Files"
 		lineedit.text_changed.connect(filter_text_changed)
 	
-	await get_tree().process_frame
-	
-	
+	#await get_tree().process_frame
 	
 	item_edited.connect(_on_item_edited)
-	_signal_connects()
+	visibility_changed.connect(_on_visibilty_changed)
 
 func set_dir(target_dir:String):
 	root_dir = target_dir
 	
 	_get_file_array(target_dir)
 	
+	#_new_tree_helper()
+	
+	#await get_tree().process_frame
+	#FileSystemSingleton.call_on_ready(_build_tree)
+	#_build_tree()
+
+func _new_tree_helper():
 	tree_helper = FSTreeHelper.new(self)
 	tree_helper.filesystem_singleton = filesystem_singleton
 	tree_helper.popup_on_right_click = false
@@ -62,9 +80,6 @@ func set_dir(target_dir:String):
 	tree_helper.multi_item_selected.connect(_on_tree_helper_multi_item_selected)
 	tree_helper.mouse_left_clicked.connect(_on_tree_helper_mouse_left_clicked)
 	tree_helper.mouse_right_clicked.connect(_on_tree_helper_mouse_right_clicked)
-	
-	await get_tree().process_frame
-	_build_tree()
 
 
 func _on_scan_files_complete():
@@ -93,14 +108,20 @@ func _get_file_array(dir):
 
 func _build_tree():
 	if not is_visible_in_tree():
-		print("NOP ", root_dir)
+		print("NOPE ", root_dir)
 		return
+	
+	if not is_instance_valid(tree_helper):
+		_new_tree_helper()
+	if not is_instance_valid(tree_helper.filesystem_singleton):
+		tree_helper.filesystem_singleton = filesystem_singleton
+	
 	print("YEP ", root_dir)
 	var selected_paths = tree_helper.selected_item_paths.duplicate()
 	var hide_files = false# HelperInst.ABConfig.hide_tree_files
 	
 	var folder_icon = filesystem_singleton.get_folder_icon()
-	var folder_color = filesystem_singleton.get_folder_default_color()
+	var folder_color = filesystem_singleton.get_folder_color()
 	
 	var target_dir = root_dir
 	
@@ -122,17 +143,8 @@ func _build_tree():
 			if path.ends_with("/"):
 				text = path.trim_suffix("/").get_file()
 			item.set_text(0, text)
-			var meta = {
-				FSTreeHelper.Keys.METADATA_PATH: path
-			}
-			item.set_metadata(0, meta)
-			item.set_icon(0, filesystem_singleton.get_icon(path))
-			var color = filesystem_singleton.get_icon_color(path)
-			if color:
-				item.set_icon_modulate(0, color)
+			tree_helper.set_tree_item_params(path, item)
 			tree_helper.item_dict[text] = item
-		
-	
 	
 	
 	root_item = create_item(tree_root) as TreeItem
@@ -149,17 +161,21 @@ func _build_tree():
 		var target_dir_folder_name = target_dir.trim_suffix("/").get_file()
 		root_item.set_text(0, target_dir_folder_name)
 	#
-	var root_item_metadata = {FSTreeHelper.Keys.METADATA_PATH: target_dir}
-	var fs_root_item = filesystem_singleton.file_system_dock_item_dict.get(target_dir)
-	if fs_root_item == null: # TODO Trigger rebuild?
-		printerr("NULL FSITEM simple_tree.gd Line: 148")
-		return
-	root_item.set_icon(0, fs_root_item.get_icon(0)) # TODO clean up this and favorites to use singleton
-	root_item.set_icon_modulate(0, fs_root_item.get_icon_modulate(0))
-	var bg_color = fs_root_item.get_custom_bg_color(0)
-	if bg_color != Color.BLACK:
-		root_item.set_custom_bg_color(0, bg_color)
-	root_item.set_metadata(0,root_item_metadata)
+	#var root_item_metadata = {FSTreeHelper.Keys.METADATA_PATH: target_dir}
+	#var fs_root_item = filesystem_singleton.file_system_dock_item_dict.get(target_dir)
+	#if fs_root_item == null: # TODO Trigger rebuild?
+		#printerr("NULL FSITEM simple_tree.gd Line: 148")
+		#return
+	
+	tree_helper.set_tree_item_params(target_dir, root_item)
+	#root_item.set_icon(0, fs_root_item.get_icon(0)) # TODO clean up this and favorites to use singleton
+	#root_item.set_icon_modulate(0, fs_root_item.get_icon_modulate(0))
+	#var bg_color = fs_root_item.get_custom_bg_color(0)
+	#if bg_color != Color.BLACK:
+		#root_item.set_custom_bg_color(0, bg_color)
+	#root_item.set_metadata(0,root_item_metadata)
+	
+	
 	
 	#var file_dict = ab_lib.ABTree.res_file_dict
 	#var icon_dict = ab_lib.ABTree.editor_icon_dict
@@ -178,10 +194,12 @@ func _build_tree():
 			if hide_files:
 				last_item.visible = false
 				continue
-			var fs_item = filesystem_singleton.file_system_dock_item_dict.get(file_path) as TreeItem
-			var tool_tip = fs_item.get_tooltip_text(0)
-			
-			last_item.set_tooltip_text(0, tool_tip)
+			var fs_item = filesystem_singleton.file_system_dock_item_dict.get(file_path)
+			if fs_item:
+				var tool_tip = fs_item.get_tooltip_text(0)
+				last_item.set_tooltip_text(0, tool_tip)
+			else:
+				last_item.set_tooltip_text(0, file_path.get_file())
 	
 	if not tree_first_build:
 		tree_first_build = true
@@ -191,6 +209,7 @@ func _build_tree():
 	
 	if _is_filtering():
 		_update_tree_items()
+	
 
 
 func _select_selected_paths(selected_paths):
@@ -280,6 +299,16 @@ func _emit_item_selected(item_data_array):
 			#bus.send_data_items.emit(item_data_array, root_dir)
 		#bus.send_data_items_to_filter.emit(item_data_array, root_dir)
 
+#func _set_tree_item_params(path:String, item:TreeItem):
+	#var meta = {
+		#FSTreeHelper.Keys.METADATA_PATH: path
+	#}
+	#item.set_metadata(0, meta)
+	#item.set_icon(0, filesystem_singleton.get_icon(path))
+	#var color = filesystem_singleton.get_icon_color(path)
+	#if color:
+		#item.set_icon_modulate(0, color)
+
 
 func _on_tree_helper_multi_item_selected():
 	print("YES")
@@ -309,7 +338,13 @@ func _on_tree_helper_mouse_left_clicked():
 
 func _on_tree_helper_mouse_right_clicked():
 	await get_tree().process_frame
-	filesystem_singleton.select_items_in_fs(tree_helper.selected_item_paths)
+	
+	var items_selected = filesystem_singleton.select_items_in_fs(tree_helper.selected_item_paths)
+	if not items_selected:
+		filesystem_singleton.rebuild_files()
+		print("Could not select items in filesystem, ensure filesystem tree is in non split view, rebuilding files.")
+		return
+	
 	filesystem_singleton.populate_filesystem_popup(self)
 	
 	var selected_item = get_selected()
@@ -355,9 +390,13 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu):
 				_rc_hierarchy(true)
 			elif id == 22: # Collapse Hierarchy
 				_rc_hierarchy(false)
+			elif id == 10:
+				start_edit()
 			return
 	
 	if id < 5000:
+		if fs_popup == EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_BOTTOM_POPUP):
+			fs_popup = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 		fs_popup.id_pressed.emit(id)
 	else:
 		if id == 5000:
@@ -394,7 +433,8 @@ func _toggle_collapse_item_by_path(file_path:String):
 		return item
 
 func _on_visibilty_changed():
-	
+	if not is_instance_valid(self.owner):
+		return
 	prints(visible, root_dir)
 	if not self.owner.visible:
 		prints("NOT", root_dir)
@@ -437,6 +477,7 @@ func _on_item_edited():
 	if new_name == original_file_name:
 		exit = true
 	
+	
 	if exit:
 		item.set_text(0, original_file_name)
 		original_file_name = ""
@@ -444,8 +485,23 @@ func _on_item_edited():
 	
 	var root = Engine.get_main_loop().root
 	var line = ALibEditor.Nodes.FileSystem.get_tree_line_edit() as LineEdit
+	var line_editor_submit = ALibRuntime.Utils.UNode.get_signal_callable(line, "text_submitted", "Tree::_line_editor_submit")
 	
 	var edfs_dock = EditorInterface.get_file_system_dock()
+	
+	edfs_dock.show()
+	await get_tree().process_frame
+	#await get_tree().process_frame
+	
+	var popup = ALibEditor.Nodes.FileSystem.get_popup() as PopupMenu
+	popup.id_pressed.emit(10)
+	line_editor_submit.call(new_name)
+	
+	edfs_dock.hide()
+	return
+	
+	
+	#var edfs_dock = EditorInterface.get_file_system_dock()
 	var edfs_container = edfs_dock.get_parent()
 	var current_tab_index = 0
 	var set_edfs_vis = false
@@ -460,7 +516,7 @@ func _on_item_edited():
 		#await get_tree().process_frame
 	
 	await get_tree().process_frame
-	var popup = ALibEditor.Nodes.FileSystem.get_popup() as PopupMenu
+	#var popup = ALibEditor.Nodes.FileSystem.get_popup() as PopupMenu
 	popup.id_pressed.emit(10)
 	line.text = item.get_text(0)
 	line.text_submitted.emit(line.text)
@@ -480,6 +536,7 @@ func _on_item_edited():
 			edfs_dock.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			edfs_dock.clip_contents = false
 
+
 #endregion
 
 
@@ -494,27 +551,58 @@ func get_click_data():
 	var data = UTree.get_click_data_standard(tree_helper.selected_items)
 	return data
 
-func _signal_connects():
-	#filter1_node.text_changed.connect(_on_filter_1_text_changed)
-	#filter2_node.text_changed.connect(_on_filter_2_text_changed)
-	visibility_changed.connect(_on_visibilty_changed)
 
 func _get_drag_data(at_position):
+	if tree_helper.is_favorited_item_selected():
+		get_window().gui_cancel_drag()
+		return
 	return UTree.get_drop_data.files(tree_helper.selected_item_paths, self)
 
 func _can_drop_data(at_position, data):
 	return UTree.can_drop_data.files(at_position, data)
 
 func _drop_data(at_position: Vector2, data: Variant) -> void:
-	var item = get_item_at_position(at_position)
-	var meta = item.get_metadata(0)
-	var item_path = ""
+	print(data)
+	var files = []
+	if data.has("files"):
+		files = data.get("files")
+	elif data.has("file_and_dirs"):
+		files = data.get("file_and_dirs")
+	print(files)
+	var from = data.get("from")
+	var target_item = get_item_at_position(at_position)
+	var meta = target_item.get_metadata(0)
+	var target_dir = ""
+	if meta is String:
+		target_dir = meta
 	if meta is Dictionary:
-		item_path = meta.get("path", "")
-		if not DirAccess.dir_exists_absolute(item_path):
-			item_path = item_path.get_base_dir()
+		target_dir = tree_helper.get_path_from_item(target_item)
+	if not target_dir.ends_with("/"):
+		target_dir = target_dir.get_base_dir()
+		if not target_dir.ends_with("/"):
+			target_dir += "/"
+	
+	for file:String in files:
+		if file == target_dir:
+			return
+		if UFile.is_file_in_directory(target_dir, file):
+			return
+		var file_dir = file
+		file_dir = file_dir.trim_suffix("/")
+		file_dir = file_dir.get_base_dir()
+		if not file_dir.ends_with("/"):
+			file_dir += "/"
+		if file_dir == target_dir:
+			return
 	
 	get_window().gui_cancel_drag()
-	#ab_lib.ABTree.move_dialogs(self)
-	#ab_lib.ABTree.Static.select_items_in_fs(tree_helper.selected_item_paths)
-	#ab_lib.ABRightClick.filesystem_move_dialog(item_path) #^ this will need to be reimplemented here..
+	filesystem_singleton.move_dialogs(self)
+	
+	if from is FileSystemTree:
+		from.filesystem_singleton.select_items_in_fs(from.tree_helper.selected_item_paths)
+	else: #?
+		filesystem_singleton.select_items_in_fs(tree_helper.selected_item_paths)
+	
+	get_window().gui_cancel_drag()
+	filesystem_singleton.move_dialogs(self)
+	filesystem_singleton.show_file_move_dialog(target_dir)

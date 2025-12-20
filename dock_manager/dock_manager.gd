@@ -39,6 +39,8 @@ var empty_panel:bool = false
 var _default_window_size:= Vector2i(1200,800)
 var save_layout:bool = true
 var allow_scene_reload:bool = false
+var _docked_name:String
+
 
 var dock_id:= -1
 var dock_id_key:
@@ -134,6 +136,8 @@ func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL,
 		main_screen_handler = _main_screen_handler
 		external_main_screen_flag = true
 	
+	_docked_name = get_docked_name()
+	
 	_set_editor_settings()
 	EditorInterface.get_editor_settings().settings_changed.connect(_set_editor_settings)
 	
@@ -153,6 +157,7 @@ func post_init():
 		printerr("Dock Manager has MainScreenHandler, but plugin doesn't handle main screen.")
 	
 	var dock_target
+	var dock_index = -1
 	var dock_data
 	if save_layout:
 		var layout_data = get_plugin_layout_data(plugin)
@@ -166,6 +171,7 @@ func post_init():
 			var docks = layout_data.get(Keys.DOCKS)
 			var dock_layout_data = docks.get(dock_id_key)
 			dock_target = dock_layout_data.get(Keys.CURRENT_DOCK)
+			dock_index = dock_layout_data.get(Keys.CURRENT_DOCK_INDEX, -1)
 			dock_data = dock_layout_data.get(Keys.DOCK_DATA, {})
 	
 	if dock_target != null:
@@ -174,6 +180,9 @@ func post_init():
 		dock_target = default_dock
 	if dock_target > -3:
 		dock_instance(int(dock_target))
+		if dock_target >= 0 and dock_index > -1:
+			var dock_control = get_current_dock_control() as TabContainer
+			dock_control.move_child(plugin_control, dock_index)
 	else:
 		undock_instance()
 	
@@ -203,6 +212,9 @@ func post_init():
 func _set_editor_settings():
 	var ed_settings = EditorInterface.get_editor_settings()
 	dock_tab_style = ed_settings.get_setting(EditorSet.DOCK_TAB_STYLE)
+	
+	await plugin.get_tree().create_timer(3).timeout
+	_set_dock_tab_style()
 
 func set_default_window_size(size:Vector2i):
 	_default_window_size = size
@@ -215,6 +227,17 @@ func _ready() -> void:
 
 func get_plugin_control():
 	return plugin_control
+
+func show_in_editor():
+	var current_dock = _get_current_dock()
+	if current_dock > -1:
+		var dock_control = get_current_dock_control()
+		if dock_control is TabContainer:
+			var i = dock_control.get_tab_idx_from_control(plugin_control)
+			dock_control.current_tab = i
+	elif current_dock == -2:
+		BottomPanel.show_panel(_docked_name)
+	
 
 func clean_up():
 	save_layout_data()
@@ -245,6 +268,7 @@ func reload_control():
 	
 	await plugin.get_tree().process_frame
 	add_to_tree()
+	show_in_editor()
 
 func free_instance():
 	clean_up()
@@ -271,6 +295,7 @@ func save_layout_data():
 	if not is_instance_valid(plugin_control):
 		return
 	var current_dock = _get_current_dock()
+	var is_tab = current_dock >= 0
 	current_dock += 3 #^ offset to get the enum val
 	
 	var layout_data = get_plugin_layout_data(plugin)
@@ -278,6 +303,9 @@ func save_layout_data():
 	var scene_data = docks.get(dock_id_key, {})
 	scene_data[Keys.SCENE_PATH] = plugin_control.scene_file_path
 	scene_data[Keys.CURRENT_DOCK] = current_dock
+	if is_tab:
+		var dock_control = get_current_dock_control() as TabContainer
+		scene_data[Keys.CURRENT_DOCK_INDEX] = dock_control.get_tab_idx_from_control(plugin_control)
 	if can_be_freed:
 		scene_data[Keys.TYPE] = Keys.FREEABLE
 	else:
@@ -352,8 +380,8 @@ func dock_instance(target_dock:int):
 		panel_wrapper.name = plugin_control.name
 		main_screen_handler.add_main_screen_control(panel_wrapper)
 	elif target_dock == -2:
-		var name = plugin_control.name
-		plugin.add_control_to_bottom_panel(plugin_control, name)
+		#var _name = plugin_control.name
+		plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
 	
 	if is_instance_valid(window):
 		if window is PanelWindow:
@@ -403,6 +431,8 @@ func _get_current_dock():
 	else:
 		return Docks.get_current_dock(plugin_control)
 
+func get_current_dock_control():
+	return Docks.get_current_dock_control(plugin_control)
 
 func window_close_requested() -> void:
 	dock_instance(last_dock)
@@ -429,13 +459,11 @@ func _get_plugin_icon():
 	return null
 
 func _set_dock_tab_style():
-	var dock = Docks.get_current_dock_control(plugin_control)
+	var dock = get_current_dock_control()
 	if dock is not TabContainer:
 		return
 	var idx = dock.get_tab_idx_from_control(plugin_control)
-	var plugin_name = plugin_control.name
-	if not external_main_screen_flag:
-		plugin_name = plugin._get_plugin_name()
+	var plugin_name = get_docked_name()
 	var icon = _get_plugin_icon()
 	if dock_tab_style == 0 or icon == null: #^ text
 		dock.set_tab_title(idx, plugin_name)
@@ -500,6 +528,9 @@ class InstanceManager:
 				continue
 			var current_dock = data.get(Keys.CURRENT_DOCK)
 			var path = data.get(Keys.SCENE_PATH)
+			if not FileAccess.file_exists(path):
+				printerr("Dock Manager - Scene doesn't exist: %s" % path)
+				continue
 			var scn = load(path)
 			var ins = DockManager.new(_plugin, scn, current_dock, _msh, false)
 			ins.can_be_freed = true
@@ -544,11 +575,20 @@ class InstanceManager:
 				_ids.append(i.dock_id)
 		return _ids
 	
-	func _get_dock_data(scene:PackedScene, _can_be_freed:bool):
+	func _get_dock_data(scene, _can_be_freed:bool):
 		var target_type = Keys.FREEABLE if _can_be_freed else Keys.PERSISTENT
 		var layout_data = DockManager.get_plugin_layout_data(_plugin)
 		var docks = layout_data.get(Keys.DOCKS, {})
 		var current_ids = get_current_dock_ids()
+		var scene_path = ""
+		if scene is PackedScene:
+			scene_path = scene.resource_path
+		elif scene is Control:
+			if scene.scene_file_path != "":
+				scene_path = scene.scene_file_path
+			else:
+				scene_path = scene.get_script().resource_path
+		
 		for id in docks.keys():
 			var id_int = int(id)
 			if id_int in current_ids:
@@ -558,7 +598,7 @@ class InstanceManager:
 			if type != target_type:
 				continue
 			var path = data.get(Keys.SCENE_PATH)
-			if path == scene.resource_path:
+			if path == scene_path:
 				return id_int
 		return -1
 	
@@ -590,6 +630,15 @@ class InstanceManager:
 			if is_instance_valid(ins):
 				ins.clean_up()
 
+func get_docked_name():
+	if _docked_name != "":
+		return _docked_name
+	if not external_main_screen_flag:
+		if plugin.has_method("_get_plugin_name"):
+			return plugin._get_plugin_name()
+	var _name = plugin_control.name
+	return _name
+
 class EditorSet:
 	const DOCK_TAB_STYLE = &"interface/editor/dock_tab_style"
 
@@ -601,6 +650,7 @@ class Keys:
 	const ALLOW_RELOAD = "allow_reload"
 	const SCENE_PATH = "scene_path"
 	const CURRENT_DOCK = "current_dock"
+	const CURRENT_DOCK_INDEX = "current_dock_index"
 	const DOCK_DATA = "dock_data"
 	
 	const META = "meta"

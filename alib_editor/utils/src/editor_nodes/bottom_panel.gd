@@ -29,6 +29,15 @@ static func show_first_panel():
 			c.toggled.emit(true)
 			break
 
+static func show_panel(button_name:String):
+	var hbox = get_button_hbox()
+	for c in hbox.get_children():
+		if not c is Button:
+			continue
+		if c.text == button_name:
+			c.toggled.emit(true)
+			break
+
 static func get_editor_log():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.EDITOR_LOG)
 

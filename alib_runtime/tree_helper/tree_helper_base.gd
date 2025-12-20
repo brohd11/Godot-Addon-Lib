@@ -109,14 +109,11 @@ func new_file_path(file_path, root_dir="", file_data=null):
 		if item_dict.has(path_key):
 			slice_item = item_dict.get(path_key)
 		else:
-			#var working_path_file_data = file_dict.get(working_path,{})
 			slice_item = tree_node.create_item(last_item)
 			slice_item.set_text(0,current_slice)
 			
 			var item_metadata = {Keys.METADATA_PATH: path_key}
 			slice_item.set_metadata(0,item_metadata)
-			#slice_item.set_icon(0, ab_lib.ABTree.folder_icon)
-			#slice_item.set_icon_modulate(0, ab_lib.ABTree.folder_color)
 			_set_folder_icon(path_key, slice_item)
 			if data_dict != null: # not sure how to implement without a ton of args
 				var collapsed = true
@@ -131,10 +128,8 @@ func new_file_path(file_path, root_dir="", file_data=null):
 		
 		last_item = slice_item
 	
-	if file_data:
+	if file_data and not is_folder:
 		_set_item_icon(last_item, file_data)
-		
-		#last_item.set_metadata(0, file_data) # don't set this here, causes issues with non res:// paths
 	
 	return last_item
 
@@ -150,18 +145,6 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 				continue
 			item.visible = true
 			item.collapsed = runtime_data.get(Keys.METADATA_COLLAPSED)
-		
-		var root_item = tree_node.get_root()
-		if tree_node.hide_root:
-			var root_children = root_item.get_children()
-			for c in root_children:
-				c.visible = true
-				c.set_collapsed_recursive(false)
-		var favorites_item = get_favorites_item()
-		if is_instance_valid(favorites_item):
-			var favorites = favorites_item.get_children()
-			for f in favorites:
-				f.visible = true
 		
 		return false
 	updating = true
@@ -200,27 +183,9 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			
 			item.visible = true
 	
-	var favorites_item = get_favorites_item()
-	if is_instance_valid(favorites_item):
-		var favorites = favorites_item.get_children()
-		for f in favorites:
-			var text = f.get_text(0)
-			if not filter_callable.call(text):
-				f.visible = false
-			else:
-				f.visible = true
-	
-	
 	var root_item = tree_node.get_root()
-	if not tree_node.hide_root:
-		root_item.visible = true
-		root_item.set_collapsed_recursive(false)
-	else:
-		var root_children = root_item.get_children()
-		for c in root_children:
-			c.visible = true
-			c.set_collapsed_recursive(false)
-	
+	root_item.visible = true
+	root_item.set_collapsed_recursive(false)
 	updating = false
 	return true
 
@@ -349,11 +314,6 @@ func _set_folder_icon(file_path, slice_item):
 	slice_item.set_icon(0, folder_icon)
 	slice_item.set_icon_modulate(0, folder_color)
 
-func get_favorites_item():
-	var root_children = tree_node.get_root().get_children()
-	for c in root_children:
-		if c.get_text(0) == "Favorites:":
-			return c
 
 func _set_item_icon(last_item, file_data):
 	pass

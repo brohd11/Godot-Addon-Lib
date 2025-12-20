@@ -32,7 +32,7 @@ func set_custom_id_pressed_callable(callable):
 	_custom_id_pressed_callable = callable
 
 
-func display_popup(options):
+func display_popup(options, center_popup:=false, position_overide=null):
 	if options is Options:
 		options = options.get_options()
 	if options.is_empty():
@@ -41,13 +41,33 @@ func display_popup(options):
 	
 	PopupHelper.parse_dict_static(options, popup, _popup_id_pressed, mouse_helper)
 	popup.reset_size()
-	_move_popup()
+	
+	var popup_position = DisplayServer.mouse_get_position()
+	if center_popup:
+		var offset = _get_popup_offset()
+		offset.x = 0
+		popup_position -= offset
+	else:
+		popup_position -= _get_popup_offset()
+	
+	if position_overide != null:
+		if position_overide is Vector2i:
+			popup_position = position_overide
+		elif position_overide is Vector2:
+			popup_position = Vector2i(position_overide)
+		else:
+			print("Unsupported position overide: ", position_overide)
+	
+	if center_popup:
+		var size_offset = popup.size.x / 2
+		popup_position.x -= size_offset
+	
+	_move_popup(popup_position)
 
 
-func _move_popup():
+func _move_popup(popup_position:Vector2i):
 	_set_popup_parent()
-	popup.position = DisplayServer.mouse_get_position() - _get_popup_offset()
-	#popup.show()
+	popup.position = popup_position
 	popup.popup()
 
 
@@ -107,6 +127,8 @@ func get_double_click():
 		return false
 	return true
 
+static func get_window_offset_position(control:Control, position:Vector2i):
+	return control.get_window().position + position
 
 class Params extends PopupHelper.ParamKeys:
 	const CALLABLE = &"callable"
