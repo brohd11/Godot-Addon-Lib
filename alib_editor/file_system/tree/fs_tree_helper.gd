@@ -23,7 +23,6 @@ func _mouse_left_clicked():
 	mouse_left_clicked.emit()
 
 func _mouse_right_clicked(data):
-	print("YE")
 	mouse_right_clicked.emit()
 	if popup_on_right_click:
 		print("RIGHT CLICK IN TREE HELPER - IS THIS USED")
@@ -150,13 +149,20 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 func get_favorites_item():
 	var root_children = tree_node.get_root().get_children()
 	for c in root_children:
-		if c.get_text(0) == "Favorites:":
+		if c.get_text(0) == filesystem_singleton.get_favorites_text():
 			return c
 
 func is_favorited_item_selected():
 	for item in selected_items:
 		var par = item.get_parent()
-		if par and par.get_text(0) == "Favorites:":
+		if par and par.get_text(0) == filesystem_singleton.get_favorites_text():
+			return true
+	return false
+
+func is_item_in_favorites(item:TreeItem):
+	var par = item.get_parent()
+	if par:
+		if par.get_text(0) == filesystem_singleton.get_favorites_text():
 			return true
 	return false
 

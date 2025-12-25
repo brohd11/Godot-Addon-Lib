@@ -10,13 +10,10 @@ var parent_item = null
 var selected_items:= []
 var selected_item_paths:= []
 
-#var metadata_path = "item_path"
-#var metadata_collapsed = "collapsed"
-
 var updating:= false
 var multi_selected_flag:= false
-var edit_on_double_click:= true
-var popup_on_right_click:= true
+var edit_on_double_click:= true # can probably remove for cleanness
+var popup_on_right_click:= true # can probably remove for cleanness
 
 var show_item_preview := true
 
@@ -50,7 +47,6 @@ func _init(_tree_node:Tree, _parent_item=null, _item_dict=null, _data_dict=null,
 			print("TreeHelper - Tree.allow_reselect not set to true.")
 	
 	connect_mouse_signals()
-	
 	_set_folder_icon_img()
 
 func get_tree_item(path:String):

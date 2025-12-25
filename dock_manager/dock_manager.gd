@@ -39,7 +39,7 @@ var empty_panel:bool = false
 var _default_window_size:= Vector2i(1200,800)
 var save_layout:bool = true
 var allow_scene_reload:bool = false
-var _docked_name:String
+var _docked_name:String = ""
 
 
 var dock_id:= -1
@@ -137,6 +137,7 @@ func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL,
 		external_main_screen_flag = true
 	
 	_docked_name = get_docked_name()
+	plugin_control.name = get_docked_name()
 	
 	_set_editor_settings()
 	EditorInterface.get_editor_settings().settings_changed.connect(_set_editor_settings)
@@ -150,7 +151,6 @@ func add_to_tree():
 func post_init():
 	if plugin_has_main:
 		if not is_instance_valid(main_screen_handler):
-			plugin_control.name = plugin._get_plugin_name()
 			main_screen_handler = MainScreenHandler.new(plugin, plugin_control)
 			plugin.add_child(main_screen_handler)
 	if is_instance_valid(main_screen_handler) and not plugin_has_main:
@@ -191,7 +191,7 @@ func post_init():
 			plugin_control.call(SET_DOCK_DATA, dock_data)
 	
 	if window_title == "":
-		window_title = plugin_control.name
+		window_title = get_docked_name()
 	
 	if "dock_button" in plugin_control:
 		dock_button = plugin_control.dock_button
@@ -253,18 +253,21 @@ func clean_up():
 func reload_control():
 	save_layout_data() # saves before reloading
 	
-	var scene_path = plugin_control.scene_file_path
-	if not FileAccess.file_exists(scene_path):
-		printerr("Scene doesn't exist: %s" % scene_path)
-		return
+	var is_scene = plugin_control.scene_file_path != ""
+	var control_path = get_scene_or_script(plugin_control)
 	
 	_remove_control_from_parent()
 	plugin_control.queue_free()
 	if main_screen_handler is MainScreenHandler:
 		main_screen_handler.queue_free()
 		main_screen_handler = null
-	var packed:PackedScene = load(scene_path)
-	plugin_control = packed.instantiate()
+	
+	if is_scene:
+		var packed:PackedScene = load(control_path)
+		plugin_control = packed.instantiate()
+	else:
+		var script = load(control_path)
+		plugin_control = script.new()
 	
 	await plugin.get_tree().process_frame
 	add_to_tree()
@@ -301,7 +304,8 @@ func save_layout_data():
 	var layout_data = get_plugin_layout_data(plugin)
 	var docks = layout_data.get(Keys.DOCKS)
 	var scene_data = docks.get(dock_id_key, {})
-	scene_data[Keys.SCENE_PATH] = plugin_control.scene_file_path
+	var file_path = get_scene_or_script(plugin_control)
+	scene_data[Keys.SCENE_PATH] = file_path
 	scene_data[Keys.CURRENT_DOCK] = current_dock
 	if is_tab:
 		var dock_control = get_current_dock_control() as TabContainer
@@ -377,10 +381,9 @@ func dock_instance(target_dock:int):
 		_set_dock_tab_style()
 	elif target_dock == -1:
 		var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
-		panel_wrapper.name = plugin_control.name
+		panel_wrapper.name = get_docked_name()
 		main_screen_handler.add_main_screen_control(panel_wrapper)
 	elif target_dock == -2:
-		#var _name = plugin_control.name
 		plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
 	
 	if is_instance_valid(window):
@@ -476,6 +479,19 @@ func _set_dock_tab_style():
 		dock.set_tab_icon(idx, icon)
 
 
+static func get_scene_or_script(control):
+	if control is PackedScene:
+		return control.resource_path
+	elif control is Control:
+		if control.scene_file_path != "":
+			return control.scene_file_path
+		var script = control.get_script()
+		var script_path = script.resource_path
+		if script_path == "":
+			print("No scene or script path for control: %s" % control)
+		return script_path
+	else:
+		print("DockManager - get_scene_or_script: Unhandled object")
 
 static func _plugin_has_main_screen(_plugin:EditorPlugin):
 	return _plugin.has_method("_has_main_screen")
@@ -529,9 +545,11 @@ class InstanceManager:
 			var current_dock = data.get(Keys.CURRENT_DOCK)
 			var path = data.get(Keys.SCENE_PATH)
 			if not FileAccess.file_exists(path):
-				printerr("Dock Manager - Scene doesn't exist: %s" % path)
+				printerr("Dock Manager - Scene doesn't exist: %s, %s" % [path, DockManager.get_layout_file_path(_plugin)])
 				continue
 			var scn = load(path)
+			if scn is GDScript:
+				scn = scn.new()
 			var ins = DockManager.new(_plugin, scn, current_dock, _msh, false)
 			ins.can_be_freed = true
 			var allow_reload = data.get(Keys.ALLOW_RELOAD, false)
@@ -548,12 +566,15 @@ class InstanceManager:
 		return _new_dock_manager(scene, slot, true, _add_to_tree)
 	
 	func _new_dock_manager(scene, slot:Slot, _can_be_freed:=false, _add_to_tree:=true):
+		var scene_path = DockManager.get_scene_or_script(scene)
+		
 		if _single_instance:
 			for ins in instances:
 				if not is_instance_valid(ins):
 					continue
-				if ins.plugin_control.scene_file_path == scene.resource_path:
-					print("Scene already instanced: ", scene.resource_path)
+				var ins_path = DockManager.get_scene_or_script(ins.plugin_control)
+				if ins_path == scene_path:
+					print("Scene already instanced: ", scene_path)
 					return
 		
 		var ins = DockManager.new(_plugin,scene, slot, _msh, false)
@@ -584,10 +605,7 @@ class InstanceManager:
 		if scene is PackedScene:
 			scene_path = scene.resource_path
 		elif scene is Control:
-			if scene.scene_file_path != "":
-				scene_path = scene.scene_file_path
-			else:
-				scene_path = scene.get_script().resource_path
+			scene_path = DockManager.get_scene_or_script(scene)
 		
 		for id in docks.keys():
 			var id_int = int(id)

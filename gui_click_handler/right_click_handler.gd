@@ -19,6 +19,10 @@ var _click_debounce_time: float = 0.3
 func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
+	_new_popup()
+
+
+func _new_popup():
 	popup = PopupHelper.new()
 	popup.wrap_controls = true
 	popup.submenu_popup_delay = 0
@@ -37,7 +41,11 @@ func display_popup(options, center_popup:=false, position_overide=null):
 		options = options.get_options()
 	if options.is_empty():
 		return
-	popup.clear(true)
+	
+	if is_instance_valid(popup):
+		popup.clear(true)
+	else:
+		_new_popup()
 	
 	PopupHelper.parse_dict_static(options, popup, _popup_id_pressed, mouse_helper)
 	popup.reset_size()
@@ -126,6 +134,10 @@ func get_double_click():
 		_click_debounce_timer = _click_debounce_time
 		return false
 	return true
+
+static func get_centered_control_position(control:Control):
+	var button_pos = control.global_position + Vector2(control.size.x / 2 , 0)
+	return get_window_offset_position(control, button_pos)
 
 static func get_window_offset_position(control:Control, position:Vector2i):
 	return control.get_window().position + position

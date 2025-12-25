@@ -141,7 +141,7 @@ func _singleton_scan_tree_for_paths():
 		return
 	
 	for child:TreeItem in root.get_children():
-		if child.get_text(0) == "Favorites:":
+		if child.get_text(0) == get_favorites_text():
 			for item in child.get_children():
 				var path = item.get_metadata(0)
 				file_system_dock_favorites_dict[path] = item
@@ -176,7 +176,7 @@ func _singleton_build_fs_item_dict():
 		return
 	
 	for child:TreeItem in root.get_children():
-		if child.get_text(0) == "Favorites:":
+		if child.get_text(0) == get_favorites_text():
 			for item in child.get_children():
 				var path = item.get_metadata(0)
 				file_system_dock_favorites_dict[path] = item
@@ -274,6 +274,12 @@ func get_icon(file_path:String):
 
 func get_folder_icon():
 	return cache.folder_icon
+
+static func get_favorites_icon():
+	return EditorInterface.get_base_control().get_theme_icon("Favorites", "EditorIcons")
+
+static func get_favorites_text():
+	return "Favorites:"
 
 func get_icon_color(file_path:String):
 	if file_system_dock_item_dict.has(file_path):
