@@ -50,12 +50,23 @@ func _build_nodes():
 	var spacer = Control.new()
 	add_child(spacer)
 	
+	var line_hbox = HBoxContainer.new()
+	add_child(line_hbox)
+	line_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
 	var line_edit = LineEdit.new()
 	line_edit.clear_button_enabled = true
-	add_child(line_edit)
+	line_hbox.add_child(line_edit)
+	line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	var line_edit_2  = LineEdit.new()
+	line_edit_2.clear_button_enabled = true
+	line_hbox.add_child(line_edit_2)
+	line_edit_2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	
 	tree = FileSystemTree.new()
 	tree.filters.append(line_edit)
+	tree.filters.append(line_edit_2)
 	add_child(tree)
 	tree.owner = self
 
@@ -66,7 +77,15 @@ func set_dock_data(data:Dictionary):
 func get_dock_data() -> Dictionary:
 	var data = {}
 	data["root"] = tree.root_dir
-	data["item_meta"] = tree.tree_helper.data_dict
+	
+	var item_meta = {}
+	for path in tree.tree_helper.data_dict.keys():
+		var path_data = tree.tree_helper.data_dict.get(path)
+		var collapsed = path_data.get(tree.tree_helper.Keys.METADATA_COLLAPSED)
+		if collapsed:
+			continue
+		item_meta[path] = {tree.tree_helper.Keys.METADATA_COLLAPSED:false}
+	data["item_meta"] = item_meta
 	return data
 
 func _on_rc_new_tab(path):

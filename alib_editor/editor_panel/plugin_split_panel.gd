@@ -1,15 +1,25 @@
 extends Control
+#! import-p Keys,
 
+const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const ClickState = preload("res://addons/addon_lib/brohd/gui_click_handler/click_state.gd")
+const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+#const ButtonDetector = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/button_detector.gd")
+
+const DogEarButton = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dog_ear/dog_ear_button.gd")
 
 var right_click_handler:RightClickHandler
 
-var tool_bar:HBoxContainer
+var buttons_h:HBoxContainer
 var dock_button:Button
+var layout_button:Button
 var vbox:VBoxContainer
 var main_container
 var dock_overlay:DockOverlay
+
+var _style_box_h:StyleBoxFlat
+var _style_box_v:StyleBoxFlat
 
 enum SplitType { 
 	HORIZONTAL_L,
@@ -29,35 +39,29 @@ enum DropZone {
 
 
 func _ready():
+	EditorInterface.get_base_control().theme_changed.connect(_on_editor_theme_changed)
+	_create_style_boxes()
+	
 	right_click_handler = RightClickHandler.new()
 	add_child(right_click_handler)
 	
 	vbox = VBoxContainer.new()
 	add_child(vbox)
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	#tool_bar = HBoxContainer.new()
-	#vbox.add_child(tool_bar)
-	
-	#dock_button = Button.new()
-	#tool_bar.add_child(dock_button)
 	
 	main_container = MarginContainer.new()
 	vbox.add_child(main_container)
 	main_container.name = "MainContainer"
 	main_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	var button_detector = Control.new()
-	add_child(button_detector)
-	button_detector.custom_minimum_size = Vector2(24,24) * 1.5
-	button_detector.set_anchors_preset(PRESET_TOP_LEFT)
-	button_detector.mouse_filter = Control.MOUSE_FILTER_STOP
+	var dog_ear_size = 16 * EditorInterface.get_editor_scale()
+	var dog_ear = DogEarButton.new(DogEarButton.Position.TOP_RIGHT, dog_ear_size)
+	add_child(dog_ear)
 	
 	var buttons_bg = ColorRect.new()
-	button_detector.add_child(buttons_bg)
+	add_child(buttons_bg)
 	buttons_bg.mouse_filter = Control.MOUSE_FILTER_PASS
-	#buttons_bg.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	buttons_bg.color = EditorInterface.get_editor_theme().get_color("base_color", "Editor")
-	#buttons_bg.color.a = 0.7
+	buttons_bg.color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color()
 	buttons_bg.hide()
 	
 	var margin = MarginContainer.new()
@@ -68,10 +72,35 @@ func _ready():
 	margin.add_theme_constant_override("margin_right", 2)
 	margin.add_theme_constant_override("margin_bottom", 2)
 	
-	var buttons_h = HBoxContainer.new()
+	margin.resized.connect(
+		func():
+			buttons_bg.custom_minimum_size = margin.size
+			buttons_bg.set_anchors_and_offsets_preset(PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE)
+	)
+	
+	buttons_h = HBoxContainer.new()
 	buttons_h.mouse_filter = Control.MOUSE_FILTER_PASS
 	buttons_h.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	margin.add_child(buttons_h)
+	
+	layout_button = Button.new()
+	buttons_h.add_child(layout_button)
+	layout_button.icon = EditorInterface.get_base_control().get_theme_icon("FileThumbnail", "EditorIcons")
+	layout_button.mouse_filter = Control.MOUSE_FILTER_PASS
+	layout_button.theme_type_variation = &"MainScreenButton"
+	layout_button.focus_mode = Control.FOCUS_NONE
+	layout_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	layout_button.pressed.connect(_on_layout_button_pressed)
+	
+	dock_button = Button.new()
+	buttons_h.add_child(dock_button)
+	dock_button.mouse_filter = Control.MOUSE_FILTER_PASS
+	dock_button.theme_type_variation = &"MainScreenButton"
+	dock_button.focus_mode = Control.FOCUS_NONE
+	dock_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	
+	dog_ear.left_clicked.connect(func():buttons_bg.show())
+	buttons_bg.mouse_exited.connect(func():buttons_bg.hide())
 	
 	dock_overlay = DockOverlay.new()
 	add_child(dock_overlay)
@@ -81,32 +110,22 @@ func _ready():
 	dock_overlay.move_panel.connect(_move_panel_to_split)
 	dock_overlay.swap_panels.connect(_swap_panels)
 	
-	
-	dock_button = Button.new()
-	buttons_h.add_child(dock_button)
-	dock_button.mouse_filter = Control.MOUSE_FILTER_PASS
-	dock_button.theme_type_variation = &"MainScreenButton"
-	dock_button.focus_mode = Control.FOCUS_NONE
-	dock_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	
-	button_detector.mouse_entered.connect(func():buttons_bg.show())
-	button_detector.mouse_exited.connect(func():buttons_bg.hide())
-	
-	margin.resized.connect(func(): buttons_bg.custom_minimum_size = margin.size)
-	
 	var panel = _new_movable_panel()
 	main_container.add_child(panel)
+	
+	EditorPanelSingleton.register_split_panel_instance(self)
 
 
 func get_dock_data():
 	return get_layout_data()
 
 func set_dock_data(data):
-	load_layout(data)
+	_load_layout(data)
+
+func load_layout(layout:Layout):
+	_load_layout(layout.get_layout_data())
 
 
-# Call this function when a user wants to split a specific panel
-# target_panel: The actual Control node being split
 func split_panel(target_panel: Control, direction: SplitType):
 	var new_panel = _new_movable_panel()
 	_new_split_panel(target_panel, new_panel, direction)
@@ -121,14 +140,11 @@ func _move_panel_to_split(dragging_panel: Control, target_panel: Control, direct
 		DropZone.RIGHT: split_type = SplitType.HORIZONTAL_R
 	_new_split_panel(target_panel, dragging_panel, split_type)
 
+
 func _new_split_panel(target_panel: Control, new_panel:Control, direction: SplitType):
 	var parent = target_panel.get_parent()
-	var new_split = SplitContainer.new()
-	if direction == SplitType.VERTICAL_U or direction == SplitType.VERTICAL_D:
-		new_split.vertical = true
-	
-	new_split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	new_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	var vertical = direction == SplitType.VERTICAL_U or direction == SplitType.VERTICAL_D
+	var new_split = _new_split_node(vertical)
 	
 	if parent == main_container: # Special case: Splitting the absolute root
 		main_container.remove_child(target_panel)
@@ -190,6 +206,7 @@ func _toggle_panel(panel:Control):
 	var split = panel.get_parent()
 	if split is SplitContainer:
 		split.vertical = not split.vertical
+		_set_split_style_box(split)
 
 func _on_panel_right_clicked(panel:MoveablePanel):
 	var options = RightClickHandler.Options.new()
@@ -201,12 +218,29 @@ func _on_panel_right_clicked(panel:MoveablePanel):
 		options.add_option("Toggle Split", _toggle_panel.bind(panel))
 	
 	options.add_option("Close", _close_panel.bind(panel))
-	#options.add_option("Print", print_tree_pretty)
 	
 	right_click_handler.display_popup(options)
 
+func _on_layout_button_pressed():
+	var options = RightClickHandler.Options.new()
+	var layouts = EditorPanelSingleton.get_registered_layouts()
+	for _name in layouts.keys():
+		var data = layouts.get(_name)
+		var layout = data.get("layout")
+		var icon = data.get("icon")
+		options.add_option(_name, load_layout.bind(layout), [icon])
+	
+	var new_pos = right_click_handler.get_centered_control_position(layout_button)
+	right_click_handler.display_popup(options, true, new_pos)
 
 func _on_drag_started(panel):
+	#if get_panel_count() < 2:
+		#return
+	for panel_container in EditorPanelSingleton.get_split_panel_instances():
+		if is_instance_valid(panel_container):
+			panel_container.start_drag(panel)
+
+func start_drag(panel):
 	dock_overlay.show()
 	dock_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	
@@ -251,30 +285,36 @@ func get_layout_data():
 func _serialize_node(node: Control) -> Dictionary:
 	var data = {}
 	if node is SplitContainer:
-		data["type"] = "split"
-		data["direction"] = "vertical" if node.vertical else "horizontal"
-		data["offset"] = node.split_offset
+		data[Keys.TYPE] = Keys.TYPE_SPLIT
+		data[Keys.DIRECTION] = Keys.DIR_VERTICAL if node.vertical else Keys.DIR_HORIZONTAL
+		data[Keys.OFFSET] = node.split_offset
 		
 		var children_data = []
 		for child in node.get_children(): # Recursively save children
 			children_data.append(_serialize_node(child))
 		
-		data["children"] = children_data
+		data[Keys.CHILDREN] = children_data
 		
-	else: # movable panel
-		data["type"] = "panel"
+	else: # node is movable panel
+		data[Keys.TYPE] = Keys.TYPE_PANEL
 		if node.get_child_count() > 0:
 			var control = node.get_control()
-			data["content_path"] = _get_panel_path(control)
+			var path = ALibRuntime.Utils.UResource.get_object_file_path(control)
+			if path:
+				data[Keys.CONTENT_PATH] = path
+				var uid = UFile.path_to_uid(path)
+				data[Keys.CONTENT_UID] = uid
+			
+			if control.has_method(Keys.METHOD_GET_DOCK_DATA):
+				data[Keys.PANEL_DOCK_DATA] = control.call(Keys.METHOD_GET_DOCK_DATA)
+				#data[Keys.PANEL_DOCK_DATA] = control.get_dock_data()
+			
 		else:
-			data["content_path"] = "" # Empty panel
-		
-		if node.has_method("get_dock_data"):
-			data["panel_dock_data"] = node.get_dock_data()
+			data[Keys.CONTENT_PATH] = "" # Empty panel
 	
 	return data
 
-func load_layout(data:Dictionary):
+func _load_layout(data:Dictionary):
 	if data.is_empty():
 		return
 	_clear_current_layout()
@@ -285,33 +325,34 @@ func _clear_current_layout():
 		child.queue_free()
 
 func _deserialize_node(data: Dictionary, parent: Control):
-	if data["type"] == "split":
-		var split = SplitContainer.new()
-		if data["direction"] == "vertical":
-			split.vertical = true
-		
-		split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		
+	if data[Keys.TYPE] == Keys.TYPE_SPLIT:
+		var vertical = data[Keys.DIRECTION] == Keys.DIR_VERTICAL
+		var split = _new_split_node(vertical)
 		parent.add_child(split)
-		split.split_offset = data.get("offset", 0)
+		split.split_offset = data.get(Keys.OFFSET, 0)
 		
-		for child_data in data["children"]:
+		for child_data in data[Keys.CHILDREN]:
 			_deserialize_node(child_data, split)
 		
-	elif data["type"] == "panel":
+	elif data[Keys.TYPE] == Keys.TYPE_PANEL:
 		var p = _new_movable_panel()
 		parent.add_child(p)
-		var panel_dock_data = data.get("plugin_dock_data")
-		var path = data.get("content_path", "")
+		var panel_dock_data = data.get(Keys.PANEL_DOCK_DATA)
+		var path = data.get(Keys.CONTENT_UID, "")
+		if not FileAccess.file_exists(path):
+			path = data.get(Keys.CONTENT_PATH, "")
+		else:
+			path = UFile.uid_to_path(path)
 		if path != "":
-			var scene = _get_panel_instance(path)
+			var scene = ALibRuntime.Utils.UResource.instance_scene_or_script(path)
 			if scene:
 				p.add_control(scene)
-				if panel_dock_data and scene.has_method("set_dock_data"):
-					scene.set_dock_data(panel_dock_data)
+				if panel_dock_data and scene.has_method(Keys.METHOD_SET_DOCK_DATA):
+					scene.call(Keys.METHOD_SET_DOCK_DATA, panel_dock_data)
+					#scene.set_dock_data(panel_dock_data)
 			else:
-				print("Could not find scene: ", path)
+				pass
+				#print("Could not find scene: ", path)
 				# Maybe load an error label or empty picker here
 
 
@@ -319,12 +360,31 @@ func _new_movable_panel():
 	var panel = MoveablePanel.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	panel.picker_right_clicked.connect(_on_picker_right_clicked)
+	panel.picker_clicked.connect(_on_picker_clicked)
 	panel.drag_started.connect(_on_drag_started)
 	panel.right_clicked.connect(_on_panel_right_clicked)
 	panel.swap_panels.connect(_swap_panels)
 	panel.move_panel.connect(_move_panel_to_split)
 	return panel
+
+func _new_split_node(_vertical:bool=false):
+	var split = SplitContainer.new()
+	split.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	split.add_theme_constant_override("separation", 12 * EditorInterface.get_editor_scale())
+	split.vertical = _vertical
+	_set_split_style_box(split)
+	return split
+
+func _set_split_style_box(split:SplitContainer):
+	if split.vertical:
+		split.add_theme_stylebox_override("split_bar_background", _style_box_v)
+	else:
+		split.add_theme_stylebox_override("split_bar_background", _style_box_h)
+
+func get_panel_count() -> int:
+	var panels = _get_panels()
+	return panels.size()
 
 func _get_panels():
 	var nodes = []
@@ -341,36 +401,70 @@ func _get_panel_recur(node: Control) -> Array:
 		nodes.append(node)
 	return nodes
 
-func _get_panel_instance(path:String):
-	var loaded = load(path)
-	if loaded is PackedScene:
-		return loaded.instantiate()
-	elif loaded is GDScript:
-		return loaded.new()
 
-func _get_panel_path(node:Node) -> String:
-	if node.scene_file_path != "":
-		return node.scene_file_path
-	var script = node.get_script()
-	if script:
-		return script.resource_path
-	return ""
-
-func _on_picker_right_clicked(panel:MoveablePanel):
+func _on_picker_clicked(panel:MoveablePanel):
 	var options = RightClickHandler.Options.new()
-	options.add_option("Print", print_tree_pretty)
+	var panels = EditorPanelSingleton.get_registered_panels()
+	for _name in panels.keys():
+		var data = panels.get(_name)
+		var path = data.get("path")
+		var icon = EditorInterface.get_base_control().get_theme_icon("GDScript", "EditorIcons")
+		if path.ends_with(".tscn"):
+			icon = EditorInterface.get_base_control().get_theme_icon("PackedScene", "EditorIcons")
+		options.add_option(_name, _on_picker_option_picked.bind(panel, path), [icon])
 	
-	right_click_handler.display_popup(options)
+	options.add_option("Open...", _on_picker_open_picked.bind(panel), ["Load"])
+	
+	var new_pos = right_click_handler.get_centered_control_position(panel._scene_picker.get_child(0))
+	right_click_handler.display_popup(options, true, new_pos)
+
+
+func _on_picker_option_picked(panel:MoveablePanel, path:String):
+	var control = ALibRuntime.Utils.UResource.instance_scene_or_script(path)
+	if control == null:
+		return
+	panel.add_control(control)
+
+func _on_picker_open_picked(panel:MoveablePanel):
+	var dialog = EditorFileDialogHandler.File.new()
+	var handled = await dialog.handled
+	if handled == dialog.CANCEL_STRING:
+		return
+	_on_picker_option_picked(panel, handled)
+
+func _on_editor_theme_changed():
+	_create_style_boxes()
+
+func _create_style_boxes():
+	var ed_scale = EditorInterface.get_editor_scale()
+	_style_box_h = StyleBoxFlat.new()
+	_style_box_h.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeSetter.ThemeColor.Type.BACKGROUND)
+	_style_box_h.border_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeSetter.ThemeColor.Type.BASE)
+	_style_box_h.border_width_left = 4 * ed_scale
+	_style_box_h.border_width_right = 4 * ed_scale
+	#_style_box_h.expand_margin_top = 6
+	
+	_style_box_v = StyleBoxFlat.new()
+	_style_box_v.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeSetter.ThemeColor.Type.BACKGROUND)
+	_style_box_v.border_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeSetter.ThemeColor.Type.BASE)
+	_style_box_v.border_width_top = 4 * ed_scale
+	_style_box_v.border_width_bottom = 4 * ed_scale
+	#_style_box_v.expand_margin_top = 6
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PREDELETE:
+		EditorPanelSingleton.unregister_split_panel_instance(self)
 
 class MoveablePanel extends Control:
 	
-	signal picker_right_clicked(panel)
+	signal picker_clicked(panel)
 	signal drag_started(panel)
 	signal right_clicked(panel)
 	signal swap_panels(from_panel, to_panel)
 	signal move_panel(from_panel, to_panel, zone)
 	
-	var _drag_section:ColorRect
+	var current_split_panel:PluginSplitPanel
 	var _vbox:VBoxContainer
 	var _scene_picker
 	
@@ -389,51 +483,37 @@ class MoveablePanel extends Control:
 		_scene_picker_button.text = "Pick Scene/File"
 		_scene_picker_button.custom_minimum_size = Vector2(75, 35)
 		_scene_picker_button.set_anchors_and_offsets_preset(PRESET_CENTER,Control.PRESET_MODE_KEEP_SIZE)
-		#_scene_picker_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		#_scene_picker_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		
+		_scene_picker_button.focus_mode = Control.FOCUS_NONE
 		_scene_picker_button.pressed.connect(_on_picker_pressed)
-		_scene_picker_button.gui_input.connect(_on_picker_gui_input)
 		
+		var dog_ear_size = 16 * EditorInterface.get_editor_scale()
+		var _dog_ear = DogEarButton.new(DogEarButton.Position.TOP_LEFT, dog_ear_size)
+		add_child(_dog_ear)
+		_dog_ear.right_clicked.connect(func(): right_clicked.emit(self))
+		_dog_ear.left_clicked.connect(func(): right_clicked.emit(self))
 		
-		_drag_section = ColorRect.new()
-		add_child(_drag_section)
-		_drag_section.custom_minimum_size = Vector2(20,20)
-		_drag_section.set_anchors_and_offsets_preset(PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE)
-		_drag_section.color = Color.WHITE
-		_drag_section.color.a = 0
-		_drag_section.mouse_entered.connect(func():_drag_section.color.a = 0.3)
-		_drag_section.mouse_exited.connect(func():_drag_section.color.a = 0)
-		_drag_section.set_drag_forwarding(_get_drag_data, func(p,d):return false, func(p,d):return)
-		_drag_section.gui_input.connect(_on_gui_input)
-		
-		### ADD CONTENT
-		#var bg = ColorRect.new()
-		#bg.color = Color(randf_range(0,0.7),randf_range(0,0.7),randf_range(0,0.7))
-		#add_control(bg)
+		set_split_panel()
+		tree_entered.connect(_on_tree_entered)
+	
+	func _on_tree_entered():
+		set_split_panel()
+	
+	func set_split_panel():
+		var parent = get_parent()
+		while is_instance_valid(parent):
+			if parent is PluginSplitPanel:
+				current_split_panel = parent
+				break
+			parent = parent.get_parent()
+	
+	func get_dock_overlay():
+		return current_split_panel.dock_overlay
 	
 	func get_control():
 		return _vbox.get_child(0)
 	
 	func _on_picker_pressed():
-		var dialog = EditorFileDialogHandler.File.new()
-		var handled = await dialog.handled
-		if handled == dialog.CANCEL_STRING:
-			return
-		
-		var path = handled
-		var loaded = load(path)
-		var scene
-		if loaded is PackedScene:
-			scene = loaded.instantiate()
-		elif loaded is GDScript:
-			scene = loaded.new()
-		if not scene:
-			print("Could not get scene: %s" % path)
-			return
-		
-		add_control(scene)
-	
+		picker_clicked.emit(self)
 	
 	func add_control(control:Control):
 		if is_instance_valid(_scene_picker):
@@ -445,22 +525,12 @@ class MoveablePanel extends Control:
 		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	func _on_gui_input(event: InputEvent) -> void:
-		var state = ClickState.get_click_state(event) as ClickState.State
-		if state == ClickState.State.RMB_RELEASED:
-			right_clicked.emit(self)
-	
-	func _on_picker_gui_input(event: InputEvent) -> void:
-		var state = ClickState.get_click_state(event) as ClickState.State
-		if state == ClickState.State.RMB_RELEASED:
-			picker_right_clicked.emit(self)
-	
 	func _get_drag_data(_at_position):
 		var preview = Label.new()
 		preview.text = "Moving " + name
 		set_drag_preview(preview)
 		drag_started.emit(self)
-		return { "type": "plugin_panel_control", "node": self }
+		return { "type": Keys.DROP_DATA_TYPE, "node": self }
 
 
 class DockOverlay extends Control:
@@ -472,6 +542,13 @@ class DockOverlay extends Control:
 	
 	var panel_rects = {}
 	var draw_data:= {}
+	
+	func _ready() -> void:
+		mouse_exited.connect(_on_mouse_exited)
+	
+	func _on_mouse_exited():
+		draw_data.clear()
+		queue_redraw()
 	
 	func _draw() -> void:
 		if draw_data.is_empty():
@@ -488,9 +565,11 @@ class DockOverlay extends Control:
 				DropZone.UP: draw_line(rect.position, rect.position + Vector2(rect.size.x, 0), color)
 				DropZone.DOWN: draw_line(rect.position + Vector2(0, rect.size.y), rect.position + rect.size, color)
 	
+	
 	func _can_drop_data(at_position, data):
-		queue_redraw()
 		draw_data.clear()
+		queue_redraw()
+		
 		var source_panel = data["node"]
 		var to_panel = _get_panel_at_position(at_position)
 		if to_panel == source_panel:
@@ -498,6 +577,10 @@ class DockOverlay extends Control:
 		var zone = _calculate_drop_zone(at_position)
 		if zone == DropZone.NIL:
 			return false
+		if zone != DropZone.CENTER: # stop a split panel from being emptied
+			if source_panel.current_split_panel.get_panel_count() < 2:
+				return false
+		
 		var rect = _get_rect_at_position(at_position)
 		if rect == null:
 			return false
@@ -507,7 +590,7 @@ class DockOverlay extends Control:
 			"zone":zone,
 			"rect": rect
 		}
-		return data is Dictionary and data.get("type") == "plugin_panel_control"
+		return data is Dictionary and data.get("type") == Keys.DROP_DATA_TYPE
 
 	func _drop_data(at_position, data):
 		var source_panel = data["node"]
@@ -554,3 +637,95 @@ class DockOverlay extends Control:
 	func _get_adjusted_rect(rect:Rect2):
 		rect.position -= global_position
 		return rect
+
+
+class Layout:
+	enum Direction {
+		VERTICAL,
+		HORIZONTAL
+	}
+	var _root: Dictionary = {}
+	var _panel_refs: Array[Dictionary] = []
+	
+	func get_layout_data() -> Dictionary:
+		return _root
+	
+	# Adds a panel.
+	# path: The scene path (tscn or gd)
+	# data: The dictionary for panel_dock_data
+	# direction: "vertical" or "horizontal" (Applied if splitting an existing panel)
+	# parent_idx: The index of the panel to split. -1 uses the most recently added panel.
+	func add_panel(path: String, dock_data: Dictionary = {}, direction:=Direction.HORIZONTAL, parent_idx: int = -1):
+		var new_panel_node = _create_panel_dict(path, dock_data)
+		
+		if _root.is_empty(): # Case 1: First element (Root)
+			_root = new_panel_node.duplicate()  # We must duplicate to avoid reference issues if we modify it later
+			_panel_refs.append(_root) # We store a reference to the root (which is currently a panel)
+			return
+		
+		# Case 2: Splitting an existing panel
+		var target_idx = parent_idx
+		if target_idx == -1:
+			target_idx = _panel_refs.size() - 1
+			
+		if target_idx < 0 or target_idx >= _panel_refs.size():
+			push_error("LayoutBuilder: Invalid parent index ", target_idx)
+			return
+
+		# Get the dictionary of the panel we are about to split
+		var target_node_ref = _panel_refs[target_idx]
+		
+		# We perform an "In-Place" replacement.
+		# Because 'target_node_ref' is a reference to a dictionary inside '_root',
+		# modifying it modifies the tree directly without needing parent pointers.
+		
+		# save the current data of the target (it's about to be pushed down a level)
+		var old_content_node = target_node_ref.duplicate()
+		
+		# convert the target node into a Split container
+		target_node_ref.clear() # Wipe the dict
+		target_node_ref[Keys.TYPE] = Keys.TYPE_SPLIT
+		var dir_string = Keys.DIR_HORIZONTAL
+		if direction != Direction.HORIZONTAL:
+			dir_string = Keys.DIR_VERTICAL
+		target_node_ref[Keys.DIRECTION] = dir_string
+		target_node_ref[Keys.OFFSET] = 0
+		
+		target_node_ref[Keys.CHILDREN] = [old_content_node, new_panel_node] # add children: [Old Content, New Content]
+		
+		# Update References
+		# The dictionary at _panel_refs[target_idx] is now a SPLIT, not a PANEL.
+		# We need to update that slot to point to the 'old_content_node' (which is now a child)
+		# so that if the user references index 0 again, they split the panel, not the container.
+		_panel_refs[target_idx] = old_content_node
+		_panel_refs.append(new_panel_node) # add the new panel to list of references
+	
+	func _create_panel_dict(path: String, dock_data: Dictionary) -> Dictionary:
+		return {
+			Keys.TYPE: Keys.TYPE_PANEL,
+			Keys.CONTENT_PATH: path,
+			Keys.CONTENT_UID: UFile.path_to_uid(path),
+			Keys.DOCK_DATA: dock_data
+		}
+
+
+class Keys:
+	const DROP_DATA_TYPE = "plugin_panel_control"
+	
+	const METHOD_GET_DOCK_DATA = "get_dock_data"
+	const METHOD_SET_DOCK_DATA = "set_dock_data"
+	
+	const PANEL_DOCK_DATA = "panel_dock_data"
+	
+	const TYPE = "type"
+	const CHILDREN = "children"
+	const DIRECTION = "direction"
+	const DIR_VERTICAL = "vertical"
+	const DIR_HORIZONTAL = "horizontal"
+	const OFFSET = "offset"
+	const CONTENT_PATH = "content_path"
+	const CONTENT_UID = "content_uid"
+	const DOCK_DATA = "panel_dock_data"
+
+	const TYPE_SPLIT = "split"
+	const TYPE_PANEL = "panel"

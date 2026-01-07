@@ -10,7 +10,7 @@ const FSTreeHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_syst
 const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/tree/fs_popup_helper.gd")
 
 
-const _FS_ID_NEED_RESCAN = []
+const _FS_ID_NEED_RESCAN = [4, 5]
 const _FS_ID_NEED_HANDLE = [0, 21, 22, 10]
 
 
@@ -152,6 +152,9 @@ func _build_tree():
 	else:
 		var target_dir_folder_name = target_dir.trim_suffix("/").get_file()
 		root_item.set_text(0, target_dir_folder_name)
+		var bg_color = filesystem_singleton.get_background_color(target_dir)
+		if bg_color:
+			root_item.set_custom_bg_color(0, bg_color)
 	
 	tree_helper.set_tree_item_params(target_dir, root_item)
 	
@@ -323,6 +326,7 @@ func _on_tree_helper_mouse_right_clicked():
 
 func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu):
 	print(id)
+	var queue_rescan = false
 	var is_folder_popup = fs_popup.get_item_text(0) == "Default (Reset)"
 	var is_create_popup = fs_popup == EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
 	if is_folder_popup:
@@ -332,6 +336,8 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu):
 	elif is_create_popup:
 		pass
 	else:
+		if id in _FS_ID_NEED_RESCAN:
+			queue_rescan = true
 		if id in _FS_ID_NEED_HANDLE:
 			if id == 0: # Expand Folder
 				_rc_expand_folder()
@@ -341,6 +347,8 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu):
 				_rc_hierarchy(false)
 			elif id == 10:
 				start_edit()
+			if queue_rescan:
+				filesystem_singleton.rebuild_files()
 			return
 	
 	if id < 5000:
@@ -351,7 +359,7 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu):
 		if id == 5000:
 			_rc_new_tab()
 	
-	if id in _FS_ID_NEED_RESCAN:
+	if queue_rescan:
 		filesystem_singleton.rebuild_files()
 
 

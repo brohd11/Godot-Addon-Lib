@@ -192,11 +192,5 @@ func _init(node:Node=null):
 #static func call_on_ready(callable, print_err:bool=true):
 	#_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
 
-#func _init(node):
-	#pass
-#
-#func _all_unregistered_callback():
-	#pass
-
 #func _get_ready_bool() -> bool:
 	#return is_node_ready()

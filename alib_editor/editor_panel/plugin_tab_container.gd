@@ -18,7 +18,7 @@ static func get_scene() -> PackedScene:
 
 @onready var right_click_handler: RightClickHandler = $RightClickHandler
 
-var _default_paths:Array = []
+var _default_tabs:Array = []
 
 var _standalone_panel:=true
 
@@ -53,19 +53,19 @@ func _ready() -> void:
 	if tab_bar.tab_count == 0:
 		_load_default()
 
+
 func set_standalone_panel(toggled:bool):
 	_standalone_panel = toggled
 	dock_button.visible = _standalone_panel
-	
 
 func set_dock_data(data:Dictionary):
 	if data.is_empty():
 		return
 	
 	var tabs_data = data.get(Keys.DATA_ALL_TABS_DATA, {})
-	var default = data.get(Keys.DATA_DEFAULT_PATH)
+	var default = data.get(Keys.DATA_DEFAULT_TABS)
 	if default != null:
-		_default_paths = default
+		_default_tabs = default
 	
 	if tabs_data.is_empty():
 		_load_default()
@@ -73,10 +73,13 @@ func set_dock_data(data:Dictionary):
 	
 	for idx:String in tabs_data.keys():
 		var tab_data = tabs_data.get(idx)
-		var file_path = tab_data.get(Keys.DATA_TAB_FILE_PATH, "")
-		if file_path == "":
-			print("Could not load dock, no file path.")
-			continue
+		
+		var file_path = tab_data.get(Keys.DATA_TAB_UID, "")
+		if not FileAccess.file_exists(file_path):
+			file_path = tab_data.get(Keys.DATA_TAB_FILE_PATH, "")
+			if not FileAccess.file_exists(file_path):
+				print("Could not load dock, no file path.")
+				continue
 		var plugin_control = load_plugin_control(file_path)
 		if not is_instance_valid(plugin_control):
 			continue
@@ -101,7 +104,7 @@ func set_dock_data(data:Dictionary):
 func get_dock_data():
 	var data = {}
 	
-	data[Keys.DATA_DEFAULT_PATH] = _default_paths
+	#data[Keys.DATA_DEFAULT_TABS] = _default_paths
 	data[Keys.DATA_CURRENT_TAB] = tab_bar.current_tab
 	var tabs_data = {}
 	for i in range(tab_bar.get_tab_count()):
@@ -114,11 +117,10 @@ func get_dock_data():
 		else:
 			tab_data[Keys.DATA_TAB_DATA] = {}
 		
-		if tab_control.scene_file_path != "":
-			tab_data[Keys.DATA_TAB_FILE_PATH] = tab_control.scene_file_path
-		else:
-			var script = tab_control.get_script()
-			tab_data[Keys.DATA_TAB_FILE_PATH] = script.resource_path
+		var path = ALibRuntime.Utils.UResource.get_object_file_path(tab_control)
+		tab_data[Keys.DATA_TAB_FILE_PATH] = path
+		tab_data[Keys.DATA_TAB_UID] = UFile.path_to_uid(path)
+		
 		tabs_data[i] = tab_data
 	
 	data[Keys.DATA_ALL_TABS_DATA] = tabs_data
@@ -127,8 +129,8 @@ func get_dock_data():
 
 func _on_new_plugin_tab(tab_control=null):
 	if tab_control == null:
-		if not _default_paths.is_empty():
-			tab_control = load_plugin_control(_default_paths[0])
+		if not _default_tabs.is_empty():
+			tab_control = load_plugin_control(_default_tabs[0])
 	if tab_control == null:
 		print("Could not new load tab, no control or default provided.")
 		return
@@ -157,12 +159,13 @@ func _add_tab(tab_control:Control):
 
 
 func _load_default():
-	if not _default_paths.is_empty():
-		for path in _default_paths:
+	if not _default_tabs.is_empty():
+		for path in _default_tabs:
 			var plugin_control = load_plugin_control(path)
 			if plugin_control:
 				_add_tab(plugin_control)
-				get_tab_control(0).show()
+		if tab_bar.tab_count > 0:
+			_show_tab(0)
 	else:
 		print("Plugin Tab Container does not have default paths.")
 	
@@ -172,7 +175,7 @@ func _load_default():
 func _on_tab_clicked(tab:int):
 	_show_tab(tab)
 
-func _show_tab(tab):
+func _show_tab(tab:int):
 	for i in range(tab_bar.tab_count):
 		var tab_control = get_tab_control(i)
 		if i == tab:
@@ -236,23 +239,33 @@ func _on_tab_bar_gui_input(event:InputEvent):
 
 func _on_new_tab_pressed():
 	var options = RightClickHandler.Options.new()
-	for path in _default_paths:
-		path = UFile.uid_to_path(path)
+	#for path in _default_paths:
+		#path = UFile.uid_to_path(path)
+		#var icon = EditorInterface.get_base_control().get_theme_icon("GDScript", "EditorIcons")
+		#if path.ends_with(".tscn"):
+			#icon = EditorInterface.get_base_control().get_theme_icon("PackedScene", "EditorIcons")
+		#options.add_option(path.get_file(), _new_tab_button_path_chosen.bind(path), [icon])
+	
+	var tabs = EditorPanelSingleton.get_registered_tabs()
+	for _name in tabs.keys():
+		var data = tabs.get(_name)
+		var path = data.get("path")
 		var icon = EditorInterface.get_base_control().get_theme_icon("GDScript", "EditorIcons")
 		if path.ends_with(".tscn"):
 			icon = EditorInterface.get_base_control().get_theme_icon("PackedScene", "EditorIcons")
-		options.add_option(path.get_file(), _new_tab_button_path_chosen.bind(path), [icon])
+		options.add_option(_name, _new_tab_button_path_chosen.bind(path), [icon])
 	
+	options.add_option("Open...", _open_choose_scene_dialog, ["Load"])
+	#options.add_option("Save", _on_save_pressed, ["Save"])
 	
-	options.add_option("Open...", _open_choose_scene_dialog, ["Folder"])
-	options.add_option("Save", _on_save_pressed, ["Save"])
-	
-	var win_pos = right_click_handler.get_window_offset_position(new_tab_button, Vector2i(new_tab_button.get_global_rect().position))
+	var win_pos = right_click_handler.get_centered_control_position(new_tab_button)
 	right_click_handler.display_popup(options, true, win_pos)
 
 func _new_tab_button_path_chosen(scene_path:String):
 	var control = load_plugin_control(scene_path)
 	_on_new_plugin_tab(control)
+	if tab_bar.tab_count == 1:
+		_show_tab(0)
 
 func _open_choose_scene_dialog():
 	var dialog = EditorFileDialogHandler.File.new(self)
@@ -265,6 +278,7 @@ func _open_choose_scene_dialog():
 		_on_new_plugin_tab(control)
 
 func _on_save_pressed():
+	print("This does nothing")
 	pass
 
 func load_plugin_control(path:String):
@@ -297,7 +311,8 @@ func _panel_checks():
 	tab_bar.queue_redraw()
 
 func _set_panel_size():
-	tab_bar.get_parent().custom_minimum_size.y = tab_bar.size.y
+	if tab_bar.size.y > 0:
+		tab_bar.get_parent().custom_minimum_size.y = tab_bar.size.y
 
 func _current_tab_can_be_freed():
 	var current_control = get_current_tab_control()
@@ -323,9 +338,10 @@ class Keys:
 	const METHOD_SET_DOCK_DATA = "set_dock_data"
 	
 	const DATA_CURRENT_TAB = "current_tab"
-	const DATA_DEFAULT_PATH = "default_path"
+	const DATA_DEFAULT_TABS = "default_tabs"
 	const DATA_ALL_TABS_DATA = "tabs_data"
 	const DATA_TAB_DATA = "dock_data"
 	const DATA_TAB_TITLE = "tab_title"
 	const DATA_TAB_FILE_PATH = "tab_file_path"
+	const DATA_TAB_UID = "tab_uid"
 	

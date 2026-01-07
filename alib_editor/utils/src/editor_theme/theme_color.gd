@@ -8,7 +8,7 @@ enum Type{
 	BACKGROUND,
 }
 
-static func get_theme_color(color_type=Type.BASE):
+static func get_theme_color(color_type:=Type.BASE):
 	var base_control = EditorInterface.get_base_control()
 	var color
 	var color_string = ""
@@ -23,4 +23,3 @@ static func get_theme_color(color_type=Type.BASE):
 	
 	color = base_control.get_theme_color(color_string, &"Editor")
 	return color
-

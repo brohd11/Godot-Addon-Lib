@@ -262,6 +262,42 @@ static func _check_dict_is_enum(dict:Dictionary) -> bool:
 		count += 1
 	return true
 
+#static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, 
+				#print_err:=false, force_script_conversion:=false, check_class:=true, check_global:=true):
+	#if script == null:
+		#script = EditorInterface.get_script_editor().get_current_script()
+	#if script == null:
+		#return null
+	##var t = ALibRuntime.Utils.UProfile.TimeFunction.new("Expr: " + member_name)
+	##var expr_res = get_member_info_by_path_expr(script, member_name)
+	##if expr_res != null:
+		##print("RESULT ", expr_res)
+		##t.stop()
+		##return expr_res
+	#var t2 = ALibRuntime.Utils.UProfile.TimeFunction.new("Std: " + member_name)
+	#var std_res = _get_member_info_by_path(script, member_name, member_hints_array, print_err, force_script_conversion, check_class, check_global)
+	#if t2 != null:
+		#t2.stop()
+	#return std_res
+
+static func get_member_info_by_path_expr(script, member_name):
+	var _call = member_name
+
+	if member_name.find(".") > -1:
+		var first_script_name = ALibRuntime.Utils.UString.get_member_access_front(member_name)
+		var first_script_path = ALibEditor.Utils.UClassDetail.get_global_class_path(first_script_name)
+		if first_script_path != "":
+			script = load(first_script_path)
+			_call = ALibRuntime.Utils.UString.trim_member_access_front(member_name)
+	
+	var ex = Expression.new()
+	var err = ex.parse(_call)
+	if err == OK:
+		var res = ex.execute([], script, false)
+		if ex.has_execute_failed():
+			return null
+		return res
+	return null
 
 static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, 
 				print_err:=false, force_script_conversion:=false, check_class:=true, check_global:=true):

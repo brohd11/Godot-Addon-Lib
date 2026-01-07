@@ -306,6 +306,7 @@ func save_layout_data():
 	var scene_data = docks.get(dock_id_key, {})
 	var file_path = get_scene_or_script(plugin_control)
 	scene_data[Keys.SCENE_PATH] = file_path
+	scene_data[Keys.SCENE_UID] = UFile.path_to_uid(file_path)
 	scene_data[Keys.CURRENT_DOCK] = current_dock
 	if is_tab:
 		var dock_control = get_current_dock_control() as TabContainer
@@ -480,18 +481,19 @@ func _set_dock_tab_style():
 
 
 static func get_scene_or_script(control):
-	if control is PackedScene:
-		return control.resource_path
-	elif control is Control:
-		if control.scene_file_path != "":
-			return control.scene_file_path
-		var script = control.get_script()
-		var script_path = script.resource_path
-		if script_path == "":
-			print("No scene or script path for control: %s" % control)
-		return script_path
-	else:
-		print("DockManager - get_scene_or_script: Unhandled object")
+	return ALibRuntime.Utils.UResource.get_object_file_path(control)
+	#if control is PackedScene:
+		#return control.resource_path
+	#elif control is Control:
+		#if control.scene_file_path != "":
+			#return control.scene_file_path
+		#var script = control.get_script()
+		#var script_path = script.resource_path
+		#if script_path == "":
+			#print("No scene or script path for control: %s" % control)
+		#return script_path
+	#else:
+		#print("DockManager - get_scene_or_script: Unhandled object")
 
 static func _plugin_has_main_screen(_plugin:EditorPlugin):
 	return _plugin.has_method("_has_main_screen")
@@ -543,10 +545,16 @@ class InstanceManager:
 			if type != Keys.FREEABLE:
 				continue
 			var current_dock = data.get(Keys.CURRENT_DOCK)
-			var path = data.get(Keys.SCENE_PATH)
+			
+			var path = data.get(Keys.SCENE_UID, "")
 			if not FileAccess.file_exists(path):
-				printerr("Dock Manager - Scene doesn't exist: %s, %s" % [path, DockManager.get_layout_file_path(_plugin)])
-				continue
+				path = data.get(Keys.SCENE_PATH, "")
+				if not FileAccess.file_exists(path):
+					printerr("Dock Manager - File doesn't exist: %s, %s" % [path, DockManager.get_layout_file_path(_plugin)])
+					continue
+			else:
+				path = UFile.uid_to_path(path)
+			
 			var scn = load(path)
 			if scn is GDScript:
 				scn = scn.new()
@@ -667,6 +675,7 @@ class Keys:
 	const PERSISTENT = "persistent"
 	const ALLOW_RELOAD = "allow_reload"
 	const SCENE_PATH = "scene_path"
+	const SCENE_UID = "scene_uid"
 	const CURRENT_DOCK = "current_dock"
 	const CURRENT_DOCK_INDEX = "current_dock_index"
 	const DOCK_DATA = "dock_data"

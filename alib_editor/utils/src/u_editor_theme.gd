@@ -2,7 +2,7 @@ extends RefCounted
 #! namespace ALibEditor.Utils class UEditorTheme
 
 const BACKPORTED = 100
-
+const ThemeColor = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_color.gd")
 const ThemeSetter = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_setter.gd")
 
 static func get_icon(icon_name:String, theme_type:String=&"EditorIcons"):
