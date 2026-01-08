@@ -47,6 +47,7 @@ static func uncollapse_items(items:Array, item_collapsed_callable:Callable):
 			parent.collapsed = false
 			item_collapsed_callable.call(parent)
 			parent = parent.get_parent()
+		item.collapsed = false
 
 static func get_click_data_standard(selected_items):
 	var right_click_data = []

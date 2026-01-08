@@ -3,6 +3,7 @@ extends RefCounted
 const PopupHelper = PopupWrapper.PopupHelper
 
 const FS_ITEMS_TO_HIDE = ["", "Expand Folder", "Expand Hierarchy", "Collapse Hierarchy"]#, "Rename..."]
+const ITEM_LIST_HIDE = ["", "Expand Folder", "Expand Hierarchy", "Collapse Hierarchy"]#, "Rename..."]
 
 static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Array=[], other_items:Dictionary={}):
 	ZyxPopupWrapper.Enable.filesystem(false, false)
@@ -24,7 +25,7 @@ static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Ar
 		new_popup.add_separator()
 	
 	var wrapper_params = PopupWrapper.WrapperParams.new()
-	wrapper_params.items_to_skip = FS_ITEMS_TO_HIDE.duplicate() #TODO this is not implemented any more..
+	wrapper_params.items_to_skip = hide_names
 	wrapper_params.show_shortcuts = false
 	wrapper_params.fs_popup_callable = callable
 	wrapper_params.connect_callable = false
@@ -37,3 +38,19 @@ static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Ar
 
 static func _on_popup_hide():
 	ZyxPopupWrapper.Enable.filesystem(true, false)
+
+
+class MenuItems:
+	const TO_HIDE_ITEM_LIST = ["", EXPAND_FOLDER, EXPAND_HIERARCHY, COLLAPSE_HIERARCHY]
+	const TO_HIDE_ITEM_LIST_EMPTY = ["", EXPAND_FOLDER, EXPAND_HIERARCHY, COLLAPSE_HIERARCHY,
+	RENAME, DUPLICATE, DELETE, MOVE_DUPLICATE_TO]
+	
+	const RENAME = "Rename..."
+	const EXPAND_FOLDER = "Expand Folder"
+	const EXPAND_HIERARCHY = "Expand Hierarchy"
+	const COLLAPSE_HIERARCHY = "Collapse Hierarchy"
+	
+	const DUPLICATE = "Duplicate..."
+	const MOVE_DUPLICATE_TO = "Move/Duplicate To..."
+	const DELETE = "Delete"
+	

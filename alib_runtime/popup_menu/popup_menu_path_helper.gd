@@ -33,7 +33,7 @@ static func parse_menu_path(id:int, _popup:PopupMenu):
 	var metadata = get_metadata(id, _popup)
 	return metadata.get("menu_path")
 
-static func parse_callable(id, _popup, dict, callable_key=ParamKeys.CALLABLE_KEY):
+static func parse_callable(id, _popup, dict, callable_key=ParamKeys.CALLABLE):
 	var menu_path = parse_menu_path(id, _popup)
 	var data = dict.get(menu_path, {})
 	var callable = data.get(callable_key)
@@ -98,16 +98,19 @@ static func connect_mouse_signals(item_dict, mouse_signal_node):
 			_popup.mouse_exited.connect(mouse_signal_node._on_mouse_exited)
 
 
-static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, current_id, extra_args=[]):
-	popup_menu_path_params.even_array_sizes()
-	var popup_menu_path = popup_menu_path_params.popup_menu_path
-	var icon_array = popup_menu_path_params.icon_array
-	var icon_color_array = popup_menu_path_params.icon_color_array
-	var base_popup = popup_menu_path_params.base_popup
-	var signal_callable = popup_menu_path_params.signal_callable
-	var tool_tip_array = popup_menu_path_params.tool_tip_array
-	var item_dict = popup_menu_path_params.popup_items_dict
-	var user_metadata = popup_menu_path_params.metadata
+static func _parse_popup_menu_path(params:PopupMenuPathParams, current_id, extra_args=[]):
+	params.even_array_sizes()
+	var popup_menu_path = params.popup_menu_path
+	var icon_array = params.icon_array
+	var icon_color_array = params.icon_color_array
+	var base_popup = params.base_popup
+	var signal_callable = params.signal_callable
+	var tool_tip_array = params.tool_tip_array
+	var radio = params.radio
+	var radio_is_checked = params.radio_is_checked
+	var item_dict = params.popup_items_dict
+	var user_metadata = params.metadata
+	
 	
 	var slice_count = popup_menu_path.get_slice_count("/")
 	var working_menu_path = ""
@@ -132,10 +135,10 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 				if working_menu_path.find("--") > -1:
 					sep_string = working_menu_path.get_slice("--", 1)
 				parent_popup.add_separator(sep_string)
-				print("ADDING: ", working_menu_path)
+				#print("ADDING: ", working_menu_path)
 				break
 			
-			_create_popup_item(parent_popup, slice, tool_tip, icon, icon_color, current_id)
+			_create_popup_item(parent_popup, params, slice, tool_tip, icon, icon_color, current_id)
 			var popup_index = parent_popup.item_count - 1
 			var metadata = {
 				"menu_path": popup_menu_path,
@@ -159,7 +162,7 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 				else:
 					path_popup.id_pressed.connect(signal_callable.bindv(extra_args).bind(path_popup))
 			path_popup.submenu_popup_delay = 0
-			_create_popup_item(parent_popup, slice, tool_tip, icon, icon_color, -1, path_popup)
+			_create_popup_item(parent_popup, params, slice, tool_tip, icon, icon_color, -1, path_popup)
 			item_dict[working_menu_path] = path_popup
 			
 		
@@ -167,7 +170,9 @@ static func _parse_popup_menu_path(popup_menu_path_params:PopupMenuPathParams, c
 	
 	return parent_popup
 
-static func _create_popup_item(_popup:PopupMenu, text, tool_tip, icon, color, id, submenu_node:PopupMenu=null):
+static func _create_popup_item(_popup:PopupMenu, params:PopupMenuPathParams, text, 
+		tool_tip, icon, color, id, submenu_node:PopupMenu=null):
+	
 	if submenu_node:
 		_popup.add_submenu_node_item(text, submenu_node)
 		var popup_index = _popup.item_count - 1
@@ -189,30 +194,44 @@ static func _create_popup_item(_popup:PopupMenu, text, tool_tip, icon, color, id
 				print("RESIZE")
 				var icon_size = 16 * EditorInterface.get_editor_scale()
 				icon = UResource.resize_texture(icon, icon_size)
-			_popup.add_icon_item(icon, text, id)
+			if params.radio:
+				_popup.add_icon_radio_check_item(icon, text, id)
+				if params.radio_is_checked:
+					var popup_index = _popup.item_count - 1
+					_popup.set_item_as_radio_checkable(popup_index, true)
+					_popup.set_item_checked(popup_index, true)
+			else:
+				_popup.add_icon_item(icon, text, id)
 			var popup_index = _popup.item_count - 1
 			if color:
 				_popup.set_item_icon_modulate(popup_index, color)
 			#if tool_tip:
 				#_popup.set_item_tooltip(popup_index, tool_tip)
 		else:
-			_popup.add_item(text, id)
+			if params.radio:
+				_popup.add_radio_check_item(text, id)
+				if params.radio_is_checked:
+					var popup_index = _popup.item_count - 1
+					_popup.set_item_as_radio_checkable(popup_index, true)
+					_popup.set_item_checked(popup_index, true)
+			else:
+				_popup.add_item(text, id)
 		#if tool_tip:
 			#var popup_index = _popup.item_count - 1
 			#_popup.set_item_tooltip(popup_index, tool_tip)
 
-static func test():
-	print(EditorInterface.get_editor_theme().get_constant_list("Popup"))
 
 static func _on_popup_hide(_popup): # if no mouse signal node, free _popup
 	_popup.queue_free()
 
 class ParamKeys:
-	const ICON_KEY = "ICON_KEY"
-	const ICON_COLOR_KEY = "ICON_COLOR_KEY"
-	const TOOL_TIP_KEY = "TOOL_TIP_KEY"
-	const CALLABLE_KEY = "CALLABLE_KEY"
-	const METADATA_KEY = "METADATA_KEY"
+	const ICON = &"ICON"
+	const ICON_COLOR = &"ICON_COLOR"
+	const TOOL_TIP = &"TOOL_TIP"
+	const CALLABLE = &"CALLABLE"
+	const METADATA = &"METADATA"
+	const RADIO = &"RADIO"
+	const RADIO_IS_CHECKED = &"RADIO_IS_CHECKED"
 	
 	static func add_separator(dict:Dictionary, label:=""):
 		var string = "%sep--" + label
@@ -223,6 +242,18 @@ class ParamKeys:
 		dict[string] = {}
 
 class PopupMenuPathParams:
+	var popup_menu_path:String
+	var base_popup:PopupMenu
+	var signal_callable#:Callable
+	var popup_items_dict:Dictionary
+	
+	var icon_array:Array = []
+	var icon_color_array:Array = []
+	var tool_tip_array:Array = []
+	var metadata:Dictionary = {}
+	var radio:= false
+	var radio_is_checked:=false
+	
 	func _init(_popup_menu_path, _base_popup, _callable, _popup_items_dict, popup_data=null) -> void:
 		popup_menu_path = clean_menu_path(_popup_menu_path)
 		base_popup = _base_popup
@@ -233,13 +264,17 @@ class PopupMenuPathParams:
 			return
 		for key in popup_data.keys():
 			var value = popup_data.get(key)
-			if key == ParamKeys.ICON_KEY:
+			if key == ParamKeys.ICON:
 				icon_array = value
-			elif key == ParamKeys.ICON_COLOR_KEY:
+			elif key == ParamKeys.ICON_COLOR:
 				icon_color_array = value
-			elif key == ParamKeys.TOOL_TIP_KEY:
+			elif key == ParamKeys.TOOL_TIP:
 				tool_tip_array = value
-			elif key == ParamKeys.METADATA_KEY:
+			elif key == ParamKeys.RADIO:
+				radio = value
+			elif key == ParamKeys.RADIO_IS_CHECKED:
+				radio_is_checked = value
+			elif key == ParamKeys.METADATA:
 				if value is not Dictionary:
 					print("Metadata must be dictionary for popup: %s" % _popup_menu_path)
 					continue
@@ -247,15 +282,6 @@ class PopupMenuPathParams:
 			else:
 				metadata[key] = value
 	
-	var popup_menu_path:String
-	var base_popup:PopupMenu
-	var signal_callable#:Callable
-	var popup_items_dict:Dictionary
-	
-	var icon_array:Array = []
-	var icon_color_array:Array = []
-	var tool_tip_array:Array = []
-	var metadata:Dictionary = {}
 	
 	static func clean_menu_path(path):
 		if path.ends_with("/"):
@@ -357,7 +383,7 @@ static func _create_popup_items_dict(_popup:PopupMenu, dict:Dictionary, path="")
 
 static func add_single_item(_popup:PopupMenu, popup_path:String, popup_data:Dictionary, popup_items_dict:Dictionary):
 	var path_count = popup_path.count("/")
-	var callable = popup_data.get(ParamKeys.CALLABLE_KEY)
+	var callable = popup_data.get(ParamKeys.CALLABLE)
 	var id = popup_data.get("id", -1)
 	
 	var popup_params = PopupMenuPathParams.new(popup_path, _popup, callable, popup_items_dict, popup_data)
@@ -377,18 +403,18 @@ static func _get_icon(icon_name:String, theme_type:String="EditorIcons"):
 
 #var items_dict = {        # example for parse dict.  Note path seperated by '/'.
 	#"Dock|Undock" : {     # add icons in array if desired, else it will default to none.
-		#ParamKeys.ICON_KEY: [Icons.make_floating],
+		#ParamKeys.ICON: [Icons.make_floating],
 		#option_keys.callable_key: on_dock_undock_button_pressed,
 		#},
 	#"Window/Toggle Split" : {
-		#ParamKeys.ICON_KEY: [Icons.window, Icons.split_container],
-		#ParamKeys.ICON_COLOR_KEY: [null, Color(5,5,5)],
+		#ParamKeys.ICON: [Icons.window, Icons.split_container],
+		#ParamKeys.ICON_COLOR: [null, Color(5,5,5)],
 		#option_keys.callable_key: on_toggle_split_button_pressed,
 		#
 		#},
 	#"Window/Layouts" : {
-		#ParamKeys.ICON_KEY: [Icons.window, Icons.panels_3_alt],
-		#ParamKeys.TOOL_TIP_KEY: [null, "Open Layouts"]
+		#ParamKeys.ICON: [Icons.window, Icons.panels_3_alt],
+		#ParamKeys.TOOL_TIP: [null, "Open Layouts"]
 		#option_keys.callable_key: on_layout_button_pressed,
 		#}
 	#}

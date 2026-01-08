@@ -10,6 +10,8 @@ var parent_item = null
 var selected_items:= []
 var selected_item_paths:= []
 
+var filtered_item_paths:= []
+
 var updating:= false
 var multi_selected_flag:= false
 var edit_on_double_click:= true # can probably remove for cleanness
@@ -57,8 +59,11 @@ func get_tree_item(path:String):
 		if item_dict.has(check):
 			return item_dict.get(check)
 
-func get_selected_tree_items():
+func get_selected_tree_items(): # possibly use get_selected and get_next_selected to get items instead of caching
 	return selected_items
+
+func get_filtered_paths():
+	return filtered_item_paths
 
 func get_path_from_item(item:TreeItem):
 	var meta = item.get_metadata(0)
@@ -80,6 +85,10 @@ func clear_items():
 	selected_items.clear()
 	selected_item_paths.clear()
 	tree_node.clear()
+
+func clear_selection():
+	selected_items.clear()
+	selected_item_paths.clear()
 
 func new_file_path(file_path, root_dir="", file_data=null):
 	var local_path:String = file_path.get_slice(root_dir,1)
@@ -132,6 +141,7 @@ func new_file_path(file_path, root_dir="", file_data=null):
 
 func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	if not filtering:
+		filtered_item_paths.clear()
 		for path in item_dict.keys():
 			var runtime_data = data_dict.get(path)
 			if not runtime_data:
@@ -160,6 +170,8 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			
 			continue
 		vis_files.append(path)
+	
+	filtered_item_paths = vis_files
 	
 	for path:String in vis_files:
 		var is_dir = path.ends_with("/")

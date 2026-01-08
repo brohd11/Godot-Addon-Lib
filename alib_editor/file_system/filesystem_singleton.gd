@@ -5,6 +5,8 @@ extends Singleton.RefCount
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
 
+const FSRename = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename.gd")
+
 
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/file_system/filesystem_singleton.gd")
 
@@ -40,7 +42,9 @@ var _file_paths_dict:= {}
 var _file_and_dir_paths_dict:={}
 
 var editor_base_control:Control
+var editor_resource_preview:EditorResourcePreview
 
+var _previews_generated:=false
 var _init_complete:=false
 
 signal filesystem_changed
@@ -53,21 +57,32 @@ func _ready() -> void:
 	EditorNodeRef.call_on_ready(_register_dialogs)
 	editor_fs = EditorInterface.get_resource_filesystem()
 	editor_fs.filesystem_changed.connect(_on_filesystem_changed)
+	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
 	
 	get_filesystem_favorites()
 	#get_filesystem_folder_colors()
 	#rebuild_files()
+	_set_interface_refs()
 	_init_complete = true
+
+
 
 func _get_ready_bool():
 	return _init_complete
+
+func _generate_previews():
+	for path:String in file_paths:
+		queue_preview(path)
+	_previews_generated = true
 
 func _set_interface_refs():
 	cache.set_folder_icon()
 	editor_fs = EditorInterface.get_resource_filesystem()
 	editor_base_control = EditorInterface.get_base_control()
+	editor_resource_preview = EditorInterface.get_resource_previewer()
 	
 	cache.folder_colors_raw = get_filesystem_folder_colors()
+
 
 
 
@@ -83,22 +98,24 @@ func clear_all_caches():
 	file_system_dock_item_dict.clear()
 	
 	cache.clear()
+	_previews_generated = false # trigger a build if needed
 
 func _on_filesystem_changed():
 	_set_interface_refs()
 	
 	_file_paths_dict.clear()
 	_file_and_dir_paths_dict.clear()
-	#file_data.clear()
+	#cache.file_data.clear()
 	#_file_scan()
 	ALibRuntime.Utils.UProfile.TimeFunction.time_func(_file_scan, "FS SCAN")
 	
 	file_paths = PackedStringArray(_file_paths_dict.keys())
 	file_and_dir_paths = PackedStringArray(_file_and_dir_paths_dict.keys())
 	
-	var t = ALibRuntime.Utils.UProfile.TimeFunction.new("ON FS")
+	if not _previews_generated:
+		_generate_previews()
+	
 	filesystem_changed.emit() # own signal
-	t.stop()
 
 
 
@@ -209,7 +226,7 @@ static func recursive_scan_tree_for_paths(item: TreeItem, include_dirs:bool=fals
 	
 	var child: TreeItem = item.get_first_child()
 	while child != null:
-		path_array.append_array(recursive_scan_tree_for_paths(child))
+		path_array.append_array(recursive_scan_tree_for_paths(child, include_dirs))
 		child = child.get_next() # Move to the next sibling
 	
 	return path_array
@@ -224,7 +241,7 @@ static func recursive_scan_for_file_paths(dir:String, include_dirs:bool=false) -
 		return files
 	for i in fs_dir.get_subdir_count():
 		var sub_dir = fs_dir.get_subdir(i)
-		files.append_array(recursive_scan_for_file_paths(sub_dir.get_path()))
+		files.append_array(recursive_scan_for_file_paths(sub_dir.get_path(), include_dirs))
 	
 	for i in fs_dir.get_file_count():
 		files.append(fs_dir.get_file_path(i))
@@ -234,22 +251,27 @@ func get_file_data(path:String):
 	var cached = CacheHelper.get_cached_data(path, cache.file_data)
 	if cached:
 		return cached
-	#if file_data.has(path):
-		#return file_data[path]
+	
 	var file_type = _get_file_type(path)
-	var icon = editor_base_control.get_theme_icon(file_type, &"EditorIcons")
+	var icon = _get_type_icon(path)
+	var preview_icon = icon
+	
 	if file_type == "":
-		file_type = "Folder"
+		file_type = FileData.FOLDER
 	
 	var _file_data = {
-		"item_path": path,
-		"file_icon": icon,
-		"file_type": file_type,
-		"file_custom_icon": false,
+		FileData.PATH: path,
+		FileData.PREVIEW_ICON: preview_icon,
+		FileData.TYPE_ICON: icon,
+		FileData.TYPE: file_type,
+		FileData.CUSTOM_ICON: false,
 	}
-	#file_data[path] = _file_data
+	
 	CacheHelper.store_data(path, _file_data, cache.file_data, [path])
+		
 	return _file_data
+
+
 
 func _get_file_type(path:String):
 	var cached = CacheHelper.get_cached_data(path, cache.file_types)
@@ -262,7 +284,13 @@ func _get_file_type(path:String):
 	CacheHelper.store_data(path, file_type, cache.file_types, [path])
 	return file_type
 
-func get_icon(file_path:String):
+func get_type_icon(file_path:String):
+	var data = get_file_data(file_path)
+	if data == null:
+		return _get_type_icon(file_path)
+	return data.get(FileData.TYPE_ICON)
+
+func _get_type_icon(file_path):
 	if file_system_dock_item_dict.has(file_path):
 		var item = file_system_dock_item_dict.get(file_path)
 		if item:
@@ -270,7 +298,28 @@ func get_icon(file_path:String):
 	if file_path.ends_with("/"):
 		return get_folder_icon()
 	var file_type = _get_file_type(file_path)
+	if Keys.VALID_FILE_TYPES.has(file_type):
+		return cache.file_icon
 	return editor_base_control.get_theme_icon(file_type, &"EditorIcons")
+
+func get_preview(path:String):
+	var cached_preview = CacheHelper.get_cached_data(path, cache.resource_previews)
+	if cached_preview != null:
+		return cached_preview
+	queue_preview(path)
+
+func queue_preview(path:String):
+	editor_resource_preview.queue_resource_preview(path, self, &"_get_resource_preview", null)
+
+func _get_resource_preview(path, preview, thumbnail, user_data):
+	if preview == null:
+		return
+	
+	var data = {
+		FileData.Preview.PREVIEW: preview,
+		FileData.Preview.THUMBNAIL: thumbnail
+	}
+	CacheHelper.store_data(path, data, cache.resource_previews, [path])
 
 func get_folder_icon():
 	return cache.folder_icon
@@ -339,13 +388,27 @@ func get_folder_color(file_path:String=""):
 	  
 	return Keys.FOLDER_COLORS_DICT.get(color, cache.folder_color)
 
-
+## Recursive get files in directory.
 func get_files_in_dir(dir:String, include_dirs:bool=false):
 	var first_item = file_system_dock_item_dict.get(dir)
-	if fs_dock_in_bottom_panel() or first_item == null:
+	if get_fs_dock_split_mode() != 0 or first_item == null:
 		return recursive_scan_for_file_paths(dir, include_dirs)
 	else:
-		return recursive_scan_tree_for_paths(first_item)
+		return recursive_scan_tree_for_paths(first_item, include_dirs)
+
+static func get_dir_contents(dir:String):
+	var files = PackedStringArray()
+	var fs_dir:EditorFileSystemDirectory = editor_fs.get_filesystem_path(dir)
+	if not fs_dir:
+		return files
+	for i in fs_dir.get_subdir_count():
+		var sub_dir = fs_dir.get_subdir(i)
+		files.append(sub_dir.get_path())
+	
+	for i in fs_dir.get_file_count():
+		files.append(fs_dir.get_file_path(i))
+	return files
+	
 
 static func get_filesystem_folder_colors():
 	var data_cache:Dictionary
@@ -388,6 +451,18 @@ static func get_filesystem_favorites():
 func activate_in_fs():
 	var fs_tree = get_filesystem_tree() as Tree
 	fs_tree.item_activated.emit()
+
+static func ensure_items_selected(path_array:Array):
+	var instance = get_instance()
+	var selected_in_fs = instance.select_items_in_fs(path_array)
+	if not selected_in_fs:
+		instance.rebuild_files()
+		selected_in_fs = instance.select_items_in_fs(path_array)
+		if not selected_in_fs:
+			print("Could not select the items in FileSystem")
+		return selected_in_fs
+	else:
+		return true
 
 func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 	var sel_paths_reversed = selected_item_paths.duplicate()
@@ -570,6 +645,12 @@ static func fs_dock_in_bottom_panel() -> bool:
 		return dock_par.get_class() == "EditorBottomPanel"
 	return false
 
+## Takes a file path, and the new name of the file. New name is not entire path.
+static func rename_path(old_path:String, new_path:String):
+	FSRename.rename_path(old_path, new_path)
+
+static func is_new_name_valid(original_file_name:String, new_file_name:String) -> bool:
+	return FSRename.is_new_name_valid(original_file_name, new_file_name)
 
 func _all_unregistered_callback():
 	pass
@@ -580,7 +661,9 @@ class Cache:
 	var folder_color_path_cache:= {}
 	var file_types:= {}
 	var file_data:={}
+	var resource_previews:={}
 	
+	var file_icon:Texture2D
 	var folder_icon:Texture2D
 	var folder_color:Color
 	
@@ -594,6 +677,7 @@ class Cache:
 		set_folder_icon()
 	
 	func set_folder_icon():
+		file_icon = EditorInterface.get_base_control().get_theme_icon("File", &"EditorIcons")
 		folder_icon = EditorInterface.get_base_control().get_theme_icon("Folder", &"EditorIcons")
 		folder_color = EditorInterface.get_base_control().get_theme_color("folder_icon_color", "FileDialog")
 
@@ -620,3 +704,29 @@ class Keys:
 	const FS_DIALOGS = "FS_DIALOGS"
 	const DIALOGS_TO_MOVE = [ "ScriptCreateDialog", "DependencyEditor", "DependencyRemoveDialog", "ConfirmationDialog", "EditorDirDialog",
 	"SceneCreateDialog","ShaderCreateDialog","DependencyEditorOwners","DirectoryCreateDialog","CreateDialog"]
+	
+	const VALID_FILE_TYPES = {
+		"Resource":true,
+		#"JSON":true,
+	}
+
+
+class FileData:
+	const FOLDER = &"Folder"
+	const PATH = &"item_path"
+	const TYPE_ICON = &"file_type_icon"
+	const PREVIEW_ICON = &"file_icon"
+	const TYPE = &"file_type"
+	const CUSTOM_ICON = &"file_custom_icon"
+	
+	class Preview:
+		const PREVIEW = &"preview"
+		const THUMBNAIL = &"thumbnail"
+
+class GetDropData:
+	static func files(selected_item_paths, from_node):
+		return UTree.get_drop_data.files(selected_item_paths, from_node)
+
+class CanDropData:
+	static func files(at_position: Vector2, data: Variant, extensions:Array=[]) -> bool:
+		return UTree.can_drop_data.files(at_position, data, extensions)

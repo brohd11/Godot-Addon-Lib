@@ -7,9 +7,9 @@ static func parse_dict_static(item_dict:Dictionary, icon_only:bool=false, target
 	for path:String in item_dict:
 		var data = item_dict.get(path)
 		
-		var icons = data.get(ParamKeys.ICON_KEY, [])
-		var icons_colors = data.get(ParamKeys.ICON_COLOR_KEY, [])
-		var callable = data.get(ParamKeys.CALLABLE_KEY)
+		var icons = data.get(ParamKeys.ICON, [])
+		var icons_colors = data.get(ParamKeys.ICON_COLOR, [])
+		var callable = data.get(ParamKeys.CALLABLE)
 		
 		var button = Button.new()
 		button.focus_mode = Control.FOCUS_NONE

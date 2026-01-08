@@ -1,10 +1,10 @@
 ## Args: Key, Value, CacheDict, FilePathArray=[]
-static func store_data(key, value, data_cache:Dictionary, file_paths:=[]):
-	var mod_data = {}
-	for path in file_paths:
+static func store_data(key, value, data_cache:Dictionary, file_paths:=[]) -> void:
+	var mod_data:= {}
+	for path:String in file_paths:
 		mod_data[path] = FileAccess.get_modified_time(path)
 	
-	var data = {"value": value,
+	var data:= {"value": value,
 	"modified": mod_data}
 	data_cache[key] = data
 

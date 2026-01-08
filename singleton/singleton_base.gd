@@ -183,7 +183,7 @@ func _init(node:Node=null):
 #static func get_singleton_name() -> String:
 	#return "MySingleton"
 #
-#static func get_instance() -> SyntaxPlus:
+#static func get_instance() -> PE_STRIP_CAST_SCRIPT:
 	#return _get_instance(PE_STRIP_CAST_SCRIPT)
 #
 #static func instance_valid() -> bool:

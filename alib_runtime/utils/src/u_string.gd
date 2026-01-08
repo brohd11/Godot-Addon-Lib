@@ -261,6 +261,17 @@ static func _get_name_and_type_from_line(declaration:String):
 	return [var_nm, type_hint]
 
 
+static func get_paths_in_line(line_text:String):
+	var string_map = get_string_map_multi_line(line_text, StringMapMultiLine.Mode.STRING)
+	var paths = []
+	var path_starts = ["res://", "user://", "uid:/"]
+	for string:String in string_map.string_map.values():
+		for start in path_starts:
+			if string.begins_with(start):
+				paths.append(string)
+				break
+	return paths
+
 
 static func get_string_map(text:String, _mode:StringMap.Mode=StringMap.Mode.FULL, print_err:=false) -> StringMap:
 	return StringMap.new(text, _mode, print_err)
@@ -366,6 +377,8 @@ class StringMapMultiLine:
 	var string:String
 	## A mask where 1 means "inside a string" and 0 means "outside".
 	var string_mask: PackedByteArray
+	
+	var string_map:Dictionary
 	## A dictionary mapping a quote's index to its matching partner's index.
 	var quote_map: Dictionary
 	## A dictionary mapping each bracket's index to the index of its matching partner.
@@ -394,6 +407,7 @@ class StringMapMultiLine:
 		var in_string = false
 		var quote_char = ""
 		var string_start_index = -1
+		var current_string = ""
 		
 		var i = -1 # for easy indexing
 		while i + 1 < text_length:
@@ -415,6 +429,10 @@ class StringMapMultiLine:
 					in_string = false
 					quote_map[string_start_index] = i
 					quote_map[i] = string_start_index
+					string_map[string_start_index] = current_string
+					current_string = ""
+					continue
+				current_string += char
 			else: # not in_string
 				if char == '"' or char == "'":
 					in_string = true
@@ -467,6 +485,10 @@ class StringMapMultiLine:
 		if end_new_line_i == -1:
 			end_new_line_i = string.length() - 1
 		return string.substr(beginning_new_line_i, end_new_line_i - beginning_new_line_i)
+	
+	func get_strings():
+		
+		pass
 
 
 

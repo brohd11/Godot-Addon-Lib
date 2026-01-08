@@ -49,6 +49,8 @@ static func _copy_popup(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_pa
 	var shortcuts = wrapper_params.show_shortcuts
 	var unsorted_popup_data = wrapper_params.custom_context_item_data.get(popup_to_copy)
 	var items_to_skip = unsorted_popup_data.keys()
+	items_to_skip.append_array(wrapper_params.items_to_skip)
+	
 	var sorted_popup_data = wrapper_params.sorted_custom_item_data.get(popup_to_copy, {})
 	
 	## add custom pre
@@ -150,7 +152,7 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 			var icon = popup_to_copy.get_item_icon(i)
 			var submenu_data = {
 				"popup_path": path,
-				ItemParams.ICON_KEY: []
+				ItemParams.ICON: []
 			}
 			
 			if custom_ancestor:
@@ -158,10 +160,10 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				if popup_path:
 					path = popup_path.path_join(text)
 					submenu_data["popup_path"] = path
-				if ItemParams.ICON_KEY in parent_data:
-					submenu_data[ItemParams.ICON_KEY] = parent_data[ItemParams.ICON_KEY].duplicate()
+				if ItemParams.ICON in parent_data:
+					submenu_data[ItemParams.ICON] = parent_data[ItemParams.ICON].duplicate()
 			
-			#submenu_data[ItemParams.ICON_KEY].append(icon)
+			#submenu_data[ItemParams.ICON].append(icon)
 			
 			_scan_popup_for_custom_items(submenu, top_popup, custom_item_data, is_custom, submenu_data)
 		else:
@@ -189,8 +191,8 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				#var args = callable.get_bound_arguments()
 				var icon = popup_to_copy.get_item_icon(i)
 				var icons = []
-				if ItemParams.ICON_KEY in parent_data:
-					icons = parent_data.get(ItemParams.ICON_KEY).duplicate()
+				if ItemParams.ICON in parent_data:
+					icons = parent_data.get(ItemParams.ICON).duplicate()
 				icons.append(icon)
 				
 				var metadata = popup_to_copy.get_item_metadata(i)
@@ -200,10 +202,10 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				
 				custom_item_data[target_popup][path] = {
 					"id": id,
-					PopupHelper.ParamKeys.CALLABLE_KEY: callable,
+					PopupHelper.ParamKeys.CALLABLE: callable,
 					#"args": callable.get_bound_arguments(),
-					PopupHelper.ParamKeys.ICON_KEY: icons,
-					PopupHelper.ParamKeys.METADATA_KEY: user_metadata,
+					PopupHelper.ParamKeys.ICON: icons,
+					PopupHelper.ParamKeys.METADATA: user_metadata,
 				}
 	#custom_item_data[popup_to_copy] = popup_data
 
@@ -213,8 +215,8 @@ static func _add_custom_item(popup, item_path, item_data, popup_item_dict):
 	if submenu:
 		return
 	var id = item_data.get("id")
-	var callable = item_data.get(ItemParams.CALLABLE_KEY) as Callable
-	item_data[ItemParams.CALLABLE_KEY] = null
+	var callable = item_data.get(ItemParams.CALLABLE) as Callable
+	item_data[ItemParams.CALLABLE] = null
 	if callable == null:
 		return
 	var parent = PopupHelper.add_single_item(popup, item_path, item_data, popup_item_dict)
@@ -282,7 +284,7 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 			continue
 		
 		var popup_data = menu_items.get(menu_path)
-		var icon = popup_data.get(ItemParams.ICON_KEY)
+		var icon = popup_data.get(ItemParams.ICON)
 		if icon is Array:
 			icon = icon[icon.size() - 1]
 		elif icon is String:
@@ -291,7 +293,7 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 		var menu_name = menu_path.get_file()
 		plugin.add_context_menu_item(menu_path, context_menu_callable.bind(menu_name), icon)
 		
-		var metadata = popup_data.get(ItemParams.METADATA_KEY)
+		var metadata = popup_data.get(ItemParams.METADATA)
 		if metadata and fs_popup:
 			meta_dict[fs_popup.item_count + count] = metadata
 		count += 1
@@ -310,13 +312,13 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 			var popup_data = menu_items.get(menu_path)
 			if not first_item:
 				first_item = true
-				var icons = popup_data.get(ItemParams.ICON_KEY,[])
+				var icons = popup_data.get(ItemParams.ICON,[])
 				if icons.size() == menu_path.get_slice_count("/"):
 					icon = icons[0]
 				if icon is String:
 					icon = PopupHelper._get_icon(icon)
-			popup_data[ItemParams.CALLABLE_KEY] = _submenu_pressed.bind(popup_args, context_menu_callable)
-			#popup_data[ItemParams.CALLABLE_KEY] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable) # old
+			popup_data[ItemParams.CALLABLE] = _submenu_pressed.bind(popup_args, context_menu_callable)
+			#popup_data[ItemParams.CALLABLE] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable) # old
 			PopupHelper.add_single_item(popup, menu_path, popup_data, popup_items)
 		
 		plugin.add_context_submenu_item(group, popup, icon)
@@ -353,7 +355,7 @@ static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, 
 		var popup_data = all_custom_items.get(popup)
 		for item_path in popup_data:
 			var item_data = popup_data.get(item_path)
-			var meta = item_data.get(ItemParams.METADATA_KEY)
+			var meta = item_data.get(ItemParams.METADATA)
 			if meta is Dictionary:
 				var priority = meta.get(ItemParams.PRIORITY, 1000)
 				var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)

@@ -1,13 +1,18 @@
 extends "res://addons/addon_lib/brohd/alib_runtime/tree_helper/tree_helper_base.gd"
 
 var filesystem_singleton:FileSystemSingleton
+var thumbnail_size:float = 16
+var show_files:bool = true
+
+func set_thumbnail_size():
+	thumbnail_size = 16 * EditorInterface.get_editor_scale()
 
 func _set_folder_icon_img():
 	folder_icon = EditorInterface.get_base_control().get_theme_icon("Folder", &"EditorIcons")
 	folder_color = EditorInterface.get_base_control().get_theme_color("folder_icon_color", "FileDialog")
 
 func _set_folder_icon(file_path, slice_item):
-	var icon = filesystem_singleton.get_icon(file_path)
+	var icon = filesystem_singleton.get_type_icon(file_path)
 	slice_item.set_icon(0, icon)
 	var color = filesystem_singleton.get_folder_color(file_path)
 	if color:
@@ -41,19 +46,16 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 	if not file_path:
 		file_path = file_data.get(Keys.METADATA_PATH)
 	var file_icon:Texture2D
-	if file_data.get("custom_icon") == true and show_preview:
-		pass
-		#file_icon = ab_lib.ABTree.resource_preview_dict.get(file_path)
-		#if not file_icon:
-			#file_icon = ab_lib.ABTree.resource_preview_large_dict.get(file_path)
-			#item.set_icon_max_width(0,16)
-	else:
-		var fs_tree_item = filesystem_singleton.file_system_dock_item_dict.get(file_path)
-		if fs_tree_item:
-			#var file_type:String = file_data.get(keys.tree.file_type)
-			file_icon = fs_tree_item.get_icon(0)
-		else:
-			file_icon = filesystem_singleton.get_icon(file_path)
+	if show_preview:
+		var preview_data = filesystem_singleton.get_preview(file_path)
+		if preview_data != null:
+			file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
+			if file_icon == null:
+				file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
+				item.set_icon_max_width(0, thumbnail_size)
+	
+	if file_icon == null:
+		file_icon = filesystem_singleton.get_type_icon(file_path)
 	
 	var file_color:Color = file_data.get("color", Color.WHITE)
 	item.set_icon(0, file_icon)
@@ -63,6 +65,7 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 
 func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	if not filtering:
+		filtered_item_paths.clear()
 		for path in item_dict.keys():
 			var runtime_data = data_dict.get(path)
 			if not runtime_data:
@@ -70,6 +73,10 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			var item = item_dict.get(path) as TreeItem
 			if not is_instance_valid(item):
 				continue
+			if not show_files:
+				if not path.ends_with("/"):
+					item.visible = false
+					continue
 			item.visible = true
 			item.collapsed = runtime_data.get(Keys.METADATA_COLLAPSED)
 		
@@ -89,22 +96,44 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	updating = true
 	
 	var vis_files = []
+	#for path:String in item_dict.keys():
+		#var item = item_dict.get(path) as TreeItem
+		#if not item:
+			#continue
+		#if path.get_extension() == "":
+			#if DirAccess.dir_exists_absolute(path):
+				#item.visible = false
+				#continue
+		#if not filter_callable.call(path):
+			#item.visible = false
+			#
+			#continue
+		#vis_files.append(path)
 	for path:String in item_dict.keys():
 		var item = item_dict.get(path) as TreeItem
 		if not item:
 			continue
-		if path.get_extension() == "":
+		if path.ends_with("/"):
 			if DirAccess.dir_exists_absolute(path):
 				item.visible = false
 				continue
-		if not filter_callable.call(path):
-			item.visible = false
-			
-			continue
-		vis_files.append(path)
+		if show_files:
+			if not filter_callable.call(path):
+				item.visible = false
+				continue
+			vis_files.append(path)
+		else:
+			var dir_path = path.trim_suffix("/").get_base_dir()
+			if not filter_callable.call(dir_path):
+				item.visible = false
+				continue
+			if not dir_path.ends_with("/"):
+				dir_path += "/"
+			vis_files.append(dir_path)
+	
+	filtered_item_paths = vis_files
 	
 	for path:String in vis_files:
-		var is_dir = path.ends_with("/")
 		var path_tail = path.get_slice(root_dir,1)
 		var work_path = root_dir
 		var slice_count = path_tail.get_slice_count("/")
@@ -171,7 +200,7 @@ func set_tree_item_params(path:String, item:TreeItem):
 		Keys.METADATA_PATH: path
 	}
 	item.set_metadata(0, meta)
-	item.set_icon(0, filesystem_singleton.get_icon(path))
+	item.set_icon(0, filesystem_singleton.get_type_icon(path))
 	var color = filesystem_singleton.get_icon_color(path)
 	if color:
 		item.set_icon_modulate(0, color)

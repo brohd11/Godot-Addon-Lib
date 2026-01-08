@@ -143,7 +143,7 @@ static func get_window_offset_position(control:Control, position:Vector2i):
 	return control.get_window().position + position
 
 class Params extends PopupHelper.ParamKeys:
-	const CALLABLE = &"callable"
+	pass
 
 class Options:
 	var _dict = {}
@@ -156,5 +156,12 @@ class Options:
 		if callable != null:
 			data[Params.CALLABLE] = callable
 		if icon_array != null:
-			data[Params.ICON_KEY] = icon_array
+			data[Params.ICON] = icon_array
 		_dict[menu_path] = data
+		return _dict[menu_path]
+	
+	func add_radio_option(menu_path:String, callable, is_checked:bool=false, icon_array=null):
+		var data = add_option(menu_path, callable, icon_array)
+		data[Params.RADIO] = true
+		data[Params.RADIO_IS_CHECKED] = is_checked
+		return data
