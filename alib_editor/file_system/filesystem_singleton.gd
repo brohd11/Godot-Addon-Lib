@@ -5,6 +5,8 @@ extends Singleton.RefCount
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
 
+const FileTypes = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/file_types.gd")
+const FSTooltop = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tooltip.gd")
 const FSRename = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename.gd")
 
 
@@ -44,7 +46,7 @@ var _file_and_dir_paths_dict:={}
 var editor_base_control:Control
 var editor_resource_preview:EditorResourcePreview
 
-var _previews_generated:=false
+var _previews_generated:=false #^ need a flag to retrigger when all are built after initial build
 var _init_complete:=false
 
 signal filesystem_changed
@@ -56,6 +58,8 @@ func _ready() -> void:
 	editor_node_ref = EditorNodeRef.get_instance()
 	EditorNodeRef.call_on_ready(_register_dialogs)
 	editor_fs = EditorInterface.get_resource_filesystem()
+	while editor_fs.is_scanning():
+		await get_tree().process_frame
 	editor_fs.filesystem_changed.connect(_on_filesystem_changed)
 	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
 	
@@ -173,9 +177,9 @@ func _singleton_recursive_scan_tree_for_paths(item: TreeItem):
 		print("NO TREE META", item.get_text(0))
 		return
 	file_system_dock_item_dict[file_path] = item
-	if file_path.ends_with("/"):
-		_file_and_dir_paths_dict[file_path] = true
-	_file_paths_dict[file_path] = true
+	if not file_path.ends_with("/"):
+		_file_paths_dict[file_path] = true
+	_file_and_dir_paths_dict[file_path] = true
 	
 	var child: TreeItem = item.get_first_child()
 	while child != null:
@@ -247,12 +251,17 @@ static func recursive_scan_for_file_paths(dir:String, include_dirs:bool=false) -
 		files.append(fs_dir.get_file_path(i))
 	return files
 
+static func is_path_valid(path:String):
+	if instance_valid():
+		return get_instance()._file_and_dir_paths_dict.has(path)
+	return false
+
 func get_file_data(path:String):
 	var cached = CacheHelper.get_cached_data(path, cache.file_data)
 	if cached:
 		return cached
 	
-	var file_type = _get_file_type(path)
+	var file_type = get_file_type(path)
 	var icon = _get_type_icon(path)
 	var preview_icon = icon
 	
@@ -271,9 +280,13 @@ func get_file_data(path:String):
 		
 	return _file_data
 
+static func get_file_type_static(path:String):
+	if instance_valid():
+		return get_instance().get_file_type(path)
+	return {}
 
 
-func _get_file_type(path:String):
+func get_file_type(path:String):
 	var cached = CacheHelper.get_cached_data(path, cache.file_types)
 	if cached != null:
 		return cached
@@ -283,6 +296,8 @@ func _get_file_type(path:String):
 	#_file_types[path] = file_type
 	CacheHelper.store_data(path, file_type, cache.file_types, [path])
 	return file_type
+
+
 
 func get_type_icon(file_path:String):
 	var data = get_file_data(file_path)
@@ -297,12 +312,16 @@ func _get_type_icon(file_path):
 			return item.get_icon(0)
 	if file_path.ends_with("/"):
 		return get_folder_icon()
-	var file_type = _get_file_type(file_path)
+	var file_type = get_file_type(file_path)
 	if Keys.VALID_FILE_TYPES.has(file_type):
 		return cache.file_icon
 	return editor_base_control.get_theme_icon(file_type, &"EditorIcons")
 
-func get_preview(path:String):
+static func get_preview(path:String):
+	if instance_valid():
+		return get_instance()._get_preview(path)
+
+func _get_preview(path:String):
 	var cached_preview = CacheHelper.get_cached_data(path, cache.resource_previews)
 	if cached_preview != null:
 		return cached_preview
@@ -448,7 +467,7 @@ static func get_filesystem_favorites():
 		return []
 
 
-func activate_in_fs():
+static func activate_in_fs():
 	var fs_tree = get_filesystem_tree() as Tree
 	fs_tree.item_activated.emit()
 
@@ -647,10 +666,50 @@ static func fs_dock_in_bottom_panel() -> bool:
 
 ## Takes a file path, and the new name of the file. New name is not entire path.
 static func rename_path(old_path:String, new_path:String):
-	FSRename.rename_path(old_path, new_path)
+	await FSRename.rename_path(old_path, new_path)
 
 static func is_new_name_valid(original_file_name:String, new_file_name:String) -> bool:
 	return FSRename.is_new_name_valid(original_file_name, new_file_name)
+
+static func fs_navigate_to_path(path:String, activate_rename:=false):
+	FSRename.show_item_in_dock(path, activate_rename)
+
+static func get_custom_tooltip(path:String):
+	return FSTooltop.get_custom_tooltip(path)
+
+static func get_thumbnail_size():
+	return Vector2(64, 64) * EditorInterface.get_editor_scale()
+
+static func get_drag_preview(paths:Array):
+	var ins = get_instance()
+	var file_icon = ins.cache.file_icon
+	var folder_icon = ins.cache.folder_icon
+	var container = VBoxContainer.new()
+	container.add_theme_constant_override("separation", 0)
+	var path_size = paths.size()
+	for i in range(5):
+		if i >= path_size:
+			break
+		var path = paths[i]
+		var hbox = HBoxContainer.new()
+		var icon = folder_icon if path.ends_with("/") else file_icon
+		var _name = path.trim_suffix("/").get_file()
+		var texture = TextureRect.new()
+		texture.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		texture.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		texture.texture = icon
+		var lab = Label.new()
+		lab.text = _name
+		hbox.add_child(texture)
+		hbox.add_child(lab)
+		container.add_child(hbox)
+	if path_size > 5:
+		var leftover = path_size - 5
+		var lab = Label.new()
+		lab.text = "%s more files" % leftover
+		container.add_child(lab)
+	
+	return container
 
 func _all_unregistered_callback():
 	pass
@@ -730,3 +789,36 @@ class GetDropData:
 class CanDropData:
 	static func files(at_position: Vector2, data: Variant, extensions:Array=[]) -> bool:
 		return UTree.can_drop_data.files(at_position, data, extensions)
+
+class DropData:
+	static func move_dialog(data, target_dir, calling_node):
+		var files = []
+		if data.has("files"):
+			files = data.get("files")
+		elif data.has("file_and_dirs"):
+			files = data.get("file_and_dirs")
+		
+		for file:String in files:
+			if file == target_dir:
+				return
+			if UFile.is_file_in_directory(target_dir, file):
+				return
+			var file_dir = file
+			file_dir = file_dir.trim_suffix("/")
+			file_dir = file_dir.get_base_dir()
+			if not file_dir.ends_with("/"):
+				file_dir += "/"
+			if file_dir == target_dir:
+				return
+		
+		calling_node.get_window().gui_cancel_drag() #^r twice calling?
+		FileSystemSingleton.move_dialogs(calling_node)
+		
+		var selected = FileSystemSingleton.ensure_items_selected(files)
+		if not selected:
+			return
+		
+		calling_node.get_window().grab_focus()
+		
+		FileSystemSingleton.move_dialogs(calling_node)
+		FileSystemSingleton.show_file_move_dialog(target_dir)

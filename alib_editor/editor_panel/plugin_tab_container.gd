@@ -5,18 +5,17 @@ const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handle
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 
 
-const DEFAULT_TAB_HEIGHT = 28
-
 static func get_scene() -> PackedScene:
 	return load("uid://2dvub2jcbmvm") # tree_tab_container.tscn
 
+
+@onready var right_click_handler: RightClickHandler = $RightClickHandler
+@onready var tab_v: VBoxContainer = %TabV
+@onready var tab_bar: TabBar = %TabBar
 @onready var new_tab_button: Button = %NewTabButton
 @onready var dock_button: Button = %DockButton
 
 @onready var v_box: VBoxContainer = %VBox
-@onready var tab_bar: TabBar = %TabBar
-
-@onready var right_click_handler: RightClickHandler = $RightClickHandler
 
 var _default_tabs:Array = []
 
@@ -32,7 +31,10 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
-	tab_bar.get_parent().custom_minimum_size.y = DEFAULT_TAB_HEIGHT * EditorInterface.get_editor_scale()
+	
+	var panel = tab_bar.get_parent()
+	var ed_theme = EditorInterface.get_editor_theme()
+	panel.add_theme_stylebox_override("panel", ed_theme.get_stylebox("tabbar_background", "TabContainer"))
 	
 	tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_NEVER
 	
@@ -43,6 +45,7 @@ func _ready() -> void:
 	tab_bar.mouse_entered.connect(_on_tab_bar_mouse_entered)
 	tab_bar.mouse_exited.connect(_on_tab_bar_mouse_exited)
 	tab_bar.tab_changed.connect(_on_tab_changed)
+	tab_bar.tab_hovered.connect(_on_tab_hovered)
 	
 	new_tab_button.pressed.connect(_on_new_tab_pressed)
 	new_tab_button.icon = EditorInterface.get_base_control().get_theme_icon("Add", "EditorIcons")
@@ -53,15 +56,34 @@ func _ready() -> void:
 	if tab_bar.tab_count == 0:
 		_load_default()
 
-
 func set_standalone_panel(toggled:bool):
 	_standalone_panel = toggled
 	dock_button.visible = _standalone_panel
+
+func get_split_options() -> RightClickHandler.Options:
+	var options:RightClickHandler.Options
+	var tab_contol = get_current_tab_control()
+	if tab_contol.has_method("get_split_options"):
+		options = tab_contol.get_split_options()
+	else:
+		options = RightClickHandler.Options.new()
+	
+	var msg_text = "Show Tab Bar"
+	var icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityVisible", "EditorIcons")
+	var val = true
+	if tab_v.visible:
+		msg_text = "Hide Tab Bar"
+		icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityHidden", "EditorIcons")
+		val = false
+	options.add_option(msg_text, _toggle_tab_bar.bind(val), [icon])
+	return options
+
 
 func set_dock_data(data:Dictionary):
 	if data.is_empty():
 		return
 	
+	_toggle_tab_bar(data.get(Keys.DATA_TAB_BAR_VIS, true))
 	var tabs_data = data.get(Keys.DATA_ALL_TABS_DATA, {})
 	var default = data.get(Keys.DATA_DEFAULT_TABS)
 	if default != null:
@@ -105,6 +127,7 @@ func get_dock_data():
 	var data = {}
 	
 	#data[Keys.DATA_DEFAULT_TABS] = _default_paths
+	data[Keys.DATA_TAB_BAR_VIS] = tab_v.visible
 	data[Keys.DATA_CURRENT_TAB] = tab_bar.current_tab
 	var tabs_data = {}
 	for i in range(tab_bar.get_tab_count()):
@@ -183,6 +206,15 @@ func _show_tab(tab:int):
 		else:
 			tab_control.hide()
 
+func _rename_tab(tab:int):
+	var old_name = tab_bar.get_tab_title(tab)
+	var rect = tab_bar.get_tab_rect(tab)
+	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(tab_bar)
+	var line = ALibRuntime.Dialog.LineSubmitHandler.new(self, rect)
+	var new = await line.line_submitted
+	if new == old_name or new == "":
+		return
+	tab_bar.set_tab_title(tab, new)
 
 func _close_tab(tab:int):
 	var control = get_tab_control(tab)
@@ -224,9 +256,16 @@ func _on_tab_bar_mouse_entered():
 func _on_tab_bar_mouse_exited():
 	tab_bar.tabs_rearrange_group = 55
 
+func _on_tab_hovered(tab:int):
+	var window = get_window()
+	if window.gui_is_dragging():
+		tab_bar.current_tab = tab
+		_show_tab(tab)
+
 
 func _on_tab_rmb_clicked(tab:int):
 	var options = RightClickHandler.Options.new()
+	options.add_option("Rename", _rename_tab.bind(tab), ["Edit"])
 	if _current_tab_can_be_freed():
 		options.add_option("Close", _close_tab.bind(tab), ["Close"])
 	
@@ -306,13 +345,9 @@ func get_all_tab_controls():
 
 func _panel_checks():
 	await get_tree().process_frame
-	_set_panel_size()
 	_check_close_policy()
 	tab_bar.queue_redraw()
 
-func _set_panel_size():
-	if tab_bar.size.y > 0:
-		tab_bar.get_parent().custom_minimum_size.y = tab_bar.size.y
 
 func _current_tab_can_be_freed():
 	var current_control = get_current_tab_control()
@@ -329,6 +364,10 @@ func _check_close_policy():
 		tab_bar.tab_close_display_policy = TabBar.CLOSE_BUTTON_SHOW_NEVER
 	tab_bar.queue_redraw()
 
+func _toggle_tab_bar(toggled:bool):
+	tab_v.visible = toggled
+
+
 class Keys:
 	const VAR_PLUGIN_TAB_CONTAINER = "plugin_tab_container"
 	const SIGNAL_NEW_PLUGIN_TAB = "new_plugin_tab"
@@ -344,4 +383,5 @@ class Keys:
 	const DATA_TAB_TITLE = "tab_title"
 	const DATA_TAB_FILE_PATH = "tab_file_path"
 	const DATA_TAB_UID = "tab_uid"
+	const DATA_TAB_BAR_VIS = &"DATA_TAB_BAR_VIS"
 	

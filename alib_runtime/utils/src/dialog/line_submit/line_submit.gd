@@ -16,6 +16,12 @@ var popup:Popup
 var line_edit:LineEdit
 var selected_node
 
+static func on_control(control:Control):
+	var rect = control.get_rect()
+	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(control)
+	var new = new(control, rect)
+	return new
+
 func _init(sel_node, rect:Rect2=Rect2()) -> void:
 	selected_node = sel_node
 	if rect == Rect2():

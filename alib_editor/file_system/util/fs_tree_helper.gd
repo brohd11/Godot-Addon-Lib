@@ -96,42 +96,32 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	updating = true
 	
 	var vis_files = []
-	#for path:String in item_dict.keys():
-		#var item = item_dict.get(path) as TreeItem
-		#if not item:
-			#continue
-		#if path.get_extension() == "":
-			#if DirAccess.dir_exists_absolute(path):
-				#item.visible = false
-				#continue
-		#if not filter_callable.call(path):
-			#item.visible = false
-			#
-			#continue
-		#vis_files.append(path)
 	for path:String in item_dict.keys():
 		var item = item_dict.get(path) as TreeItem
 		if not item:
 			continue
-		if path.ends_with("/"):
-			if DirAccess.dir_exists_absolute(path):
-				item.visible = false
-				continue
-		if show_files:
-			if not filter_callable.call(path):
-				item.visible = false
-				continue
-			vis_files.append(path)
-		else:
-			var dir_path = path.trim_suffix("/").get_base_dir()
-			if not filter_callable.call(dir_path):
-				item.visible = false
-				continue
-			if not dir_path.ends_with("/"):
-				dir_path += "/"
-			vis_files.append(dir_path)
+		item.visible = false
+		#if path.ends_with("/"):
+			#if DirAccess.dir_exists_absolute(path):
+				#item.visible = false
+				#continue
+		#if show_files:
+			#if not filter_callable.call(path):
+				#item.visible = false
+				#continue
+			#vis_files.append(path)
+		#else:
+			#var dir_path = path.trim_suffix("/").get_base_dir()
+			#if not filter_callable.call(dir_path):
+				#item.visible = false
+				#continue
+			#if not dir_path.ends_with("/"):
+				#dir_path += "/"
+			#vis_files.append(dir_path)
 	
-	filtered_item_paths = vis_files
+	#filtered_item_paths = vis_files
+	vis_files = filtered_item_paths
+	
 	
 	for path:String in vis_files:
 		var path_tail = path.get_slice(root_dir,1)
@@ -154,11 +144,13 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	if is_instance_valid(favorites_item):
 		var favorites = favorites_item.get_children()
 		for f in favorites:
-			var text = f.get_text(0)
-			if not filter_callable.call(text):
-				f.visible = false
-			else:
-				f.visible = true
+			var path = get_path_from_item(f)
+			f.visible = path in vis_files
+			#var text = f.get_text(0)
+			#if not filter_callable.call(text):
+				#f.visible = false
+			#else:
+				#f.visible = true
 	
 	
 	var root_item = tree_node.get_root()

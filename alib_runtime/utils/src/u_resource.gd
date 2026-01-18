@@ -1,6 +1,13 @@
 extends RefCounted
 #! namespace ALibRuntime.Utils class UResource
 
+const UFile = ALibRuntime.Utils.UFile
+
+const Audio = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/audio.gd")
+const ImageSize = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/image_size.gd")
+const GDScriptFileAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/gdscript.gd")
+const PackedSceneFileAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/packed_scene.gd")
+
 static func save_resource_to_path(res:Resource,path:String, name_overide:String="") -> void:
 	if name_overide == "":
 		res.resource_name = path.get_file().get_basename()
@@ -33,6 +40,7 @@ static func edit_resource(path):
 	editor_interface.edit_resource(res)
 
 
+
 static func resize_texture(texture:Texture2D, new_size_x:int, new_size_y:int=-1):
 	var img = texture.get_image()
 	if new_size_y == -1:
@@ -40,6 +48,21 @@ static func resize_texture(texture:Texture2D, new_size_x:int, new_size_y:int=-1)
 	img.resize(new_size_x, new_size_y)
 	var img_tex = ImageTexture.create_from_image(img)
 	return img_tex
+
+static func get_modulated_icon(texture:Texture2D, color:=Color(1,1,1)) -> Texture2D:
+	var img = texture.get_image()
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8) # Convert to RGBA8 to ensure can modify pixels
+	
+	for y in img.get_height():
+		for x in img.get_width():
+			var pixel_color = img.get_pixel(x, y)
+			if pixel_color.a > 0: # Check if pixel has any visibility
+				img.set_pixel(x, y, Color(color.r, color.b, color.g, pixel_color.a)) # Set RGB to White, KEEP the original Alpha
+	
+	return ImageTexture.create_from_image(img)
+
 
 static func instance_scene_or_script(path:String):
 	if not FileAccess.file_exists(path):
@@ -65,4 +88,47 @@ static func get_object_file_path(obj:Object) -> String:
 		var script = obj.get_script()
 		if script:
 			return script.resource_path
+	return ""
+
+
+
+static func get_resource_script_class(path:String):
+	if path.get_extension() == "tres":
+		return _get_resource_script_class_file_access(path)
+	var res = load(path) as Resource
+	var script = res.get_script() as GDScript
+	if script == null:
+		return ""
+	return script.get_global_name()
+
+static func _get_resource_script_class_file_access(file_path: String) -> String:
+	var result = ""
+	var f = UFile.get_file_access(file_path)
+	if f:
+		var header = f.get_line()
+		if "script_class=" in header:
+			var start_index = header.find("script_class=") + 14 # Length of 'script_class="'
+			var end_index = header.find('"', start_index)
+			if end_index != -1:
+				result = header.substr(start_index, end_index - start_index)
+	return result
+
+static func check_scene_root(file_path:String, valid_types:Array) -> bool:
+	var root = get_scene_root_type(file_path)
+	return root in valid_types
+	
+
+static func get_scene_root_type(file_path:String):
+	var file = UFile.get_file_access(file_path)
+	if file:
+		while not file.eof_reached():
+			var line = file.get_line()
+			if not line.find("[node name=") > -1:
+				continue
+			if line.find("instance=") > -1:
+				pass
+			else:
+				var first_pass_type = line.get_slice('type="', 1)
+				var type = first_pass_type.get_slice('"', 0)
+				return type
 	return ""

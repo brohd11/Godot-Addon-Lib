@@ -191,7 +191,7 @@ static func _create_popup_item(_popup:PopupMenu, params:PopupMenuPathParams, tex
 				icon = _get_icon(icon)
 			icon = icon as Texture2D
 			if icon.get_size() != ICON_DEFAULT_SIZE * EditorInterface.get_editor_scale():
-				print("RESIZE")
+				#print("RESIZE")
 				var icon_size = 16 * EditorInterface.get_editor_scale()
 				icon = UResource.resize_texture(icon, icon_size)
 			if params.radio:

@@ -399,7 +399,7 @@ func undock_instance():
 	var window = PanelWindow.new(plugin_control, empty_panel, _default_window_size)
 	window.title = window_title
 	window.close_requested.connect(window_close_requested)
-	#window.mouse_entered.connect(_on_window_mouse_entered.bind(window))
+	window.mouse_entered.connect(_on_window_mouse_entered.bind(window))
 	#window.mouse_exited.connect(_on_window_mouse_exited)
 	
 	dock_changed.emit(self)
@@ -440,8 +440,11 @@ func get_current_dock_control():
 
 func window_close_requested() -> void:
 	dock_instance(last_dock)
-func _on_window_mouse_entered(window):
-	window.grab_focus()
+func _on_window_mouse_entered(window:Window):
+	return
+	#return
+	if plugin.get_window().gui_is_dragging():
+		window.grab_focus()
 func _on_window_mouse_exited():
 	EditorInterface.get_base_control().get_window().grab_focus()
 

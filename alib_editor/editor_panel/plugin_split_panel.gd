@@ -61,7 +61,7 @@ func _ready():
 	var buttons_bg = ColorRect.new()
 	add_child(buttons_bg)
 	buttons_bg.mouse_filter = Control.MOUSE_FILTER_PASS
-	buttons_bg.color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color()
+	buttons_bg.color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BACKGROUND)
 	buttons_bg.hide()
 	
 	var margin = MarginContainer.new()
@@ -209,7 +209,13 @@ func _toggle_panel(panel:Control):
 		_set_split_style_box(split)
 
 func _on_panel_right_clicked(panel:MoveablePanel):
-	var options = RightClickHandler.Options.new()
+	var options:RightClickHandler.Options
+	var control = panel.get_control()
+	if control.has_method("get_split_options"):
+		options = control.get_split_options()
+	else:
+		options = RightClickHandler.Options.new()
+	
 	options.add_option("Split/Left", split_panel.bind(panel, SplitType.HORIZONTAL_L))
 	options.add_option("Split/Right", split_panel.bind(panel, SplitType.HORIZONTAL_R))
 	options.add_option("Split/Up", split_panel.bind(panel, SplitType.VERTICAL_U))

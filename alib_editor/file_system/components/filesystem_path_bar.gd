@@ -1,0 +1,176 @@
+extends HBoxContainer
+
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+
+const FSUtil = FSClasses.FSUtil
+
+const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+
+signal path_selected(path:String)
+signal right_clicked(path:String)
+
+static var _style_boxes = {}
+
+var path_in_res:=true
+
+var back_button:Button
+var forward_button:Button
+var tab_bar:TabBar
+
+var scroll_container:ScrollContainer
+var line_edit:LineEdit
+var button_hbox:HBoxContainer
+
+var _history_path := ""
+var _current_dir := ""
+
+var _bar_view:=0
+
+func _ready() -> void:
+	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	tab_bar = TabBar.new()
+	add_child(tab_bar)
+	tab_bar.tab_clicked.connect(_on_tab_bar_pressed)
+	tab_bar.tab_rmb_clicked.connect(_on_tab_bar_right_clicked)
+	tab_bar.select_with_rmb = true
+	tab_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tab_bar.focus_mode = Control.FOCUS_NONE
+	
+	
+	_set_style_boxes(tab_bar)
+	
+	line_edit = LineEdit.new()
+	add_child(line_edit)
+	line_edit.text_submitted.connect(_on_line_edit_text_submitted)
+	line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	#line_edit.expand_to_text_length = true
+	line_edit.hide()
+	
+	set_current_dir("res://")
+
+func set_current_path(path:String):
+	set_current_dir(path)
+
+func set_current_dir(path:String):
+	if path == "FAVORITES":
+		return
+	if path == _current_dir:
+		return
+	
+	_current_dir = path
+	line_edit.text = _current_dir
+	var path_to_display = _current_dir
+	var current_dir = _current_dir
+	if not DirAccess.dir_exists_absolute(current_dir):
+		current_dir = current_dir.get_base_dir()
+	if not current_dir.ends_with("/"):
+		current_dir += "/"
+	
+	var path_is_ancestor = UFile.is_dir_in_or_equal_to_dir(_history_path, _current_dir)
+	if path_is_ancestor and FSUtil.paths_have_same_root(_history_path, _current_dir):
+		print(_history_path, _current_dir)
+		_select_tab_by_path(current_dir)
+		return
+	else:
+		tab_bar.clear_tabs()
+		_history_path = _current_dir
+	
+	
+	
+	var path_prefix = path_to_display.get_slice("://", 0)
+	var path_parts = path_to_display.get_slice("://", 1)
+	var parts = path_parts.split("/", false)
+	var working_path = path_prefix + "://"
+	
+	if path_in_res or path_to_display.find("://") > -1:
+		tab_bar.add_tab(working_path)
+		tab_bar.set_tab_metadata(0, working_path)
+	else:
+		parts = path_to_display.split("/", false)
+		working_path = "/" # this needs an os get root thing?
+		tab_bar.add_tab("/")
+		tab_bar.set_tab_metadata(0, working_path)
+	print(current_dir)
+	var current_tab = 0
+	
+	for i in range(parts.size()):
+		var part = parts[i]
+		working_path = working_path.path_join(part)
+		var is_dir = DirAccess.dir_exists_absolute(working_path)
+		if not is_dir:
+			break
+		if is_dir:
+			working_path += "/"
+		if working_path == current_dir:
+			current_tab = i + 1 # due to prefix being 0
+		tab_bar.add_tab(part)
+		tab_bar.set_tab_metadata(i + 1, working_path)
+	
+	tab_bar.current_tab = current_tab
+
+func _select_tab_by_path(path:String):
+	for i in range(tab_bar.tab_count):
+		var meta_path = tab_bar.get_tab_metadata(i)
+		if meta_path == path:
+			tab_bar.current_tab = i
+			break
+
+func _on_tab_bar_pressed(idx:int):
+	var path = tab_bar.get_tab_metadata(idx)
+	path_selected.emit(path)
+
+func _on_tab_bar_right_clicked(idx) -> void:
+	var path = tab_bar.get_tab_metadata(idx)
+	right_clicked.emit(path)
+
+func _on_line_edit_text_submitted(new_text:String):
+	if not DirAccess.dir_exists_absolute(new_text) and not FileAccess.file_exists(new_text):
+		line_edit.text = _current_dir
+		line_edit.grab_focus()
+		return
+	
+	if DirAccess.dir_exists_absolute(new_text):
+		if not new_text.ends_with("/"):
+			new_text += "/"
+		line_edit.text = new_text
+	path_selected.emit(new_text)
+
+func toggle_view_mode():
+	_bar_view += 1
+	#if _bar_view > 2:
+	if _bar_view > 1:
+		_bar_view = 0
+	show()
+	if _bar_view == 0:
+		tab_bar.show()
+		line_edit.hide()
+	elif _bar_view == 1:
+		tab_bar.hide()
+		line_edit.show()
+	elif _bar_view == 2:
+		hide()
+		
+
+func _set_style_boxes(_tab_bar:TabBar):
+	var sbs = ["tab_selected", "tab_unselected", "tab_hovered", "tab_focus", "tab_disabled"]
+	for _name in sbs:
+		var sb = _get_style_box(_name)
+		sb.border_width_right = 2
+		sb.border_color = Color.TRANSPARENT
+		_tab_bar.add_theme_stylebox_override(_name, sb)
+	
+
+func _get_style_box(_name:String):
+	if _style_boxes == null:
+		_style_boxes = {}
+	if _style_boxes.has(_name):
+		return _style_boxes[_name]
+	var sb = tab_bar.get_theme_stylebox(_name).duplicate()
+	sb.border_width_right = 2
+	sb.border_color = Color.TRANSPARENT
+	if _name == "tab_selected":
+		sb.border_width_top = 0
+		sb.bg_color = sb.bg_color.darkened(0.5)
+	_style_boxes[_name] = sb
+	return sb

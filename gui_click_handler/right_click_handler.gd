@@ -1,3 +1,4 @@
+#! namespace ClickHandlers class RightClickHandler
 @tool
 extends Node
 
@@ -5,6 +6,8 @@ extends Node
 
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
 const MouseHelper = PopupHelper.MouseHelper
+const Options = ALibRuntime.Popups.Options
+const Params = PopupHelper.ParamKeys
 
 var popup:PopupMenu
 var mouse_helper:MouseHelper
@@ -15,6 +18,8 @@ var _custom_id_pressed_callable:Callable
 
 var _click_debounce_timer:float = 0
 var _click_debounce_time: float = 0.3
+
+signal popup_hidden
 
 func _ready() -> void:
 	if is_part_of_edited_scene():
@@ -95,6 +100,7 @@ func _on_mouse_helper_timeout():
 		_hide_popup()
 
 func _hide_popup():
+	popup_hidden.emit()
 	popup.hide()
 	_remove_popup_from_tree()
 
@@ -141,27 +147,3 @@ static func get_centered_control_position(control:Control):
 
 static func get_window_offset_position(control:Control, position:Vector2i):
 	return control.get_window().position + position
-
-class Params extends PopupHelper.ParamKeys:
-	pass
-
-class Options:
-	var _dict = {}
-	
-	func get_options():
-		return _dict
-	
-	func add_option(menu_path:String, callable, icon_array=null):
-		var data = {}
-		if callable != null:
-			data[Params.CALLABLE] = callable
-		if icon_array != null:
-			data[Params.ICON] = icon_array
-		_dict[menu_path] = data
-		return _dict[menu_path]
-	
-	func add_radio_option(menu_path:String, callable, is_checked:bool=false, icon_array=null):
-		var data = add_option(menu_path, callable, icon_array)
-		data[Params.RADIO] = true
-		data[Params.RADIO_IS_CHECKED] = is_checked
-		return data

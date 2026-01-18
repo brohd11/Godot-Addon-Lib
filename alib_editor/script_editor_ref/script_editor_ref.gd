@@ -4,6 +4,8 @@ extends Singleton.Base
 
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/script_editor_ref/script_editor_ref.gd")
 
+const Selection = ALibRuntime.NodeUtils.UCodeEdit.Selection
+
 static func get_singleton_name() -> String:
 	return "ScriptEditorRef"
 
@@ -143,6 +145,18 @@ func _on_text_changed():
 
 
 #^ utils
+
+static func get_selected_lines(script_editor:CodeEdit=null):
+	if script_editor == null:
+		script_editor = get_current_code_edit()
+	return Selection.get_selected_line_data(script_editor)
+
+static func get_selection(script_editor:CodeEdit=null) -> Selection:
+	if script_editor == null:
+		script_editor = get_current_code_edit()
+	var selection = Selection.new(script_editor)
+	return selection
+
 
 func _get_code_text_editor(script_text_editor:ScriptEditorBase):
 	var vsplit:VSplitContainer

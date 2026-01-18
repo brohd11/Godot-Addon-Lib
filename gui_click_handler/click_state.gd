@@ -1,3 +1,4 @@
+#! namespace ClickHandlers class ClickState
 
 enum State{
 	NONE,

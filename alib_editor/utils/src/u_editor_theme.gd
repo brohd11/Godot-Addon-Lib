@@ -38,8 +38,3 @@ static func get_size_of_control_type(type):
 	ins.hide()
 	ins.queue_free()
 	return new_size
-
-static func get_test():
-	print(EditorInterface.get_editor_theme().get_stylebox_type_list())
-	print(EditorInterface.get_editor_theme().get_constant_list("SplitContainer"))
-	pass

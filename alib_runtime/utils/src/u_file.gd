@@ -1,10 +1,52 @@
 extends RefCounted
 #! namespace ALibRuntime.Utils class UFile
 
+const GetFilesAsync = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/file/get_files_async.gd")
+
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 
 const _UID = "uid" + "://"
 const _UID_INVALID = _UID + "<invalid>"
+
+static func get_file_access(path:String, flag:=FileAccess.ModeFlags.READ, print_err:=false):
+	var file_access = FileAccess.open(path, flag)
+	if not file_access and print_err:
+		printerr("Could not open FileAccess: %s" % path)
+	return file_access
+
+static func get_files(dir:String, include_dirs=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
+	if not DirAccess.dir_exists_absolute(dir):
+		return PackedStringArray()
+	return _get_files_recur(dir, include_dirs, file_types)
+
+static func _get_files_recur(dir:String, include_dirs:=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
+	var found_files = PackedStringArray()
+	var dir_access = DirAccess.open(dir)
+	if not dir_access:
+		return found_files
+	dir_access.include_hidden = show_hidden
+	var files = dir_access.get_files()
+	var filter = not file_types.is_empty()
+	for f in files:
+		var path = dir.path_join(f)
+		if not filter:
+			found_files.append(path)
+		else:
+			var ext = f.get_extension()
+			if ext in file_types:
+				found_files.append(path)
+	
+	var dirs = dir_access.get_directories()
+	for d in dirs:
+		var path = dir.path_join(d) + "/"
+		if include_dirs:
+			found_files.append(path)
+		found_files.append_array(_get_files_recur(path, include_dirs, file_types, show_hidden))
+	
+	return found_files
+
+
+
 
 static func scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
 	if show_ignore or not Engine.is_editor_hint():
@@ -208,7 +250,10 @@ static func copy_file(from:String, to:String, overwrite:bool=false) -> Error:
 static func uid_to_path(uid:String):
 	if not uid.begins_with(_UID):
 		return uid
-	return ResourceUID.get_id_path(ResourceUID.text_to_id(uid))
+	var id = ResourceUID.text_to_id(uid)
+	if ResourceUID.has_id(id):
+		return ResourceUID.get_id_path(id)
+	return ""
 
 static func path_to_uid(path:String):
 	if path.begins_with(_UID):
@@ -217,6 +262,23 @@ static func path_to_uid(path:String):
 	if uid == _UID_INVALID:
 		uid = path
 	return uid
+
+static func file_exists(path_or_uid:String, current_script:Script=null, print_err:=false):
+	if not path_or_uid.is_absolute_path():
+		if is_instance_valid(current_script):
+			var dir = current_script.resource_path.get_base_dir()
+			path_or_uid = dir.path_join(path_or_uid)
+		else:
+			if print_err:
+				printerr("Not absolute path provided in file exists.")
+			return false
+	if path_or_uid.begins_with(_UID):
+		path_or_uid = uid_to_path(path_or_uid)
+		if path_or_uid == "":
+			if print_err:
+				printerr("Invalid UID: %s" % path_or_uid)
+			return false
+	return FileAccess.file_exists(path_or_uid)
 
 static func load_config_file(path:String):
 	var config = ConfigFile.new()
@@ -243,23 +305,10 @@ static func replace_text_in_file(file_path, replace, with):
 				
 			file.close() 
 
+
+## DEPRECATED move to UResource
 static func check_scene_root(file_path:String, valid_types:Array) -> bool:
-	var file = FileAccess.open(file_path, FileAccess.READ)
-	if not file:
-		printerr("Could not open file: " + file_path)
-		return false
-	while not file.eof_reached():
-		var line = file.get_line()
-		if not line.find("[node name=") > -1:
-			continue
-		var first_pass_type = line.get_slice('type="', 1)
-		var type = first_pass_type.get_slice('"', 0)
-		if not type in valid_types:
-			printerr("Scene is not a UI root: " + file_path)
-			return false
-		else:
-			return true
-	return false
+	return ALibRuntime.Utils.UResource.check_scene_root(file_path, valid_types)
 
 static func get_relative_path(from_path: String, to_path: String) -> String:
 	var from_dir = from_path.get_base_dir()
@@ -337,6 +386,28 @@ static func _get_script_dir() -> String:
 	var script = new()
 	return script.get_script().resource_path.get_base_dir()
 
+static func get_dir_contents(dir_path:String, construct_path:=false, show_hidden:=false, printerr:=false):
+	var dir_access = DirAccess.open(dir_path)
+	if dir_access:
+		dir_access.include_hidden = show_hidden
+		var files = dir_access.get_files()
+		var dirs = dir_access.get_directories()
+		if not construct_path:
+			return {"files":files, "dirs":dirs}
+		var file_paths = []
+		var dir_paths = []
+		for f in files:
+			var path = dir_path.path_join(f)
+			file_paths.append(path)
+		for d in dirs:
+			var path = dir_path.path_join(d) + "/"
+			dir_paths.append(path)
+		return {"files":file_paths, "dirs":dir_paths}
+	elif printerr:
+		printerr("Could not open dir - error %s: %s" % [DirAccess.get_open_error(), dir_path])
+	return {"files":[], "dirs":[]}
+
+
 static func is_file_in_directory(file_path: String, dir_path: String) -> bool:
 	var absolute_file_path = ProjectSettings.globalize_path(file_path)
 	var absolute_dir_path = ProjectSettings.globalize_path(dir_path)
@@ -361,4 +432,42 @@ static func is_dir_in_or_equal_to_dir(file_path: String, dir_path: String) -> bo
 	#if absolute_file_path == absolute_dir_path:
 		#return true
 	return absolute_file_path.begins_with(absolute_dir_path)
+
+static func ensure_dir_slash(path):
+	if not path.ends_with("/"):
+		path += "/"
+	return path
+
+static func get_dir(path:String):
+	var original_path = path
+	if path.ends_with("://"):
+		return path
+	path = path.trim_suffix("/")
+	path = path.get_base_dir()
+	return ensure_dir_slash(path)
+
+static func path_is_root(path:String):
+	if path.ends_with("://"):
+		return true
+	if path == "/":
+		return true
+	return false
+
+static func get_file_size(path: String, format:=true) -> String:
+	var file = FileAccess.open(path, FileAccess.READ)
+	if not file:
+		return "Unknown"
 	
+	var bytes = file.get_length()
+	if not format:
+		return bytes
+	bytes = float(bytes)
+	
+	if bytes < 1024:
+		return "%.0f B" % bytes
+	elif bytes < 1024 * 1024:
+		return "%.2f KiB" % (bytes / 1024)
+	elif bytes < 1024 * 1024 * 1024:
+		return "%.2f MiB" % (bytes / (1024 * 1024))
+	else:
+		return "%.2f GiB" % (bytes / (1024 * 1024 * 1024))

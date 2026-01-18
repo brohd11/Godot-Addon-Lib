@@ -299,6 +299,54 @@ static func get_member_info_by_path_expr(script, member_name):
 		return res
 	return null
 
+static func resolve_script_access_path(script, member_name:String, 
+				print_err:=false, force_script_conversion:=false, check_class:=true, check_global:=true):
+	
+	if script == null:
+		script = EditorInterface.get_script_editor().get_current_script()
+	if script == null:
+		return null
+	
+	var current_script = script as Script
+	var parts = [member_name]
+	if member_name.find(".") > -1:
+		parts = member_name.split(".", false)
+	var resolved_path = ""
+	var parts_size = parts.size()
+	for i in range(parts_size):
+		var part = parts[i]
+		var member_info = get_member_info(current_script, part, ["const"], check_class)
+		#prints(resolved_path, member_info)
+		if member_info == null:
+			var err = true
+			if i == 0 and check_global:
+				var global_class_path = get_global_class_path(part)
+				if global_class_path != "":
+					err = false
+					current_script = load(global_class_path)
+					resolved_path = current_script.resource_path
+			if err:
+				if print_err:
+					printerr("Member '%s' not found in: %s" % [part, member_name.get_slice(part, 0).trim_suffix(".")])
+				return _append_path_tail(resolved_path, i, parts)
+		
+		elif member_info is GDScript:
+			if member_info.resource_path != "":
+				current_script = member_info
+				resolved_path = current_script.resource_path
+				continue
+			return _append_path_tail(resolved_path, i, parts)
+		else:
+			return _append_path_tail(resolved_path, i, parts)
+	
+	return resolved_path
+
+static func _append_path_tail(current_path:String, start_i:int, parts:PackedStringArray):
+	for i in range(start_i, parts.size()):
+		var tail_part = parts[i]
+		current_path += "." + tail_part
+	return current_path.trim_prefix(".").trim_suffix(".")
+
 static func get_member_info_by_path(script, member_name:String, member_hints_array:=_MEMBER_ARGS, 
 				print_err:=false, force_script_conversion:=false, check_class:=true, check_global:=true):
 	if script == null:
@@ -327,19 +375,14 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 		var member_info = get_member_info(current_script, part, member_hints_array, check_class)
 		final_val = member_info
 		if member_info == null:
-			if i == 0:
-				if not check_global:
-					if print_err:
-						printerr("Could not find member in script or global classes: %s" % part)
-					return null
+			var err = true
+			if i == 0 and check_global:
 				var global_class_path = get_global_class_path(part)
-				if global_class_path == "":
-					if print_err:
-						printerr("Could not find member in script or global classes: %s" % part)
-					return null
-				current_script = load(global_class_path)
-				final_val = current_script # set final val in case only looking up the global, for some reason
-			else:
+				if global_class_path != "":
+					current_script = load(global_class_path)
+					final_val = current_script # set final val in case only looking up the global, for some reason
+					err = false
+			if err:
 				if print_err:
 					printerr("Member '%s' not found in: %s" % [part, member_name.get_slice(part, 0).trim_suffix(".")])
 				return null
