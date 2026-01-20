@@ -160,9 +160,8 @@ func get_add_to_places_options(path:String):
 		if place_list.has_path(path):
 			continue
 		var menu_path = ADD_TO_PLACES_STRING.path_join(place_list.get_title())
-		options.add_option(menu_path, add_place_item.bind(path, place_list), ["Add", null], {"place_list": place_list})
+		options.add_option(menu_path, add_place_item.bind(path, place_list), ["ControlAlignLeftWide", null], {"place_list": place_list})
 	return options
-
 
 
 class Data:

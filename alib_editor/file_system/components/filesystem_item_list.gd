@@ -17,6 +17,7 @@ var file_type_icon_size:Vector2 = Vector2(16, 16)
 var file_type_icon_margin:Vector2 = Vector2(4, 4)
 
 var current_browser_state:FileSystemTab.BrowserState = FileSystemTab.BrowserState.BROWSE
+var current_view_mode:FileSystemTab.ViewMode = FileSystemTab.ViewMode.TREE
 
 var tree_root:=""
 var folder_view_root:=""
@@ -153,13 +154,13 @@ func _create_items_res():
 	if display_as_list:
 		folder_thumb = filesystem_singleton.get_folder_icon()
 	
-	var view_root = folder_view_root
-	var paths = _current_paths
-	if _is_filtering():
-		paths = _filtered_paths
-		view_root = ""
+	var view_root = _get_folder_view_root(true)
+	var paths = _get_paths_to_show()
+	#if _is_filtering():
+		#paths = _filtered_paths
+		#view_root = ""
 	
-	if view_root != "" and view_root != tree_root:
+	if view_root != "":# and view_root != tree_root:
 		add_icon_item(folder_thumb)
 		set_item_text(0, "..")
 		set_item_selectable(0, false)
@@ -206,13 +207,13 @@ func _create_items_not_res():
 		folder_icon = filesystem_singleton.get_folder_icon()
 		file_icon = EditorInterface.get_editor_theme().get_icon("File", "EditorIcons")
 	
-	var view_root = folder_view_root
-	var paths = _current_paths
-	if _is_filtering():
-		paths = _filtered_paths
-		view_root = ""
+	var view_root = _get_folder_view_root(false)
+	var paths = _get_paths_to_show()
+	#if _is_filtering():
+		#paths = _filtered_paths
+		#view_root = ""
 	
-	if view_root != "" and not FSUtil.is_root_folder(_current_path):
+	if view_root != "":# and not FSUtil.is_root_folder(_current_path):
 		add_icon_item(folder_icon)
 		set_item_text(0, "..")
 		set_item_selectable(0, false)
@@ -233,6 +234,20 @@ func _create_items_not_res():
 		set_item_metadata(idx, path)
 		set_item_text(idx, path.trim_suffix("/").get_file())
 		set_item_icon_modulate(idx, icon_color)
+
+func _get_folder_view_root(in_res:bool):
+	var view_root = folder_view_root
+	if _is_filtering() or FSUtil.is_root_folder(_current_path):
+		view_root = ""
+	if in_res and current_view_mode == FileSystemTab.ViewMode.TREE and view_root == tree_root:
+		view_root = ""
+	return view_root
+
+func _get_paths_to_show():
+	var paths = _current_paths
+	if _is_filtering():
+		paths = _filtered_paths
+	return paths
 
 func _draw() -> void:
 	var scroll_bar_offset = Vector2(get_h_scroll_bar().value, get_v_scroll_bar().value)

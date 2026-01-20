@@ -1,4 +1,5 @@
 
+const FileSystemTab = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tab.gd")
 const FileSystemTree = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tree.gd")
 const FileSystemItemList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_item_list.gd")
 const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
@@ -10,7 +11,8 @@ const ITEM_LIST_EMPTY_HIDE = ["Rename..."]
 const _FS_ID_NEED_RESCAN = [4, 5]
 const _FS_ID_NEED_HANDLE = [0, 21, 22, 10]
 
-const CREATE_NEW_TAB = "New Tab"
+const NEW_WINDOW = "New/Window"
+const CREATE_NEW_TAB = "New/Tab"
 const ADD_TO_PLACES = "Add to Places"
 const SET_ROOT = "Set Root"
 const RESET_ROOT = "Reset Root"
@@ -20,6 +22,7 @@ signal add_to_places(path)
 
 var filesystem_singleton:FileSystemSingleton
 
+var filesystem_tab:FileSystemTab
 var tree:FileSystemTree
 var item_list:FileSystemItemList
 var places:FileSystemPlaces
@@ -54,16 +57,17 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 		}
 	if _clicked_node is FileSystemTree:
 		if _selected_path == _clicked_node.root_dir:
-			items["pre"]["Reset Root"] = {
+			items["pre"][RESET_ROOT] = {
 				PopupWrapper.ItemParams.ICON:["Clear"]
 			}
 		elif _selected_path != "res://" and selected_is_dir:
-			items["pre"]["Set Root"] = {
+			items["pre"][SET_ROOT] = {
 				PopupWrapper.ItemParams.ICON:["NewRoot"]
-			}
+			}#!icon
 	if selected_is_dir and selected_paths.size() == 1:# and not tree_helper.is_item_in_favorites(selected_item):
+		items["pre"][NEW_WINDOW] = {PopupWrapper.ItemParams.ICON:["New", "Window"]}
 		items["pre"][CREATE_NEW_TAB] = {
-				PopupWrapper.ItemParams.ICON:["New"]
+				PopupWrapper.ItemParams.ICON:["New", ALibEditor.Singletons.EditorIcons.get_icon_white("TabContainer")]
 			}
 		var places_options = places.get_add_to_places_options(_selected_path).get_options()
 		for option in places_options.keys():
@@ -129,6 +133,11 @@ func _handle_non_fs(id, popup):
 	var id_text = PopupWrapper.PopupHelper.parse_menu_path(id, popup)
 	if id_text == CREATE_NEW_TAB:
 		_rc_new_tab()
+	elif id_text == NEW_WINDOW:
+		var fs_data = filesystem_tab.get_dock_data()
+		if filesystem_tab._current_view_mode == FileSystemTab.ViewMode.TREE:
+			fs_data[FileSystemTab.DataKeys.ROOT] = _selected_path
+		EditorGlobalSignals.signal_emit(FileSystemTab.DataKeys.GLOBAL_NEW_WINDOW_SIGNAL, fs_data)
 	elif id_text.begins_with(ADD_TO_PLACES):
 		_add_to_places(PopupWrapper.PopupHelper.get_metadata(id, popup))
 	elif id_text == SET_ROOT:

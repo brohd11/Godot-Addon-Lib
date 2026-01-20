@@ -1,9 +1,13 @@
 @tool
 extends Control
 
+#! import-p Keys,
+
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 
+static func get_scene_path():
+	return "uid://2dvub2jcbmvm" #! ensure-path
 
 static func get_scene() -> PackedScene:
 	return load("uid://2dvub2jcbmvm") # tree_tab_container.tscn
@@ -150,7 +154,7 @@ func get_dock_data():
 	return data
 
 
-func _on_new_plugin_tab(tab_control=null):
+func _on_new_plugin_tab(tab_control=null, select:=false):
 	if tab_control == null:
 		if not _default_tabs.is_empty():
 			tab_control = load_plugin_control(_default_tabs[0])
@@ -160,6 +164,8 @@ func _on_new_plugin_tab(tab_control=null):
 	_add_tab(tab_control)
 	
 	_panel_checks()
+	if select:
+		_show_tab(tab_bar.tab_count - 1)
 
 func _add_tab(tab_control:Control):
 	v_box.add_child(tab_control)
@@ -384,4 +390,32 @@ class Keys:
 	const DATA_TAB_FILE_PATH = "tab_file_path"
 	const DATA_TAB_UID = "tab_uid"
 	const DATA_TAB_BAR_VIS = &"DATA_TAB_BAR_VIS"
+
+class Tabs:
+	var _data = {}
 	
+	func get_data() -> Dictionary:
+		return _data
+	
+	func set_current_tab(idx:int) -> void:
+		var tabs_data = _data.get_or_add(Keys.DATA_ALL_TABS_DATA, {})
+		var tab_count = tabs_data.size()
+		if idx < tab_count:
+			_data[Keys.DATA_CURRENT_TAB] = idx
+		else:
+			print("Cannot set current tab to %s, only have %s tabs." % [idx, tab_count])
+	
+	func set_default_tabs(default_tabs:PackedStringArray) -> void:
+		_data[Keys.DATA_DEFAULT_TABS] = default_tabs
+	
+	func add_tab(title:String, tab_path:String, data:Dictionary={}) -> void:
+		var tabs_data = _data.get_or_add(Keys.DATA_ALL_TABS_DATA, {})
+		var next_idx = tabs_data.size()
+		tabs_data[var_to_str(next_idx)] = {
+			Keys.DATA_TAB_FILE_PATH:tab_path,
+			Keys.DATA_TAB_UID: UFile.path_to_uid(tab_path),
+			Keys.DATA_TAB_DATA : data
+		}
+		if not _data.has(Keys.DATA_CURRENT_TAB):
+			_data[Keys.DATA_CURRENT_TAB] = 0
+		

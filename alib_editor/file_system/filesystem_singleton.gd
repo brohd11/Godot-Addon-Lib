@@ -526,7 +526,7 @@ func _register_dialogs():
 static func get_dialogs():
 	return EditorNodeRef.get_registered(Keys.FS_DIALOGS)
 
-static func move_dialogs(new_parent):
+static func move_dialogs(new_parent, connect_vis_signal:=true):
 	var window_checked = false
 	var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
 	for dialog in dialog_nodes:
@@ -537,10 +537,27 @@ static func move_dialogs(new_parent):
 		new_parent = new_parent.get_window().get_child(0) # TEST
 		if dialog.get_parent() != new_parent:
 			dialog.reparent(new_parent)
+		
+		if connect_vis_signal:
+			dialog.visibility_changed.connect(_on_dialog_visibility_changed.bind(dialog))
 
-static func reset_dialogs(pos=null, mouse=null):
+static func _on_dialog_visibility_changed(dialog_changed:Window):
+	if dialog_changed.visible == false:
+		var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
+		for dialog:Window in dialog_nodes:
+			#if dialog.visibility_changed.is_connected(_on_dialog_visibility_changed):
+			dialog.visibility_changed.disconnect(_on_dialog_visibility_changed)
+		reset_dialogs()
+
+static func reset_dialogs(parent=null, mouse=null):
 	var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
-	for dialog in dialog_nodes:
+	var first_dialog = dialog_nodes[0]
+	if first_dialog.get_parent() == EditorInterface.get_file_system_dock():
+		return
+	if parent is Node:
+		if first_dialog.get_window() != parent.get_window():
+			return
+	for dialog:Window in dialog_nodes:
 		dialog.reparent(EditorInterface.get_file_system_dock())
 
 
@@ -586,13 +603,7 @@ static func show_file_move_dialog(target_dir:=""):
 	item.select(0)
 	dialog_tree.scroll_to_item(item, true)
 	dialog_tree.queue_redraw()
-	
-	move_dialog.visibility_changed.connect(_dialog_closed.bind(move_dialog))
 
-static func _dialog_closed(dialog:Window):
-	if dialog.visibility_changed.is_connected(_dialog_closed):
-		dialog.visibility_changed.disconnect(_dialog_closed)
-	reset_dialogs()
 
 static func populate_filesystem_popup(calling_node:Node):
 	ALibEditor.Nodes.FileSystem.populate_popup(calling_node)

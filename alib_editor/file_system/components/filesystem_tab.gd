@@ -119,16 +119,19 @@ var _dock_data:= {}
 signal new_plugin_tab(control)
 
 func can_be_freed() -> bool:
-	if not is_instance_valid(plugin_tab_container):
-		if tree.root_dir == "res://":
-			return false
-		return true
-	else:
-		var tabs = plugin_tab_container.get_all_tab_controls()
-		for tab:FileSystemTab in tabs:
-			if tab.tree.root_dir == "res://" and tab != self:
-				return true
-		return false
+	var tabs = plugin_tab_container.get_all_tab_controls()
+	return not tabs.size() == 1
+	
+	#if not is_instance_valid(plugin_tab_container):
+		#if tree.root_dir == "res://":
+			#return false
+		#return true
+	#else:
+		#var tabs = plugin_tab_container.get_all_tab_controls()
+		#for tab:FileSystemTab in tabs:
+			#if tab.tree.root_dir == "res://" and tab != self:
+				#return true
+		#return false
 
 func get_tab_title():
 	if tree.root_dir == "res://":
@@ -158,11 +161,15 @@ func _ready() -> void:
 	
 	places.build_item_list(place_data)
 	
-	_set_current_path(self, root)
+	#_set_current_path(self, root)
 	
 	_set_view_data() #^ must ensure root dir is set before calling
 	visibility_changed.connect(_on_visibilty_changed, 1)
+	
+	_set_current_path(self, current_path)
 
+func _exit_tree() -> void:
+	filesystem_singleton.reset_dialogs(self)
 
 func get_split_options() -> RightClickHandler.Options:
 	var options = RightClickHandler.Options.new()
@@ -377,7 +384,7 @@ func _get_filtered_paths(include_dirs:=false, use_file_name:=true):
 			_async_is_searching = true
 			_async_search = UFile.GetFilesAsync.open(_current_search_dir, _search_async_callback)
 			_async_search.set_settings(include_dirs)
-			paths = await _async_search.get_files(200)
+			paths = await _async_search.get_files(50)
 			_async_is_searching = false
 			_reset_filter_icons()
 			if _async_search.was_cancelled():
@@ -434,17 +441,13 @@ func _set_filter_icons(icon, clear_enabled:=true):
 	for f:LineEdit in filters:
 		f.clear_button_enabled = clear_enabled
 		f.right_icon = icon
-	
-	
-	pass
 
-func _on_rc_new_tab(path):
+
+func _on_rc_new_tab(path:String):
 	var new_instance = new()
-	new_instance.set_dock_data({
-		DataKeys.ROOT: path,
-		DataKeys.SPLIT_MODE: _current_split_mode,
-		DataKeys.ITEM_DISPLAY_LIST: item_list.display_as_list
-		})
+	var data = get_dock_data()
+	data[DataKeys.ROOT] = path
+	new_instance.set_dock_data(data)
 	new_plugin_tab.emit(new_instance)
 
 func _on_add_to_places(path): #^r think obsolete
@@ -680,7 +683,7 @@ func _change_view_mode(view_mode:ViewMode):
 	_get_view_data()
 	_current_view_mode = view_mode
 	_set_view_data()
-	await _rebuild_tree()
+	await _rebuild_tree() #^ maybe conditional
 	refresh_current_path()
 
 func _get_view_data():
@@ -734,7 +737,8 @@ func _set_view_mode():
 		miller.show()
 		tree.hide()
 		item_list.hide()
-		
+	
+	item_list.current_view_mode = _current_view_mode
 
 func _set_display_as_list():
 	item_list.set_display_as_list(not item_list.display_as_list)
@@ -941,9 +945,6 @@ func _get_hidden_element_options():
 	return options
 
 
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_PREDELETE:
-		filesystem_singleton.reset_dialogs()
 
 func _build_nodes():
 	if is_instance_valid(tree):
@@ -1105,6 +1106,7 @@ func _build_nodes():
 	
 	
 	fs_popup_handler = FSPopupHandler.new()
+	fs_popup_handler.filesystem_tab = self
 	fs_popup_handler.tree = tree
 	fs_popup_handler.item_list = item_list
 	fs_popup_handler.places = places
@@ -1186,15 +1188,7 @@ func _miller_icon():
 
 
 func _get_modulated_icon(text: String, brightness:=0.8) -> Texture2D:
-	_modulated_icons.clear()
-	if _modulated_icons.has(text):
-		return _modulated_icons[text]
-	var icon = EditorInterface.get_editor_theme().get_icon(text, "EditorIcons") # Example icon
-	var b = brightness
-	var tex = ALibRuntime.Utils.UResource.get_modulated_icon(icon, Color(b, b, b))
-	var img = icon.get_image()
-	_modulated_icons[text] = tex
-	return tex
+	return ALibEditor.Singletons.EditorIcons.get_icon_white(text, brightness)
 
 class DataKeys:
 	const ROOT = &"ROOT"
@@ -1216,4 +1210,5 @@ class DataKeys:
 	const VIEW_DATA_PLACES = &"VIEW_DATA_PLACES"
 	const VIEW_DATA_MILLER = &"VIEW_DATA_MILLER"
 	
+	const GLOBAL_NEW_WINDOW_SIGNAL = &"GLOBAL_NEW_WINDOW_SIGNAL"
 	pass
