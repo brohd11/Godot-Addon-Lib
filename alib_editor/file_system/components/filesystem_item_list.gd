@@ -177,11 +177,15 @@ func _create_items_res():
 			item_icon = folder_thumb
 		else:
 			var preview_data = filesystem_singleton.get_preview(path)
-			if preview_data != null:
-				item_icon = preview_data.get("preview")
-			else:
-				if display_as_list:
+			if display_as_list:
+				if preview_data != null:
+					item_icon = preview_data.get("thumbnail")
+				if item_icon == null:
 					item_icon = file_type_icon
+			else:
+				#var preview_data = filesystem_singleton.get_preview(path)
+				if preview_data != null:
+					item_icon = preview_data.get("preview")
 				else:
 					var file_icon = file_data.get(FileSystemSingleton.FileData.PREVIEW_ICON)
 					var custom_icon = file_data.get(FileSystemSingleton.FileData.CUSTOM_ICON)
@@ -189,6 +193,26 @@ func _create_items_res():
 						item_icon = file_thumb
 					else:
 						item_icon = file_icon
+			
+			
+			
+			#var preview_data = filesystem_singleton.get_preview(path)
+			#if preview_data != null:
+				#item_icon = preview_data.get("preview")
+			#else:
+				#if display_as_list:
+					#print("DISPLAT")
+					#item_icon = file_type_icon
+				#else:
+					#print("PREVIEW")
+					#var file_icon = file_data.get(FileSystemSingleton.FileData.PREVIEW_ICON)
+					#var custom_icon = file_data.get(FileSystemSingleton.FileData.CUSTOM_ICON)
+					#if not custom_icon:
+						#item_icon = file_thumb
+					#else:
+						#item_icon = file_icon
+		
+		
 		
 		var idx = add_icon_item(item_icon)
 		_file_icons[idx] = file_type_icon
@@ -395,7 +419,7 @@ func start_edit():
 	
 
 func _make_custom_tooltip(for_text: String) -> Object:
-	var item = get_item_at_position(get_local_mouse_position())
+	var item = get_item_at_position(get_local_mouse_position(), true)
 	if item > -1:
 		var path = get_item_path(item)
 		if path:

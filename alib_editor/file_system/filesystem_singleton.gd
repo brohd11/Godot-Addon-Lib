@@ -28,6 +28,9 @@ static func register_node(node:Node):
 static func call_on_ready(callable, print_err:bool=true):
 	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
 
+static func clear_caches():
+	get_instance().clear_all_caches()
+
 static var editor_fs:EditorFileSystem
 
 var editor_node_ref:EditorNodeRef
@@ -89,7 +92,6 @@ func _set_interface_refs():
 
 
 
-
 func rebuild_files():
 	_on_filesystem_changed()
 
@@ -102,6 +104,7 @@ func clear_all_caches():
 	file_system_dock_item_dict.clear()
 	
 	cache.clear()
+	cache.set_editor_icons()
 	_previews_generated = false # trigger a build if needed
 
 func _on_filesystem_changed():
@@ -306,16 +309,21 @@ func get_type_icon(file_path:String):
 	return data.get(FileData.TYPE_ICON)
 
 func _get_type_icon(file_path):
-	if file_system_dock_item_dict.has(file_path):
-		var item = file_system_dock_item_dict.get(file_path)
-		if item:
-			return item.get_icon(0)
+	#if file_system_dock_item_dict.has(file_path):
+		#var item = file_system_dock_item_dict.get(file_path)
+		#if item:
+			#return item.get_icon(0)
 	if file_path.ends_with("/"):
 		return get_folder_icon()
 	var file_type = get_file_type(file_path)
+	if cache.editor_icons.has(file_type):
+		return cache.editor_icons[file_type]
 	if Keys.VALID_FILE_TYPES.has(file_type):
+		return cache.editor_icons[Keys.VALID_FILE_TYPES.get(file_type)]
+	var fs_dir = EditorInterface.get_resource_filesystem().get_filesystem_path(file_path.get_base_dir())
+	if fs_dir.get_file_import_is_valid(fs_dir.find_file_index(file_path.get_file())):
 		return cache.file_icon
-	return editor_base_control.get_theme_icon(file_type, &"EditorIcons")
+	return EditorInterface.get_editor_theme().get_icon("FileBroken", "EditorIcons")
 
 static func get_preview(path:String):
 	if instance_valid():
@@ -539,14 +547,15 @@ static func move_dialogs(new_parent, connect_vis_signal:=true):
 			dialog.reparent(new_parent)
 		
 		if connect_vis_signal:
-			dialog.visibility_changed.connect(_on_dialog_visibility_changed.bind(dialog))
+			if not dialog.visibility_changed.is_connected(_on_dialog_visibility_changed):
+				dialog.visibility_changed.connect(_on_dialog_visibility_changed.bind(dialog))
 
 static func _on_dialog_visibility_changed(dialog_changed:Window):
 	if dialog_changed.visible == false:
 		var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
 		for dialog:Window in dialog_nodes:
-			#if dialog.visibility_changed.is_connected(_on_dialog_visibility_changed):
-			dialog.visibility_changed.disconnect(_on_dialog_visibility_changed)
+			if dialog.visibility_changed.is_connected(_on_dialog_visibility_changed):
+				dialog.visibility_changed.disconnect(_on_dialog_visibility_changed)
 		reset_dialogs()
 
 static func reset_dialogs(parent=null, mouse=null):
@@ -737,6 +746,8 @@ class Cache:
 	var folder_icon:Texture2D
 	var folder_color:Color
 	
+	var editor_icons:= {}
+	
 	func clear():
 		data_cache.clear()
 		folder_colors_raw.clear()
@@ -750,6 +761,12 @@ class Cache:
 		file_icon = EditorInterface.get_base_control().get_theme_icon("File", &"EditorIcons")
 		folder_icon = EditorInterface.get_base_control().get_theme_icon("Folder", &"EditorIcons")
 		folder_color = EditorInterface.get_base_control().get_theme_color("folder_icon_color", "FileDialog")
+	
+	func set_editor_icons():
+		editor_icons = {}
+		var editor_theme = EditorInterface.get_editor_theme()
+		for _name in editor_theme.get_icon_list(&"EditorIcons"):
+			editor_icons[_name] = editor_theme.get_icon(_name, &"EditorIcons")
 
 class FilePaths:
 	const PROJECT = "res://project.godot"
@@ -776,7 +793,8 @@ class Keys:
 	"SceneCreateDialog","ShaderCreateDialog","DependencyEditorOwners","DirectoryCreateDialog","CreateDialog"]
 	
 	const VALID_FILE_TYPES = {
-		"Resource":true,
+		"Resource":"Object", # this is actually file in the normal tree
+		"Texture": "CompressedTexture2D"
 		#"JSON":true,
 	}
 

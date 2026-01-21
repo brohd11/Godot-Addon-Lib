@@ -81,13 +81,15 @@ var _places_button:Button
 var _miller_button:Button
 var options_button:Button
 
+var _search_select_path:bool=true
+
 var _async_search:UFile.GetFilesAsync
 var _search_tick = 1
 var _async_is_searching:= false
 
 var _current_search_view:SearchView=SearchView.AUTO
 var _current_search_dir:= ""
-var _search_set_current_path:=true
+
 var filters:= []
 var _filters_toggled:=false
 var _filter_debounce:= false
@@ -191,6 +193,8 @@ func set_dock_data(data:Dictionary):
 	_current_view_mode = _dock_data.get(DataKeys.VIEW_MODE, ViewMode.TREE)
 	_view_data = _dock_data.get(DataKeys.VIEW_DATA, {})
 	
+	_search_select_path = _dock_data.get(DataKeys.SEARCH_SELECT_PATH, true)
+	
 	_recursive_view = _dock_data.get(DataKeys.TREE_RECURSIVE_VIEW, false)
 	tree.show_item_preview = _dock_data.get(DataKeys.TREE_PREVIEW_ICONS, false)
 
@@ -207,11 +211,14 @@ func get_dock_data() -> Dictionary:
 		if collapsed:
 			continue
 		item_meta[path] = {tree.tree_helper.Keys.METADATA_COLLAPSED:false}
+	
 	data[DataKeys.TREE_ITEM_META] = item_meta
 	#data[DataKeys.SPLIT_MODE] = _current_split_mode
 	#data[DataKeys.ITEM_DISPLAY_LIST] = item_list.display_as_list
 	data[DataKeys.TREE_RECURSIVE_VIEW] = _recursive_view
 	data[DataKeys.TREE_PREVIEW_ICONS] = tree.show_item_preview
+	
+	data[DataKeys.SEARCH_SELECT_PATH] = _search_select_path
 	
 	data[DataKeys.CURRENT_PATH] = current_path
 	data[DataKeys.VIEW_MODE] = _current_view_mode
@@ -282,6 +289,7 @@ func _set_filter_texts():
 		if FSUtil.is_root_folder(_current_search_dir):
 			display = _current_search_dir
 		search_label.text = 'Searching "%s"' % display
+		search_label.tooltip_text = _current_search_dir
 		
 		if _current_search_view == SearchView.AUTO:
 			_set_search_view_auto()
@@ -475,7 +483,7 @@ func _set_current_path(who:Control, path:String):
 		dir = UFile.get_dir(dir)
 	
 	if _current_browser_state == BrowserState.SEARCH:
-		if not _search_set_current_path:
+		if not _search_select_path:
 			if _current_view_mode == ViewMode.MILLER and who == miller:
 				miller.set_current_dir_search(dir)
 				print("EARLY EXIT")
@@ -619,11 +627,12 @@ func _on_options_button_pressed():
 	var sv = _current_search_view
 	options.add_radio_option("Search/View/Auto", _set_search_view.bind(SearchView.AUTO), sv == SearchView.AUTO, ["Search","ViewportZoom",view_icon])
 	options.add_radio_option("Search/View/Item List", _set_search_view.bind(SearchView.ITEM_LIST), sv == SearchView.ITEM_LIST, ["Search","ViewportZoom",_places_icon()])
-	options.add_option("Search/Deep", _set_search_setting, ["Search", null])
+	options.add_option("Search/Set Path (%s)" % _search_select_path, func(): _search_select_path = not _search_select_path, ["Search", "Filesystem"])
+	
 	for _name in FSFilter.FilterMode.keys():
 		var val = FSFilter.FilterMode[_name]
 		var icons = ["Search", "FilenameFilter", null]
-		options.add_radio_option("Search/Filter/" + _name, func():_current_filter_mode = val, _current_filter_mode == val, icons)
+		options.add_radio_option("Search/Filter Mode/" + _name, func():_current_filter_mode = val, _current_filter_mode == val, icons)
 	
 	if _current_view_mode == ViewMode.TREE:
 		options.add_option("Item List/Change Split Mode", _change_split_mode, [_places_icon(), _get_split_icon()])
@@ -998,6 +1007,7 @@ func _build_nodes():
 	tool_bar_hbox.add_child(search_label)
 	search_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_label.clip_text = true
+	search_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	#search_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	search_label.hide()
 	
@@ -1195,6 +1205,8 @@ class DataKeys:
 	const CURRENT_PATH = &"CURRENT_PATH"
 	const SPLIT_MODE = &"SPLIT_MODE"
 	const SPLIT_OFFSET = &"SPLIT_OFFSET"
+	
+	const SEARCH_SELECT_PATH = &"SEARCH_SELECT_PATH"
 	
 	const TREE_ITEM_META = &"TREE_ITEM_META"
 	const TREE_RECURSIVE_VIEW = &"TREE_RECURSIVE_VIEW"

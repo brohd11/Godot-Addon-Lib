@@ -74,6 +74,8 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 			items["pre"][option] = places_options[option]
 			items["pre"][option].erase(PopupWrapper.ItemParams.CALLABLE)
 	
+	items["pre"]["Search Here"] = {}
+	
 	var window = clicked_node.get_window()
 	var popup = PopupMenu.new()
 	window.add_child(popup)
@@ -144,6 +146,14 @@ func _handle_non_fs(id, popup):
 		tree.set_dir(_selected_path, true)
 	elif id_text == RESET_ROOT:
 		tree.set_dir("res://", true)
+	elif id_text == "Search Here":
+		if _selected_path.ends_with("/"):
+			filesystem_tab._current_search_dir = _selected_path
+		else:
+			filesystem_tab._current_search_dir = _selected_path.get_base_dir() + "/"
+		print(filesystem_tab._current_search_dir)
+		filesystem_tab._set_filter_texts()
+		
 
 
 func _rc_new_tab():

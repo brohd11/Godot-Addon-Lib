@@ -186,12 +186,12 @@ func _build_tree():
 			if not show_files:
 				last_item.visible = false
 				continue
-			var fs_item = filesystem_singleton.file_system_dock_item_dict.get(file_path)
-			if fs_item:
-				var tool_tip = fs_item.get_tooltip_text(0)
-				last_item.set_tooltip_text(0, tool_tip)
-			else:
-				last_item.set_tooltip_text(0, file_path.get_file())
+			#var fs_item = filesystem_singleton.file_system_dock_item_dict.get(file_path)
+			#if fs_item:
+				#var tool_tip = fs_item.get_tooltip_text(0)
+				#last_item.set_tooltip_text(0, tool_tip)
+			#else:
+				#last_item.set_tooltip_text(0, file_path.get_file())
 	
 	if not tree_first_build:
 		tree_first_build = true

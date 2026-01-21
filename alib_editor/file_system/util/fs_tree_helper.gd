@@ -46,13 +46,12 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 	if not file_path:
 		file_path = file_data.get(Keys.METADATA_PATH)
 	var file_icon:Texture2D
-	if show_preview:
-		var preview_data = filesystem_singleton.get_preview(file_path)
-		if preview_data != null:
-			file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
-			if file_icon == null:
-				file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
-				item.set_icon_max_width(0, thumbnail_size)
+	var preview_data = filesystem_singleton.get_preview(file_path)
+	if preview_data != null:
+		file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
+		if show_preview and file_icon == null:
+			file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
+			item.set_icon_max_width(0, thumbnail_size)
 	
 	if file_icon == null:
 		file_icon = filesystem_singleton.get_type_icon(file_path)
