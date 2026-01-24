@@ -36,5 +36,8 @@ func can_be_freed():
 func allow_reload():
 	dock_popup.allow_reload()
 
+func show_always_on_top(current_setting:=false):
+	dock_popup.show_always_on_top(current_setting)
+
 func _on_handled(arg):
 	handled.emit(arg)

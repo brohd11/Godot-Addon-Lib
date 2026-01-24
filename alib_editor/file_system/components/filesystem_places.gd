@@ -1,6 +1,8 @@
 @tool
 extends VBoxContainer
 
+const MultiSplit = preload("res://addons/addon_lib/brohd/alib_runtime/ui/multi_split/multi_split.gd")
+
 const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
 const UFile = ALibRuntime.Utils.UFile
 
@@ -13,11 +15,13 @@ signal path_selected(path:String)
 signal right_clicked(index, place_list)
 signal title_right_clicked(place_list)
 
+
 var places:= {}
 
 func _ready() -> void:
 	custom_minimum_size = _MIN_SIZE
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
+
 
 func build_item_list(data:Dictionary):
 	var pl_indexs = data.keys()
@@ -39,6 +43,7 @@ func _new_place_list(title:String, idx=-1):
 		ids.sort()
 		parent = places[ids[ids.size() - 1]]
 	parent.add_child(place_list)
+	
 	places[idx] = place_list
 	place_list.path_selected.connect(_on_path_selected)
 	place_list.right_clicked.connect(func(index, place_list):right_clicked.emit(index, place_list))
@@ -59,7 +64,6 @@ func _deseelect_place_list_items(current_pl:PlaceList):
 
 
 func add_place_item(path:String, place_list:PlaceList):
-	prints("ADD:", path, place_list)
 	var _name = path.trim_suffix("/").get_file()
 	if UFile.path_is_root(path):
 		_name = path
@@ -79,21 +83,31 @@ func get_place_data():
 	return data
 
 func add_place_list(place_list:PlaceList):
-	var line = ALibRuntime.Dialog.LineSubmitHandler.on_control(place_list.label)
+	var line = ALibRuntime.Dialog.LineSubmitHandler.on_control(place_list.title_button, false)
 	var text = await line.line_submitted
 	if text == "":
 		return
 	_new_place_list(text)
 
 func remove_place_list(place_list:PlaceList):
+	if place_list.get_item_count() > 0:
+		var conf = ALibRuntime.Dialog.ConfirmationDialogHandler.new("Delete non empty list?", self)
+		var handled = await conf.handled
+		if not handled:
+			return
 	var target_idx = -1
 	for idx in places.keys():
 		if places[idx] == place_list:
 			target_idx = idx
 			break
 	if target_idx > -1:
+		var parent = place_list.get_parent()
+		var child_list = _get_list_child(place_list)
+		if child_list:
+			child_list.reparent(parent)
+		parent.remove_child(place_list)
 		place_list.queue_free()
-		places.erase(target_idx)
+		_reindex_lists()
 	else:
 		print("Could not remove list.")
 
@@ -136,6 +150,7 @@ func _move_place_list(ancestor:PlaceList, child:PlaceList):
 		ancestor.add_child(child_child)
 
 func _reindex_lists():
+	places.clear()
 	var place_list = get_child(0)
 	var count = 0
 	while is_instance_valid(place_list):
@@ -149,6 +164,11 @@ func _get_list_child(list:PlaceList):
 		return list.get_child(1)
 	return null
 
+func has_place_list_name(_name:String):
+	for pl:PlaceList in places.values():
+		if pl.get_title() == _name:
+			return true
+	return false
 
 func get_place_list_count():
 	return places.size()

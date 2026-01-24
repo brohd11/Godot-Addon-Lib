@@ -56,13 +56,14 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 	if file_icon == null:
 		file_icon = filesystem_singleton.get_type_icon(file_path)
 	
-	var file_color:Color = file_data.get("color", Color.WHITE)
+	#var file_color:Color = file_data.get("color", Color.WHITE) # this is legacy from old tree system
+	var file_color:Color = Color.WHITE
 	item.set_icon(0, file_icon)
 	if file_path.get_extension() != "":
 		item.set_icon_modulate(0, file_color)
 
 
-func update_tree_items(filtering, filter_callable, root_dir="res://"):
+func update_tree_items(filtering, filter_callable, root_dir="res://"): # why return bool?
 	if not filtering:
 		filtered_item_paths.clear()
 		for path in item_dict.keys():
@@ -80,6 +81,8 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			item.collapsed = runtime_data.get(Keys.METADATA_COLLAPSED)
 		
 		var root_item = tree_node.get_root()
+		if not is_instance_valid(root_item):
+			return false
 		if tree_node.hide_root:
 			var root_children = root_item.get_children()
 			for c in root_children:

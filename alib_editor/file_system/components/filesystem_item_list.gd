@@ -13,25 +13,34 @@ const UFile = ALibRuntime.Utils.UFile
 
 var filesystem_singleton:FileSystemSingleton
 
+var draw_folder_tris:=false
 var file_type_icon_size:Vector2 = Vector2(16, 16)
 var file_type_icon_margin:Vector2 = Vector2(4, 4)
 
 var current_browser_state:FileSystemTab.BrowserState = FileSystemTab.BrowserState.BROWSE
 var current_view_mode:FileSystemTab.ViewMode = FileSystemTab.ViewMode.TREE
+var active:=true
 
 var tree_root:=""
-var folder_view_root:=""
+var folder_view_root:="" #^ this is typically going to be the same as _current_dir, can it be replaced?
+var disable_folder_root:=false
 var display_file_type_icon:=true
 
 var path_in_res:=true
 var _filtered_paths:= PackedStringArray()
 var display_as_list:=false
+var draw_alternate_line_colors:=false
 
 var _current_dir:= "res://"
-var _current_path:="res://"
 var _current_paths:= []
+var _current_path_hash:int = 0
+var filesystem_dirty:=true
 var _file_icons:= {}
 
+var _selected_paths:=[]
+var last_selected_path:String
+
+signal selection_changed()
 
 signal left_clicked(selected_path, selected_path_array)
 signal right_clicked(self_node, selected_path, selected_path_array)
@@ -55,9 +64,34 @@ func _ready() -> void:
 	empty_clicked.connect(_on_empty_clicked)
 	_set_list_settings()
 
+func set_active(active_state:bool):
+	print("ITEM ACTIVE: ", active_state)
+	active = active_state
+	if active_state:
+		refresh()
+	else:
+		clear_items()
 
-func _is_filtering() -> bool:
-	return current_browser_state == FileSystemTab.BrowserState.SEARCH
+func refresh(force_refresh:=false):
+	if not active:
+		return
+	if force_refresh:
+		filesystem_dirty = true
+	check_current_dir_contents()
+	if filesystem_dirty:
+		_rebuild()
+
+func _rebuild():
+	clear_items()
+	create_items()
+	set_selected_paths(_selected_paths)
+
+func clear_items():
+	_selected_paths = get_selected_paths()
+	clear()
+	_file_icons.clear()
+
+
 
 func set_display_as_list(toggled:bool, rebuild:=true):
 	display_as_list = toggled
@@ -88,58 +122,30 @@ func _set_list_settings():
 func set_filtered_paths(paths:Array):
 	_filtered_paths = paths
 
+func _is_filtering() -> bool:
+	return current_browser_state == FileSystemTab.BrowserState.SEARCH
+
 func update_filter():
 	_rebuild()
 
 
-
-func set_current_path(path:String, set_folder_view:=false, _recursive_view:= false):
-	set_current_dir(path, set_folder_view, _recursive_view)
+func set_current_path(path:String, set_folder_view:=false):
+	set_current_dir(path, set_folder_view)
 	
-func set_current_dir(path:String, set_folder_view:=false, _recursive_view:= false):
-	_current_path = path
-	folder_view_root = ""
-	var paths
-	if path_in_res:
-		if path == FileSystemTab.FAVORITES_META:
-			paths = FileSystemSingleton.get_filesystem_favorites()
-			paths.sort()
-		else:
-			if _recursive_view:
-				paths = filesystem_singleton.get_files_in_dir(path)
-			else:
-				paths = FileSystemSingleton.get_dir_contents(path)
-				if set_folder_view:
-					folder_view_root = path
-	else:
-		paths = []
-		var dir_contents = UFile.get_dir_contents(path)
-		var raw_dirs = dir_contents.get("dirs")
-		for _name in raw_dirs:
-			var full_path = path.path_join(_name) + "/"
-			paths.append(full_path)
-		
-		var raw_files = dir_contents.get("files")
-		for _name in raw_files:
-			var full_path = path.path_join(_name)
-			paths.append(full_path)
-		if set_folder_view:
-			folder_view_root = path
-	
-	_current_paths = paths
-	_rebuild()
+func set_current_dir(path:String, _refresh:=true):
+	_current_dir = path
+	folder_view_root = path
+	if _refresh:
+		refresh()
+
+func check_current_dir_contents():
+	_current_paths = get_paths_at_dir(_current_dir, path_in_res)
+	var hash = _current_paths.hash()
+	if not filesystem_dirty:
+		filesystem_dirty = hash != _current_path_hash
+	_current_path_hash = hash
 
 
-
-func _rebuild():
-	var selected = get_selected_paths()
-	clear_items()
-	create_items()
-	set_selected_paths(selected)
-
-func clear_items():
-	clear()
-	_file_icons.clear()
 
 func create_items():
 	if path_in_res:
@@ -148,7 +154,6 @@ func create_items():
 		_create_items_not_res()
 
 func _create_items_res():
-	prints("ITEM LIST RES")
 	var folder_thumb = EditorInterface.get_editor_theme().get_icon("FolderBigThumb", "EditorIcons")
 	var file_thumb = EditorInterface.get_editor_theme().get_icon("FileBigThumb", "EditorIcons")
 	if display_as_list:
@@ -156,9 +161,6 @@ func _create_items_res():
 	
 	var view_root = _get_folder_view_root(true)
 	var paths = _get_paths_to_show()
-	#if _is_filtering():
-		#paths = _filtered_paths
-		#view_root = ""
 	
 	if view_root != "":# and view_root != tree_root:
 		add_icon_item(folder_thumb)
@@ -179,40 +181,20 @@ func _create_items_res():
 			var preview_data = filesystem_singleton.get_preview(path)
 			if display_as_list:
 				if preview_data != null:
-					item_icon = preview_data.get("thumbnail")
+					item_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
 				if item_icon == null:
 					item_icon = file_type_icon
 			else:
 				#var preview_data = filesystem_singleton.get_preview(path)
 				if preview_data != null:
-					item_icon = preview_data.get("preview")
+					item_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
 				else:
-					var file_icon = file_data.get(FileSystemSingleton.FileData.PREVIEW_ICON)
+					var file_icon = file_data.get(FileSystemSingleton.FileData.TYPE_ICON)
 					var custom_icon = file_data.get(FileSystemSingleton.FileData.CUSTOM_ICON)
 					if not custom_icon:
 						item_icon = file_thumb
 					else:
 						item_icon = file_icon
-			
-			
-			
-			#var preview_data = filesystem_singleton.get_preview(path)
-			#if preview_data != null:
-				#item_icon = preview_data.get("preview")
-			#else:
-				#if display_as_list:
-					#print("DISPLAT")
-					#item_icon = file_type_icon
-				#else:
-					#print("PREVIEW")
-					#var file_icon = file_data.get(FileSystemSingleton.FileData.PREVIEW_ICON)
-					#var custom_icon = file_data.get(FileSystemSingleton.FileData.CUSTOM_ICON)
-					#if not custom_icon:
-						#item_icon = file_thumb
-					#else:
-						#item_icon = file_icon
-		
-		
 		
 		var idx = add_icon_item(item_icon)
 		_file_icons[idx] = file_type_icon
@@ -233,11 +215,8 @@ func _create_items_not_res():
 	
 	var view_root = _get_folder_view_root(false)
 	var paths = _get_paths_to_show()
-	#if _is_filtering():
-		#paths = _filtered_paths
-		#view_root = ""
 	
-	if view_root != "":# and not FSUtil.is_root_folder(_current_path):
+	if view_root != "":# and not FSUtil.is_root_folder(_current_dir):
 		add_icon_item(folder_icon)
 		set_item_text(0, "..")
 		set_item_selectable(0, false)
@@ -260,8 +239,12 @@ func _create_items_not_res():
 		set_item_icon_modulate(idx, icon_color)
 
 func _get_folder_view_root(in_res:bool):
+	if disable_folder_root:
+		return ""
 	var view_root = folder_view_root
-	if _is_filtering() or FSUtil.is_root_folder(_current_path):
+	if _current_dir == FileSystemTab.FAVORITES_META:
+		view_root = ""
+	if _is_filtering() or FSUtil.is_root_folder(_current_dir):
 		view_root = ""
 	if in_res and current_view_mode == FileSystemTab.ViewMode.TREE and view_root == tree_root:
 		view_root = ""
@@ -273,10 +256,39 @@ func _get_paths_to_show():
 		paths = _filtered_paths
 	return paths
 
+func get_paths_at_dir(path:String, _path_in_res:= true) -> Array:
+	var paths
+	if _path_in_res:
+		if path == FileSystemTab.FAVORITES_META:
+			paths = FileSystemSingleton.get_filesystem_favorites()
+			paths.sort()
+		else:
+			paths = FileSystemSingleton.get_dir_contents(path)
+	else:
+		paths = []
+		var dir_contents = UFile.get_dir_contents(path)
+		var raw_dirs = dir_contents.get("dirs")
+		for _name in raw_dirs:
+			var full_path = path.path_join(_name) + "/"
+			paths.append(full_path)
+		
+		var raw_files = dir_contents.get("files")
+		for _name in raw_files:
+			var full_path = path.path_join(_name)
+			paths.append(full_path)
+	
+	return paths
+
+
 func _draw() -> void:
 	var scroll_bar_offset = Vector2(get_h_scroll_bar().value, get_v_scroll_bar().value)
 	if display_as_list:
+		if draw_alternate_line_colors:
+			ALibRuntime.NodeUtils.UItemList.AltColor.draw_lines(self)
+		if not draw_folder_tris:
+			return
 		var folder_texture = EditorInterface.get_editor_theme().get_icon("TransitionImmediate", "EditorIcons")
+		var scroll_bar_vis = get_v_scroll_bar().visible
 		for i in item_count:
 			var path = get_item_metadata(i)
 			if not path.ends_with("/"):
@@ -285,7 +297,8 @@ func _draw() -> void:
 			if rect.size.x < 150:
 				break
 			rect.position.y -= scroll_bar_offset.y
-			rect.position.x -= 10
+			if scroll_bar_vis:
+				rect.position.x -= 10
 			var og_x_size = rect.size.x
 			var og_y_size = rect.size.y
 			rect.size = Vector2(og_y_size * 0.75, og_y_size * 0.75)
@@ -293,6 +306,8 @@ func _draw() -> void:
 			rect.position.y = rect.position.y + (og_y_size / 2) - (rect.size.y / 2)
 			draw_texture_rect(folder_texture, rect, false, Color(0.7, 0.7, 0.7))
 		return
+	
+	#^ grid items
 	if display_file_type_icon and path_in_res:
 		var broken_file = EditorInterface.get_editor_theme().get_icon("FileBroken", "EditorIcons")
 		for i in item_count:
@@ -303,7 +318,6 @@ func _draw() -> void:
 			var icon = _file_icons.get(i, broken_file)
 			var display_rect = Rect2((rect.position - scroll_bar_offset) + file_type_icon_margin, file_type_icon_size)
 			draw_texture_rect(icon, display_rect, false)
-	
 	
 	var font = ThemeDB.get_default_theme().default_font
 	var count = item_count
@@ -325,7 +339,6 @@ func get_selected_paths():
 	var paths = []
 	for i:int in selected_items:
 		paths.append(get_item_metadata(i))
-	
 	return paths
 
 func set_selected_paths(paths:Array):
@@ -347,11 +360,11 @@ func _on_empty_clicked(at_pos:Vector2, mouse_button_idx:int):
 			
 
 func _on_item_selected(idx:int, selected:bool):
-	print("SEL")
 	if selected:
 		var path = get_item_path(idx)
-		#if path.ends_with("/"):
 		_on_left_clicked(path)
+		last_selected_path = path
+	selection_changed.emit()
 
 func _on_item_clicked(index:int, at_pos:Vector2, mouse_button_idx:int):
 	if mouse_button_idx == 2:
@@ -364,6 +377,7 @@ func _on_item_clicked(index:int, at_pos:Vector2, mouse_button_idx:int):
 		
 		_on_right_clicked(path)
 
+
 func _on_left_clicked(path):
 	left_clicked.emit(path, get_selected_paths())
 
@@ -374,13 +388,13 @@ func _on_right_clicked(path):
 
 func _on_double_clicked(selected_item:int):
 	var path = get_item_path(selected_item)
-	print(path)
+	#print(path)
 	if not path.ends_with("/"):
 		double_clicked.emit(path)
 	else:
 		if path.ends_with("://"):
 			return
-		print(path,"   ", folder_view_root)
+		#print(path,"   ", folder_view_root)
 		if path != folder_view_root:
 			double_clicked.emit(path)
 		else:

@@ -16,13 +16,13 @@ var popup:Popup
 var line_edit:LineEdit
 var selected_node
 
-static func on_control(control:Control):
-	var rect = control.get_rect()
+static func on_control(control:Control, auto_hide:=true):
+	var rect = Rect2(Vector2.ZERO, control.size)
 	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(control)
-	var new = new(control, rect)
+	var new = new(control, rect, auto_hide)
 	return new
 
-func _init(sel_node, rect:Rect2=Rect2()) -> void:
+func _init(sel_node, rect:Rect2=Rect2(), auto_hide:=true) -> void:
 	selected_node = sel_node
 	if rect == Rect2():
 		var line_pos = Vector2(DisplayServer.mouse_get_position())
@@ -31,7 +31,8 @@ func _init(sel_node, rect:Rect2=Rect2()) -> void:
 		rect = Rect2(line_pos, Vector2(200, 25))
 	
 	popup = Popup.new()
-	mouse_helper = PopupHelper.MouseHelper.new(popup, _on_timer_elapsed)
+	if auto_hide:
+		mouse_helper = PopupHelper.MouseHelper.new(popup, _on_timer_elapsed)
 	
 	line_edit = LineEdit.new()
 	line_edit.custom_minimum_size = rect.size

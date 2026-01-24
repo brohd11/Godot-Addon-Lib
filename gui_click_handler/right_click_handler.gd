@@ -76,6 +76,7 @@ func display_popup(options, center_popup:=false, position_overide=null):
 		popup_position.x -= size_offset
 	
 	_move_popup(popup_position)
+	
 
 
 func _move_popup(popup_position:Vector2i):

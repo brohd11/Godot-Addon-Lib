@@ -70,6 +70,7 @@ func _ready() -> void:
 	#get_filesystem_folder_colors()
 	#rebuild_files()
 	_set_interface_refs()
+	cache.set_editor_icons()
 	_init_complete = true
 
 
@@ -266,14 +267,12 @@ func get_file_data(path:String):
 	
 	var file_type = get_file_type(path)
 	var icon = _get_type_icon(path)
-	var preview_icon = icon
 	
 	if file_type == "":
 		file_type = FileData.FOLDER
 	
 	var _file_data = {
 		FileData.PATH: path,
-		FileData.PREVIEW_ICON: preview_icon,
 		FileData.TYPE_ICON: icon,
 		FileData.TYPE: file_type,
 		FileData.CUSTOM_ICON: false,
@@ -803,7 +802,6 @@ class FileData:
 	const FOLDER = &"Folder"
 	const PATH = &"item_path"
 	const TYPE_ICON = &"file_type_icon"
-	const PREVIEW_ICON = &"file_icon"
 	const TYPE = &"file_type"
 	const CUSTOM_ICON = &"file_custom_icon"
 	

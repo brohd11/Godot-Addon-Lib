@@ -216,6 +216,8 @@ func uncollapse_items(items=null, item_collapse_callable=null):
 		UTree.uncollapse_items(items, _on_item_collapsed)
 
 func show_tree_item(item:TreeItem):
+	if not is_instance_valid(item):
+		return
 	tree_node.set_selected(item,0)
 	
 	var item_parent:TreeItem = item.get_parent()

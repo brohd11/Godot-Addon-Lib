@@ -47,15 +47,12 @@ func _get_icon(icon_name:String, color=null, brightness:=0.8, overwrite:=false):
 	var color_dict = icon_dict.get_or_add(color, {})
 	if not overwrite:
 		if color_dict.has(brightness):
-			print("GET CACHE")
 			return color_dict[brightness]
 	
 	var icon = editor_theme.get_icon(icon_name, "EditorIcons")
 	if color == null:
 		return icon
-	print(color)
 	color *= brightness
-	print(color)
 	var texture = ALibRuntime.Utils.UResource.get_modulated_icon(icon, color)
 	color_dict[brightness] = texture
 	return texture

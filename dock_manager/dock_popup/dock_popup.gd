@@ -17,6 +17,7 @@ const CANCEL_STRING = "CANCEL_STRING"
 @onready var make_floating_button: Button = %MakeFloatingButton
 @onready var free_instance_button: Button = %FreeInstanceButton
 @onready var reload_scene_button: Button = %ReloadSceneButton
+@onready var always_on_top_button: Button = %AlwaysOnTopButton
 
 var timer:Timer
 var _mouse_in_panel := true
@@ -49,11 +50,13 @@ func _ready() -> void:
 	make_floating_button.pressed.connect(_button_pressed.bind(-3))
 	free_instance_button.pressed.connect(_button_pressed.bind(20))
 	reload_scene_button.pressed.connect(_button_pressed.bind(30))
+	always_on_top_button.pressed.connect(_button_pressed.bind(40))
 	
 	if not is_part_of_edited_scene():
 		make_floating_button.icon = EditorInterface.get_editor_theme().get_icon("MakeFloating", &"EditorIcons")
 		free_instance_button.icon = EditorInterface.get_editor_theme().get_icon("Clear", &"EditorIcons")
 		reload_scene_button.icon = EditorInterface.get_editor_theme().get_icon("Reload", &"EditorIcons")
+		always_on_top_button.icon = EditorInterface.get_editor_theme().get_icon("Pin", &"EditorIcons")
 		
 		var editor_scale = EditorInterface.get_editor_scale()
 		size = size * editor_scale
@@ -73,6 +76,14 @@ func can_be_freed():
 func allow_reload():
 	size.y = size.y + reload_scene_button.size.y
 	reload_scene_button.show()
+
+func show_always_on_top(current_setting:=false):
+	size.y = size.y + always_on_top_button.size.y
+	if current_setting:
+		var accent = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)
+		always_on_top_button.add_theme_color_override("icon_normal_color", accent)
+	always_on_top_button.show()
+
 
 func _button_pressed(chosen):
 	option_chosen = true

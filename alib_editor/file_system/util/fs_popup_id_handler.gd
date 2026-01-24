@@ -22,6 +22,8 @@ signal add_to_places(path)
 
 var filesystem_singleton:FileSystemSingleton
 
+var current_browser_state:FileSystemTab.BrowserState=FileSystemTab.BrowserState.BROWSE
+
 var filesystem_tab:FileSystemTab
 var tree:FileSystemTree
 var item_list:FileSystemItemList
@@ -74,7 +76,8 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 			items["pre"][option] = places_options[option]
 			items["pre"][option].erase(PopupWrapper.ItemParams.CALLABLE)
 	
-	items["pre"]["Search Here"] = {}
+	if current_browser_state == FileSystemTab.BrowserState.SEARCH:
+		items["pre"]["Search Here"] = {}
 	
 	var window = clicked_node.get_window()
 	var popup = PopupMenu.new()
@@ -144,8 +147,12 @@ func _handle_non_fs(id, popup):
 		_add_to_places(PopupWrapper.PopupHelper.get_metadata(id, popup))
 	elif id_text == SET_ROOT:
 		tree.set_dir(_selected_path, true)
+		item_list.tree_root = _selected_path
+		filesystem_tab.refresh_current_path()
 	elif id_text == RESET_ROOT:
 		tree.set_dir("res://", true)
+		item_list.tree_root = "res://"
+		filesystem_tab.refresh_current_path()
 	elif id_text == "Search Here":
 		if _selected_path.ends_with("/"):
 			filesystem_tab._current_search_dir = _selected_path

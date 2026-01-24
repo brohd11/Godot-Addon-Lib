@@ -338,6 +338,9 @@ func _on_dock_button_pressed():
 		dock_popup_handler.disable_main_screen()
 	if allow_scene_reload:
 		dock_popup_handler.allow_reload()
+	var plugin_window = plugin_control.get_window()
+	if plugin_window is PanelWindow:
+		dock_popup_handler.show_always_on_top(plugin_window.always_on_top)
 	
 	var handled = await dock_popup_handler.handled
 	if handled is String:
@@ -357,7 +360,9 @@ func _on_dock_button_pressed():
 	elif handled == 30:
 		reload_control()
 		return
-		
+	elif handled == 40:
+		plugin_window.always_on_top = not plugin_window.always_on_top
+		return
 	
 	elif handled == _slot.get(Slot.FLOATING):
 		undock_instance()

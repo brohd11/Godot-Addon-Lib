@@ -17,18 +17,27 @@ var scroll_hbox:HBoxContainer
 var scroll_spacer:Control
 
 var current_browser_state:FileSystemTab.BrowserState = FileSystemTab.BrowserState.BROWSE
+var active:= true
 
 var _filtered_item_paths = []
+var _filtered_item_paths_hash:int=0
+var _new_filtered_paths:=true
 
 var _columns := {}
 var _search_column:FileColumn
 var _search_history_path:String = ""
 var _last_selected_search_item_path:String = ""
 
+var _current_scroll_amount:float=0
+
+var draw_alt_color:=false
+
 var path_in_res:=true
 var current_path := ""
 var _current_dir := ""
 var _history_path := ""
+
+var multi_select_dir:=""
 
 signal left_clicked(path, selected_paths)
 signal right_clicked(self_node, path, array)
@@ -60,30 +69,51 @@ func _ready() -> void:
 	
 	scroll_container.resized.connect(func(): scroll_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, MIN_COL_SIZE))
 
+func set_active(active_state:bool):
+	print("MILLER ACTIVE: ", active_state)
+	active = active_state
+	if active_state:
+		refresh()
+		scroll_container.scroll_horizontal = _current_scroll_amount
+	else:
+		_current_scroll_amount = scroll_container.scroll_horizontal
+		_clear_panes("", true)
 
-func set_current_dir(path:String, force_build:bool=false, force_show_current:=false):
-	if force_show_current and not force_build:
-		_set_current_column_with_path(path)
-		_show_current_column()
-		return
+func on_filesystem_changed():
+	for col:FileColumn in get_columns():
+		col.item_list.filesystem_dirty = true
+
+func set_alt_list_colors(state:bool):
+	draw_alt_color = state
+	for col:FileColumn in get_columns():
+		col.item_list.draw_alternate_line_colors = state
+		col.item_list.queue_redraw()
+
+func refresh():
+	_build_columns()
+
+func set_current_dir(path:String):
 	if path == "FAVORITES":
 		return
-	if path == _current_dir and not force_build:
-		return
+	#if path == _current_dir and not force_build:
+		#return
 	
 	_current_dir = path
-	
+
+
+
+func _build_columns(force_show_current:=false):
 	if current_browser_state == FileSystemTab.BrowserState.BROWSE:
-		_build_columns()
+		await _build_normal_columns()
 	elif current_browser_state == FileSystemTab.BrowserState.SEARCH:
-		_build_search_column()
+		await _build_search_column()
 	
 	if force_show_current:
-		await get_tree().process_frame
-		_show_current_column()
+		#await get_tree().process_frame
+		show_current_column()
 
 
-func _build_columns():
+func _build_normal_columns():
 	var path_to_display = _current_dir
 	
 	var force_rebuild = not FSUtil.paths_have_same_root(_history_path, _current_dir)
@@ -99,6 +129,9 @@ func _build_columns():
 	if not current_dir.ends_with("/"):
 		current_dir = UFile.get_dir(current_dir)
 	
+	if multi_select_dir != "":
+		current_dir = multi_select_dir
+	
 	_free_search_column()
 	_clear_panes(path_to_display, force_rebuild)
 	
@@ -113,16 +146,27 @@ func _build_columns():
 	if is_instance_valid(col):
 		current_col = col
 	
-	select_path_items(current_path)
+	if current_path.ends_with("/"): #^ ensures dir clicking in doesn't have items cleared
+		current_dir = UFile.get_dir(current_dir)
+	select_path_items(current_dir)
+	
+	if multi_select_dir != "": #^ dir with multi selected to current
+		set_current_column_with_path(current_dir)
+	else: #^ sets either file's dir or selected dir's contents to current
+		if is_instance_valid(current_col):
+			_set_current_column(current_col)
 	
 	await get_tree().process_frame
 	
-	if not use_history_path:
-		scroll_container.ensure_control_visible(current_col.item_list)
-	_set_current_column(current_col)
+	if is_instance_valid(current_col):
+		if not use_history_path:
+			scroll_container.ensure_control_visible(current_col.item_list)
 
 
 func set_filtered_paths(path_array:Array):
+	var hash = path_array.hash()
+	_new_filtered_paths = _filtered_item_paths_hash != hash
+	_filtered_item_paths_hash = hash
 	_filtered_item_paths = path_array
 	var sort = func(a:String, b:String):
 		var a_dir = a.ends_with("/")
@@ -156,7 +200,7 @@ func _search(current_search_path:String):
 
 
 func _build_columns_search(search_path:String):
-	print("BEGIN SEARCH: ", search_path)
+	#print("BEGIN SEARCH: ", search_path)
 	var selected_search_item_path = _get_search_column_selected_path()
 	var force_column_rebuild = selected_search_item_path != _last_selected_search_item_path
 	
@@ -200,20 +244,27 @@ func _build_columns_search(search_path:String):
 	if is_instance_valid(col):
 		current_col = col
 	
-	select_path_items(search_path)
+	_set_current_column(current_col)
+	
+	#select_path_items(search_path)
+	
 	await get_tree().process_frame
 	
 	if not use_history_path:
 		scroll_container.ensure_control_visible(current_col.item_list)
-	_set_current_column(current_col)
+	
 
 
 func _build_search_column():
 	if not is_instance_valid(_search_column):
 		_new_column("%SEARCH") #^ this will make it not set path
-	_search_column.set_path_in_res(path_in_res)
-	_search_column.set_filtering(true)
-	_search_column.set_filtered_paths(_filtered_item_paths, true)
+		_search_column.set_path_in_res(path_in_res)
+		_search_column.set_filtering(true)
+	
+	if _new_filtered_paths:
+		_new_filtered_paths = false
+		_search_column.set_filtered_paths(_filtered_item_paths, true)
+	
 
 func _get_search_column_selected_path():
 	var paths = _search_column.item_list.get_selected_paths()
@@ -242,16 +293,6 @@ func _build_path_parts(current_dir:String, working_path:String, parts:PackedStri
 	
 	return current_col
 
-
-func _get_or_build_column(working_path:String):
-	var col = _columns.get(working_path)
-	if not is_instance_valid(col):
-		col = _new_column(working_path)
-	else:
-		col.set_path_in_res(path_in_res)
-		col.set_current_path(working_path)
-	return col
-
 func _get_path_parts(path:String):
 	var parts
 	var root
@@ -264,6 +305,16 @@ func _get_path_parts(path:String):
 	
 	return {"root": root, "parts": parts}
 
+
+func _get_or_build_column(working_path:String):
+	var col:FileColumn = _columns.get(working_path)
+	if not is_instance_valid(col):
+		col = _new_column(working_path)
+	else:
+		col.set_path_in_res(path_in_res)
+		col.set_current_path(working_path)
+	return col
+
 func _new_column(path:String="%SEARCH") -> FileColumn:
 	var column = FileColumn.new()
 	scroll_hbox.add_child(column)
@@ -272,6 +323,8 @@ func _new_column(path:String="%SEARCH") -> FileColumn:
 	column.right_clicked.connect(_on_column_right_clicked)
 	column.double_clicked.connect(_on_column_double_clicked)
 	column.forward_gui.connect(_on_column_list_input_event)
+	
+	column.item_list.draw_alternate_line_colors = draw_alt_color
 	
 	if path == "%SEARCH":
 		_search_column = column
@@ -282,6 +335,7 @@ func _new_column(path:String="%SEARCH") -> FileColumn:
 		column.set_current_path(path)
 	
 	return column
+
 
 func select_path_items(path:String):
 	var data = _get_path_parts(path)
@@ -302,7 +356,7 @@ func _select_item_path(dir_path:String, item_path:String):
 		col.select_item(item_path)
 	
 
-func _set_current_column_with_path(path:String):
+func set_current_column_with_path(path:String):
 	var column:FileColumn = _columns.get(path)
 	if column:
 		_set_current_column(column)
@@ -310,14 +364,17 @@ func _set_current_column_with_path(path:String):
 		set_current_dir(path)
 
 func _set_current_column(current:FileColumn):
-	for col:FileColumn in scroll_hbox.get_children():
+	for col:FileColumn in get_columns():
 		if col == current:
 			col.is_current = true
 		else:
 			col.is_current = false
 		col.redraw()
 
-func _show_current_column():
+func get_columns():
+	return scroll_hbox.get_children()
+
+func show_current_column():
 	for col in scroll_hbox.get_children():
 		if col.is_current:
 			scroll_container.ensure_control_visible(col.item_list)
@@ -338,9 +395,12 @@ func _clear_panes(path_to_display:String, clear_all:=false):
 			_columns.erase(path)
 
 func _free_search_column():
+	
 	if is_instance_valid(_search_column):
+		print("FREE SEARCH")
 		scroll_hbox.remove_child(_search_column)
 		_search_column.queue_free()
+
 
 func _on_column_left_clicked(path:String, paths:Array):
 	get_window().gui_release_focus()
@@ -364,21 +424,19 @@ func _on_column_list_input_event(event:InputEvent):
 
 
 class FileColumn extends HBoxContainer:
-	
 	var current_path:String
 	var item_list:FileSystemItemList
-	
 	var is_current:=false
 	
 	var has_vertical_scroll:= false
 	var has_horizontal_scroll:= false
+	signal forward_gui(event)
 	
 	signal left_clicked(path, selected_paths)
 	signal right_clicked(path)
 	signal double_clicked(path)
 	
-	signal forward_gui(event)
-	
+	var sel_timer:Timer
 	
 	func _ready() -> void:
 		add_theme_constant_override("separation", 0)
@@ -391,18 +449,26 @@ class FileColumn extends HBoxContainer:
 		
 		var dragger = ColumnDragger.new()
 		add_child(dragger)
-		dragger.target_column = vbox
+		dragger.target_control = vbox
 		dragger.drag_ended.connect(_check_mouse_filter)
 		
 		item_list = FileSystemItemList.new()
 		vbox.add_child(item_list)
+		item_list.disable_folder_root = true
+		item_list.draw_folder_tris = true
 		item_list.set_display_as_list(true, false)
 		item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		item_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		item_list.focus_mode = Control.FOCUS_NONE
 		
+		sel_timer = Timer.new()
+		add_child(sel_timer)
+		sel_timer.one_shot = true
+		sel_timer.timeout.connect(_on_selection_changed_debounced)
+		item_list.selection_changed.connect(func(): sel_timer.start(0.1))
+		
+		#item_list.left_clicked.connect(func(path, paths):left_clicked.emit(path, paths))
 		item_list.double_clicked.connect(func(path):double_clicked.emit(path))
-		item_list.left_clicked.connect(func(path, paths):left_clicked.emit(path, paths))
 		#^ right click pass FileColumn as arg to redraw columns
 		item_list.right_clicked.connect(func(s, p, arr):right_clicked.emit(self, p, arr))
 		
@@ -410,15 +476,39 @@ class FileColumn extends HBoxContainer:
 		item_list.gui_input.connect(_on_item_list_gui_input)
 	
 	func select_item(path:String):
+		item_list.deselect_all()
 		item_list.set_selected_paths([path])
+		item_list.queue_redraw()
+		
+		#if not item_list._selected_paths.has(path):
+			#item_list._selected_paths.append(path)
+		#item_list.set_selected_paths(item_list._selected_paths)
 	
 	func set_path_in_res(state:bool):
 		item_list.path_in_res = state
 	
 	func set_current_path(path:String):
 		current_path = path
-		item_list.set_current_path(path)
+		item_list.set_current_dir(path)
+		#print(item_list._selected_paths)
 		_check_mouse_filter()
+	
+	func refresh():
+		item_list.refresh()
+		_check_mouse_filter()
+	
+	func _on_selection_changed_debounced():
+		var sel_paths = item_list.get_selected_paths()
+		if sel_paths.size() > 0:
+			var selected_path = item_list.last_selected_path
+			if not selected_path in sel_paths:
+				selected_path = sel_paths[0]
+			left_clicked.emit(selected_path, sel_paths)
+		
+	
+	func _on_left_clicked(path:String, paths:Array):
+		return
+		left_clicked.emit(path, paths)
 	
 	func set_filtered_paths(paths, update:=false):
 		item_list.set_filtered_paths(paths)

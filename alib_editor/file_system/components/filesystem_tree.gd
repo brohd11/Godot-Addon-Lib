@@ -17,6 +17,7 @@ const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_sys
 const FileData = FileSystemSingleton.FileData
 
 var current_browser_state:FileSystemTab.BrowserState = FileSystemTab.BrowserState.BROWSE
+var active:=true
 
 var root_item:TreeItem
 
@@ -38,6 +39,8 @@ var _filter_debounce:=false
 var sel_item_path:= ""
 
 var filesystem_singleton:FileSystemSingleton
+
+var draw_alternate_line_colors:=false
 
 var tree_helper:FSTreeHelper
 
@@ -65,6 +68,11 @@ func _ready() -> void:
 	
 	item_edited.connect(_on_item_edited)
 
+func _draw() -> void:
+	if draw_alternate_line_colors:
+		ALibRuntime.NodeUtils.UTree.AltColor.draw_lines(self)
+
+
 func set_dir(target_dir:String, build:=false):
 	root_dir = target_dir
 	#_get_file_array(target_dir)
@@ -82,6 +90,8 @@ func _new_tree_helper():
 
 func _make_custom_tooltip(for_text: String) -> Object:
 	var item = get_item_at_position(get_local_mouse_position())
+	if not is_instance_valid(item):
+		return
 	var path = tree_helper.get_path_from_item(item)
 	return filesystem_singleton.get_custom_tooltip(path)
 
@@ -89,28 +99,35 @@ func _make_custom_tooltip(for_text: String) -> Object:
 func clear_items():
 	tree_helper.clear_items_keep_paths()
 
-func set_active():
-	if file_array.is_empty():
-		await full_build()
-	elif tree_helper.item_dict.is_empty():
-		#await full_build()
-		_build_tree()
-	#full_build() # would like to use above, but issues on start up
-	
-	_emit_item_selected()
+func set_active(active_state:bool):
+	active = active_state
+	#print("TREE ACTIVE: ", active_state)
+	if active_state:
+		if file_array.is_empty():
+			await full_build()
+		elif tree_helper.item_dict.is_empty():
+			_build_tree()
+		#_emit_item_selected()
+	else:
+		clear_items()
 
-func set_inactive():
-	clear_items()
+
+func refresh(full:=false):
+	if full:
+		full_build()
+	else:
+		quick_build()
+
 
 func full_build():
 	print("FULL ", root_dir)
 	_get_file_array(root_dir)
-	await get_tree().process_frame
+	#await get_tree().process_frame # is this necessary?
 	_build_tree()
 
 func quick_build():
 	_build_tree()
-	_scroll_to_selected_and_emit()
+	#_scroll_to_selected_and_emit()
 
 func _get_file_array(dir):
 	if dir == "res://":
@@ -184,14 +201,10 @@ func _build_tree():
 		var file_type = file_data.get(FileData.TYPE)
 		if file_type != FileData.FOLDER:
 			if not show_files:
-				last_item.visible = false
+				#last_item.visible = false
+				last_item.free()
+				tree_helper.item_dict.erase(file_path)
 				continue
-			#var fs_item = filesystem_singleton.file_system_dock_item_dict.get(file_path)
-			#if fs_item:
-				#var tool_tip = fs_item.get_tooltip_text(0)
-				#last_item.set_tooltip_text(0, tool_tip)
-			#else:
-				#last_item.set_tooltip_text(0, file_path.get_file())
 	
 	if not tree_first_build:
 		tree_first_build = true

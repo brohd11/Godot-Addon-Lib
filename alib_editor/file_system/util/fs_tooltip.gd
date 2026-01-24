@@ -109,6 +109,7 @@ static func _get_file_specific_details(path:String):
 		
 		if ALibRuntime.Utils.UResource.GDScriptFileAccess.get_is_tool(path):
 			label_text += "\nTool Script"
+		
 	
 	return label_text
 
