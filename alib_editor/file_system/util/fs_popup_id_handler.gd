@@ -142,6 +142,7 @@ func _handle_non_fs(id, popup):
 		var fs_data = filesystem_tab.get_dock_data()
 		if filesystem_tab._current_view_mode == FileSystemTab.ViewMode.TREE:
 			fs_data[FileSystemTab.DataKeys.ROOT] = _selected_path
+		fs_data[FileSystemTab.DataKeys.CURRENT_PATH] = _selected_path
 		EditorGlobalSignals.signal_emit(FileSystemTab.DataKeys.GLOBAL_NEW_WINDOW_SIGNAL, fs_data)
 	elif id_text.begins_with(ADD_TO_PLACES):
 		_add_to_places(PopupWrapper.PopupHelper.get_metadata(id, popup))

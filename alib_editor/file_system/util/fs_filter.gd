@@ -6,6 +6,7 @@ const Filter = ALibRuntime.Utils.UString.Filter
 
 
 enum FilterMode {
+	AUTO,
 	EXACT,
 	EXACT_SORT,
 	SUBSEQUENCE,

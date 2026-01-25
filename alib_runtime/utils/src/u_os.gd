@@ -1,4 +1,4 @@
-#! namespace ALibRuntime.Utils class UOS
+#! namespace ALibRuntime.Utils class UOs
 
 const LINUX = "Linux"
 const MAC = "macOS"

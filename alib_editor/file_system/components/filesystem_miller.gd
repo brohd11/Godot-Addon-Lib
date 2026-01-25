@@ -89,6 +89,10 @@ func set_alt_list_colors(state:bool):
 		col.item_list.draw_alternate_line_colors = state
 		col.item_list.queue_redraw()
 
+func queue_force_refresh():
+	for col:FileColumn in get_columns():
+		col.item_list.queue_refresh()
+
 func refresh():
 	_build_columns()
 

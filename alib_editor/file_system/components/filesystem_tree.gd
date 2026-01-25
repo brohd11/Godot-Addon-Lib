@@ -39,6 +39,8 @@ var _filter_debounce:=false
 var sel_item_path:= ""
 
 var filesystem_singleton:FileSystemSingleton
+var filesystem_dirty:bool=false
+var _force_refresh_queued:=false
 
 var draw_alternate_line_colors:=false
 
@@ -96,24 +98,26 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	return filesystem_singleton.get_custom_tooltip(path)
 
 
-func clear_items():
-	tree_helper.clear_items_keep_paths()
+
 
 func set_active(active_state:bool):
 	active = active_state
 	#print("TREE ACTIVE: ", active_state)
 	if active_state:
-		if file_array.is_empty():
-			await full_build()
-		elif tree_helper.item_dict.is_empty():
-			_build_tree()
+		refresh()
 		#_emit_item_selected()
 	else:
 		clear_items()
 
+func clear_items():
+	tree_helper.clear_items_keep_paths()
 
-func refresh(full:=false):
-	if full:
+func queue_force_refresh():
+	_force_refresh_queued = true
+
+func refresh():
+	if filesystem_dirty or _force_refresh_queued:
+		_force_refresh_queued = false
 		full_build()
 	else:
 		quick_build()
@@ -122,11 +126,16 @@ func refresh(full:=false):
 func full_build():
 	print("FULL ", root_dir)
 	_get_file_array(root_dir)
+	filesystem_dirty = false
 	#await get_tree().process_frame # is this necessary?
 	_build_tree()
 
 func quick_build():
-	_build_tree()
+	if tree_helper.item_dict.is_empty():
+		print("QUICK BUILD TREE")
+		_build_tree()
+	else:
+		print("NO BUILD TREE")
 	#_scroll_to_selected_and_emit()
 
 func _get_file_array(dir):

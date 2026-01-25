@@ -186,7 +186,7 @@ func get_add_to_places_options(path:String):
 
 class Data:
 	static func get_default_data():
-		var home = ALibRuntime.Utils.UOS.get_home_dir()
+		var home = ALibRuntime.Utils.UOs.get_home_dir()
 		var editor_paths = EditorInterface.get_editor_paths()
 		
 		var _places = {

@@ -35,6 +35,7 @@ var _current_dir:= "res://"
 var _current_paths:= []
 var _current_path_hash:int = 0
 var filesystem_dirty:=true
+var _force_refresh_queued:=false
 var _file_icons:= {}
 
 var _selected_paths:=[]
@@ -72,13 +73,15 @@ func set_active(active_state:bool):
 	else:
 		clear_items()
 
-func refresh(force_refresh:=false):
+func queue_force_refresh():
+	_force_refresh_queued = true
+
+func refresh():
 	if not active:
 		return
-	if force_refresh:
-		filesystem_dirty = true
 	check_current_dir_contents()
-	if filesystem_dirty:
+	if filesystem_dirty or _force_refresh_queued:
+		_force_refresh_queued = false
 		_rebuild()
 
 func _rebuild():
@@ -141,8 +144,8 @@ func set_current_dir(path:String, _refresh:=true):
 func check_current_dir_contents():
 	_current_paths = get_paths_at_dir(_current_dir, path_in_res)
 	var hash = _current_paths.hash()
-	if not filesystem_dirty:
-		filesystem_dirty = hash != _current_path_hash
+	#if not filesystem_dirty:
+	filesystem_dirty = hash != _current_path_hash
 	_current_path_hash = hash
 
 
