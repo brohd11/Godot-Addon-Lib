@@ -41,6 +41,11 @@ var save_layout:bool = true
 var allow_scene_reload:bool = false
 var _docked_name:String = ""
 
+# persistent
+var window_always_on_top:bool = true
+var _last_window_size = null
+var _last_window_pos = null
+
 
 var dock_id:= -1
 var dock_id_key:
@@ -117,6 +122,7 @@ static func get_layout_file_dir(_plugin:EditorPlugin):
 func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, 
 	_main_screen_handler=null, _add_to_tree:=true) -> void:
 	plugin = _plugin
+	plugin.add_child(self) #^ moved here, will never be called in ready..
 	if _control is Control:
 		plugin_control = _control
 	elif _control is PackedScene:
@@ -158,6 +164,7 @@ func post_init():
 	
 	var dock_target
 	var dock_index = -1
+	var dock_layout_data
 	var dock_data
 	if save_layout:
 		var layout_data = get_plugin_layout_data(plugin)
@@ -169,7 +176,7 @@ func post_init():
 			save_layout_data.call_deferred()
 		else:
 			var docks = layout_data.get(Keys.DOCKS)
-			var dock_layout_data = docks.get(dock_id_key)
+			dock_layout_data = docks.get(dock_id_key)
 			dock_target = dock_layout_data.get(Keys.CURRENT_DOCK)
 			dock_index = dock_layout_data.get(Keys.CURRENT_DOCK_INDEX, -1)
 			dock_data = dock_layout_data.get(Keys.DOCK_DATA, {})
@@ -184,7 +191,10 @@ func post_init():
 			var dock_control = get_current_dock_control() as TabContainer
 			dock_control.move_child(plugin_control, dock_index)
 	else:
+		if dock_layout_data != null:
+			_set_window_settings(dock_layout_data)
 		undock_instance()
+		
 	
 	if save_layout:
 		if plugin_control.has_method(SET_DOCK_DATA) and dock_data != null:
@@ -208,6 +218,23 @@ func post_init():
 	
 	_set_dock_tab_style.call_deferred() # need this even more delayed?
 
+func _set_window_settings(dock_layout_data:Dictionary):
+	window_always_on_top = dock_layout_data.get(Keys.ALWAYS_ON_TOP, true)
+	
+	var window_size = dock_layout_data.get(Keys.WINDOW_SIZE)
+	if window_size != null:
+		window_size = str_to_var(window_size)
+		_last_window_size = window_size
+	
+	var current_screen = dock_layout_data.get(Keys.CURRENT_SCREEN, 0)
+	if DisplayServer.get_screen_count() <= current_screen:
+		return
+	
+	var window_pos = dock_layout_data.get(Keys.WINDOW_POSITION)
+	if window_pos != null:
+		window_pos = str_to_var(window_pos)
+		_last_window_pos = window_pos
+
 
 func _set_editor_settings():
 	var ed_settings = EditorInterface.get_editor_settings()
@@ -223,7 +250,8 @@ func set_window_title(title:String):
 	window_title = title
 
 func _ready() -> void:
-	plugin.add_child(self)
+	#plugin.add_child(self)
+	pass
 
 func get_plugin_control():
 	return plugin_control
@@ -308,6 +336,13 @@ func save_layout_data():
 	scene_data[Keys.SCENE_PATH] = file_path
 	scene_data[Keys.SCENE_UID] = UFile.path_to_uid(file_path)
 	scene_data[Keys.CURRENT_DOCK] = current_dock
+	scene_data[Keys.ALWAYS_ON_TOP] = window_always_on_top
+	var window = get_dock_manager_window()# as Window
+	if is_instance_valid(window):
+		scene_data[Keys.CURRENT_SCREEN] = window.current_screen
+		scene_data[Keys.WINDOW_SIZE] = var_to_str(window.size)
+		scene_data[Keys.WINDOW_POSITION] = var_to_str(window.position)
+	
 	if is_tab:
 		var dock_control = get_current_dock_control() as TabContainer
 		scene_data[Keys.CURRENT_DOCK_INDEX] = dock_control.get_tab_idx_from_control(plugin_control)
@@ -338,9 +373,9 @@ func _on_dock_button_pressed():
 		dock_popup_handler.disable_main_screen()
 	if allow_scene_reload:
 		dock_popup_handler.allow_reload()
-	var plugin_window = plugin_control.get_window()
-	if plugin_window is PanelWindow:
-		dock_popup_handler.show_always_on_top(plugin_window.always_on_top)
+	var plugin_window = get_dock_manager_window()
+	if is_instance_valid(plugin_window):
+		dock_popup_handler.show_always_on_top(window_always_on_top)
 	
 	var handled = await dock_popup_handler.handled
 	if handled is String:
@@ -361,9 +396,8 @@ func _on_dock_button_pressed():
 		reload_control()
 		return
 	elif handled == 40:
-		plugin_window.always_on_top = not plugin_window.always_on_top
-		return
-	
+		window_always_on_top = not window_always_on_top
+		plugin_window.always_on_top = window_always_on_top
 	elif handled == _slot.get(Slot.FLOATING):
 		undock_instance()
 	else:
@@ -379,8 +413,11 @@ func dock_instance(target_dock:int):
 			target_dock = -2
 	if target_dock == -1 and not plugin_has_main:
 		target_dock = default_dock
+	var window = get_dock_manager_window()
+	if is_instance_valid(window):
+		_last_window_size = window.size
+		_last_window_pos = window.position
 	
-	var window = plugin_control.get_window()
 	_remove_control_from_parent()
 	if target_dock > -1:
 		plugin.add_control_to_dock(target_dock, plugin_control)
@@ -392,17 +429,23 @@ func dock_instance(target_dock:int):
 	elif target_dock == -2:
 		plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
 	
-	if is_instance_valid(window):
-		if window is PanelWindow:
-			window.queue_free()
-	
 	dock_changed.emit(self)
 
 
 func undock_instance():
 	_remove_control_from_parent()
-	var window = PanelWindow.new(plugin_control, empty_panel, _default_window_size)
+	var window_size = _default_window_size
+	if _last_window_size is Vector2i:
+		window_size = _last_window_size
+	window_size = Vector2i(50,50).max(window_size)
+	
+	var window_pos = null
+	if _last_window_pos is Vector2i:
+		window_pos = _last_window_pos
+	var window = PanelWindow.new(plugin_control, empty_panel, window_size, window_pos)
+	
 	window.title = window_title
+	window.always_on_top = window_always_on_top
 	window.close_requested.connect(window_close_requested)
 	window.mouse_entered.connect(_on_window_mouse_entered.bind(window))
 	#window.mouse_exited.connect(_on_window_mouse_exited)
@@ -411,7 +454,7 @@ func undock_instance():
 	return window
 
 func _remove_control_from_parent():
-	var window = plugin_control.get_window()
+	var window = get_dock_manager_window()
 	var current_dock = _get_current_dock()
 	if current_dock != null:
 		last_dock = current_dock
@@ -431,8 +474,7 @@ func _remove_control_from_parent():
 			control_parent.remove_child(plugin_control)
 	
 	if is_instance_valid(window):
-		if window is PanelWindow:
-			window.queue_free()
+		window.queue_free()
 
 func _get_current_dock():
 	if plugin_control.get_parent() is PanelWrapper:
@@ -442,6 +484,12 @@ func _get_current_dock():
 
 func get_current_dock_control():
 	return Docks.get_current_dock_control(plugin_control)
+
+func get_dock_manager_window():
+	var window = plugin_control.get_window()
+	if window is PanelWindow:
+		return window
+	return null
 
 func window_close_requested() -> void:
 	dock_instance(last_dock)
@@ -490,18 +538,6 @@ func _set_dock_tab_style():
 
 static func get_scene_or_script(control):
 	return ALibRuntime.Utils.UResource.get_object_file_path(control)
-	#if control is PackedScene:
-		#return control.resource_path
-	#elif control is Control:
-		#if control.scene_file_path != "":
-			#return control.scene_file_path
-		#var script = control.get_script()
-		#var script_path = script.resource_path
-		#if script_path == "":
-			#print("No scene or script path for control: %s" % control)
-		#return script_path
-	#else:
-		#print("DockManager - get_scene_or_script: Unhandled object")
 
 static func _plugin_has_main_screen(_plugin:EditorPlugin):
 	return _plugin.has_method("_has_main_screen")
@@ -687,6 +723,11 @@ class Keys:
 	const CURRENT_DOCK = "current_dock"
 	const CURRENT_DOCK_INDEX = "current_dock_index"
 	const DOCK_DATA = "dock_data"
+	const ALWAYS_ON_TOP = &"ALWAYS_ON_TOP"
+	const WINDOW_SIZE = &"WINDOW_SIZE"
+	const WINDOW_POSITION = &"WINDOW_POSITION"
+	const WINDOW_TRANSFORM = &"WINDOW_TRANSFORM"
+	const CURRENT_SCREEN = &"CURRENT_SCREEN"
 	
 	const META = "meta"
 	const NEXT_ID = "next_id"

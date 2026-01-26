@@ -81,17 +81,20 @@ func set_active(active_state:bool):
 
 func on_filesystem_changed():
 	for col:FileColumn in get_columns():
-		col.item_list.filesystem_dirty = true
+		if is_instance_valid(col.item_list):
+			col.item_list.filesystem_dirty = true
 
 func set_alt_list_colors(state:bool):
 	draw_alt_color = state
 	for col:FileColumn in get_columns():
-		col.item_list.draw_alternate_line_colors = state
-		col.item_list.queue_redraw()
+		if is_instance_valid(col.item_list):
+			col.item_list.draw_alternate_line_colors = state
+			col.item_list.queue_redraw()
 
 func queue_force_refresh():
 	for col:FileColumn in get_columns():
-		col.item_list.queue_refresh()
+		if is_instance_valid(col.item_list):
+			col.item_list.queue_force_refresh()
 
 func refresh():
 	_build_columns()

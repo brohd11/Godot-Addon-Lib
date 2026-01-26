@@ -52,7 +52,10 @@ var fs_popup_handler:FSPopupHandler
 var right_click_handler:RightClickHandler
 var non_res_helper:NonResHelper
 
-var current_path_history:= PackedStringArray()
+var max_history_size:int = 20
+var _recent_files:= []
+var _dir_history:= []
+var _dir_history_index:int = -1
 var current_path:String = "res://" #^ setting - d
 var current_dir:String = "res://"
 var current_selected_paths:= PackedStringArray()
@@ -76,6 +79,8 @@ var right_side_vbox:VBoxContainer
 var miller:FileSystemMiller
 var item_list:FileSystemItemList
 
+var _history_back_button:Button
+var _history_forward_button:Button
 var _toggle_places_button:Button
 var _toggle_path_button:Button
 var _navigate_up_button:Button
@@ -109,17 +114,17 @@ var _current_browser_state:= BrowserState.BROWSE
 var _current_search_view:SearchView=SearchView.AUTO #^ setting - dd
 
 var _search_whole_filesystem:bool=false #^ setting - dd
-var _search_select_path:bool=true #^ setting - d
+var _search_select_path:bool=true #^ setting - dd
 var _search_tree_list_dir:bool=false #^ setting - dd
-var _current_filter_mode:FSFilter.FilterMode = FSFilter.FilterMode.AUTO #^ setting - d
-var _filter_mode_follow_view_mode:= true  #^ setting - d
+var _current_filter_mode:FSFilter.FilterMode = FSFilter.FilterMode.AUTO #^ setting - dd
+var _filter_mode_follow_view_mode:= true  #^ setting - dd
 
-var _places_toggled:=true #^ setting - d - this is in both view data and dock data
-var _places_follow_view_mode:=true  #^ setting - d
-var _alt_list_color:=false #^ setting - d
+var _places_toggled:=true #^ setting - dd - this is in both view data and dock data
+var _places_follow_view_mode:=true  #^ setting - dd
+var _alt_list_color:=false #^ setting - dd
 
-var _current_view_mode:ViewMode = ViewMode.TREE #^ setting - d
-var _current_split_mode:SplitMode = SplitMode.NONE #^ setting - d
+var _current_view_mode:ViewMode = ViewMode.TREE #^ setting - dd
+var _current_split_mode:SplitMode = SplitMode.NONE #^ setting - dd
 
 var _view_data:Dictionary = {}
 
@@ -198,6 +203,7 @@ func set_dock_data(data:Dictionary):
 	_dock_data = data
 	
 	current_path = _dock_data.get(DataKeys.CURRENT_PATH, "res://")
+	_recent_files = _dock_data.get(DataKeys.RECENT_FILES, [])
 	_current_view_mode = _dock_data.get(DataKeys.VIEW_MODE, ViewMode.TREE)
 	_view_data = _dock_data.get(DataKeys.VIEW_DATA, {})
 	
@@ -235,6 +241,7 @@ func get_dock_data() -> Dictionary:
 	data[DataKeys.SEARCH_VIEW] = _current_search_view
 	
 	data[DataKeys.CURRENT_PATH] = current_path
+	data[DataKeys.RECENT_FILES] = _recent_files
 	data[DataKeys.LIST_ALT_COLOR] = _alt_list_color
 	data[DataKeys.TOGGLED_ELEMENTS] = _get_hidden_element_names()
 	data[DataKeys.PATH_BAR_TOGGLED] = path_bar.visible
@@ -282,7 +289,7 @@ func _set_active():
 		var tree_act = _current_view_mode == ViewMode.TREE
 		await tree.set_active(tree_act)
 		var item_act = _current_view_mode == ViewMode.PLACES
-		if tree_act and _current_split_mode != SplitMode.NONE:
+		if _tree_view_with_split_mode():
 			item_act = true
 		item_list.set_active(item_act)
 		miller.set_active(_current_view_mode == ViewMode.MILLER)
@@ -319,10 +326,8 @@ func _set_filter_texts():
 	#^c SEARCH
 	if _current_browser_state == BrowserState.SEARCH:
 		_set_filter_text_search()
-	
 	elif _current_browser_state == BrowserState.BROWSE:
 		_set_filter_text_browse()
-		
 	
 	_last_browser_state = _current_browser_state
 
@@ -361,14 +366,13 @@ func _set_filter_text_browse():
 	miller.set_filtered_paths([])
 	miller.clear_columns()
 	miller.set_current_dir(current_dir)
-	#miller.refresh()
-	#miller.show_current_column()
-	#miller.update_filter()
 	
 	if _last_browser_state != _current_browser_state:
 		_async_search = null
 		_current_search_dir = current_dir
 		_set_view_data() #^ reset layout to current view data on switching state
+		if _current_view_mode == ViewMode.TREE and _search_select_path:
+			tree.select_paths([current_path], false, true)
 
 
 
@@ -380,7 +384,7 @@ func _set_search_view_auto():
 			filter_mode = FilterMode.EXACT
 		tree.set_filtered_paths(await _get_filtered_paths(true, false, filter_mode))
 		tree.update_filter() #^ this mode filters tree items. Selected dirs displayed in item list if list_dir setting is true
-		#refresh_current_path() #^r I had this here but not sure? Seems irrelavant
+		refresh_current_path() #^ this refreshes item list if active
 	elif _current_view_mode == ViewMode.MILLER:
 		if filter_mode == FilterMode.AUTO:
 			filter_mode = FilterMode.SUBSEQUENCE_SORT
@@ -402,11 +406,13 @@ func _set_search_view_auto():
 func _set_search_view_item_list():
 	if _current_split_mode == SplitMode.NONE:
 		_set_split_mode(SplitMode.HORIZONTAL)
-	tree.hide()
-	_check_main_split_vis()
-	if miller.visible:
-		miller.hide()
 	item_list.show()
+	if places.visible and _current_view_mode == ViewMode.TREE:
+		main_split_container.split_offset = places.size.x
+	tree.hide()
+	miller.hide()
+	_check_main_split_vis()
+	
 	var filter_mode = _current_filter_mode
 	if filter_mode == FilterMode.AUTO:
 		filter_mode = FilterMode.SUBSEQUENCE_SORT
@@ -445,7 +451,7 @@ func _get_filter_text_array():
 
 
 func _get_filtered_paths(include_dirs:=false, use_file_name:=true, filter_mode:=_current_filter_mode):
-	print("GET FILTERED: ", current_dir)
+	print("GET FILTERED: ", _current_search_dir)
 	var paths:PackedStringArray
 	if _current_search_dir == "res://":
 		if include_dirs:
@@ -518,7 +524,6 @@ func _set_filter_icons(icon, clear_enabled:=true):
 		f.right_icon = icon
 
 
-
 func _set_browser_states(browser_state:=_current_browser_state):
 	tree.current_browser_state = browser_state
 	item_list.current_browser_state = browser_state
@@ -540,26 +545,26 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	if not dir.ends_with("/"):
 		dir = UFile.get_dir(dir)
 	
+	var navigation_selection = who != self and (who == path_bar or who == places)
+	if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
+		if not navigation_selection and who == item_list:
+			navigation_selection = true
+	
 	if _current_browser_state == BrowserState.SEARCH:
 		if not _search_select_path:
-			_set_current_path_search_mode(who, dir, false) #^r this uses navigation select below, should this as well?
-			print("EARLY EXIT")
+			_set_current_path_search_mode(who, dir, navigation_selection)
 			return
 	
 	current_path = path
 	current_dir = dir
 	
-	var navigation_selection = who != self and who == path_bar or who == places
-	if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
-		if not navigation_selection and who == item_list:
-			navigation_selection = true
-	
 	if not visible: # all will be inactive
 		return
-	
 	if current_path == FAVORITES_META:
 		if item_list.active:
 			item_list.set_current_dir(FAVORITES_META, true)
+		_path_in_res = true
+		_set_path_in_res()
 		return
 	
 	_path_in_res = FSUtil.is_path_valid_res(current_path)
@@ -567,6 +572,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	
 	miller.current_path = current_path
 	item_list.set_current_dir(current_dir, true)
+	path_bar.set_current_dir(current_dir)
 	
 	
 	if _path_in_res and who != self:
@@ -575,10 +581,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	
 	if _current_browser_state == BrowserState.SEARCH:
 		_set_current_path_search_mode(who, dir, navigation_selection)
-		print("SET CURRENT PATH SEARCH")
 		return
-	
-	path_bar.set_current_dir(current_dir)
 	
 	if _current_view_mode == ViewMode.TREE:
 		if navigation_selection and UFile.is_dir_in_or_equal_to_dir(current_dir, tree.root_dir):
@@ -586,7 +589,6 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	elif _current_view_mode == ViewMode.PLACES:
 		pass
 	elif _current_view_mode == ViewMode.MILLER:
-		
 		if current_selected_paths.size() <= 1 or navigation_selection:
 			miller.multi_select_dir = ""
 		else:
@@ -597,11 +599,26 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 			miller.set_current_column_with_path(current_dir)
 			miller.show_current_column()
 	
+	if  who == _history_back_button or who == _history_forward_button:
+		if _current_view_mode == ViewMode.TREE:
+			if UFile.is_dir_in_or_equal_to_dir(current_path, tree.root_dir):
+				tree.select_paths([current_path], false, true)
+			if item_list.active:
+				item_list.deselect_all()
+				item_list.set_selected_paths([current_path])
+		elif _current_view_mode == ViewMode.PLACES:
+			item_list.set_selected_paths([current_path])
+		elif _current_view_mode == ViewMode.MILLER:
+			miller.current_path = current_path
+			miller.select_path_items(current_path)
+	
+	if who != self and who != _history_back_button and who != _history_forward_button:
+		_add_dir_to_history(current_path)
+	
 	if _refresh:
 		refresh()
 	
-	print("SET CURRENT PATH - REFRESH: ", _refresh)
-	#if _current_browser_state == BrowserState.SEARCH:
+	#if _current_browser_state == BrowserState.SEARCH: #^r think this can go
 		#_set_filter_texts()
 
 func _set_current_path_search_mode(who, dir:String, navigation_selection:bool):
@@ -630,22 +647,73 @@ func _on_miller_path_selected(path:String, selected_paths:Array):
 
 func _on_tree_item_selected(path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
-	_set_current_path(tree, path)#, false) #^ this is causing a refresh evertime? Should others be set to false too?
+	_set_current_path(tree, path)
 
 func _on_item_list_item_selected(path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
-	#if _current_browser_state == BrowserState.SEARCH: #^ commented so that tree search dir view doesnt navigate on 1 click.
-		#_set_current_path(item_list, path) #^ This may need to be enabled for set dir on other searches, need flag for mode?
+	if _current_browser_state == BrowserState.SEARCH:
+		if _tree_view_dir_search() and path.ends_with("/"):
+			var dir = UFile.get_dir(path)
+			_set_current_path(item_list, dir) #^ stops dirs from 1 click navigating in search, but also sets the current dir
+		else:
+			_set_current_path(item_list, path) #^ any other situation or for files just set the path
+	else:
+		_add_dir_to_history(path)
 
+func _update_history_buttons():
+	_history_back_button.disabled = _dir_history_index == 0
+	_history_back_button.flat = true
+	_history_forward_button.disabled = _dir_history_index == _dir_history.size() - 1
+	_history_forward_button.flat = true
 
-
-
-
-func _add_path_to_history():
-	var undoredo = UndoRedo.new()
+func _add_dir_to_history(new_dir:String):
+	if _dir_history_index >= 0 and _dir_history[_dir_history_index] == new_dir:
+		return
 	
+	if _dir_history_index < _dir_history.size() - 1:
+		_dir_history = _dir_history.slice(0, _dir_history_index + 1)
+		
+	_dir_history.append(new_dir)
+	_dir_history_index += 1
 	
-	pass
+	if _dir_history.size() > max_history_size:
+		_dir_history.pop_front()
+		_dir_history_index -= 1
+	
+	_update_history_buttons()
+
+func _dir_history_back():
+	print("BACK", _dir_history)
+	if _dir_history_index > 0:
+		_dir_history_index -= 1
+		_set_current_path(_history_back_button, _dir_history[_dir_history_index])
+	_update_history_buttons()
+
+func _dir_history_forward():
+	if _dir_history_index < _dir_history.size() - 1:
+		_dir_history_index += 1
+		_set_current_path(_history_forward_button, _dir_history[_dir_history_index])
+	_update_history_buttons()
+
+
+func _add_path_to_recent(path:String):
+	if path.ends_with("/"):
+		return
+	if path in _recent_files:
+		_recent_files.erase(path)
+	
+	_recent_files.push_front(path)
+	
+	if _recent_files.size() > max_history_size:
+		_recent_files.pop_back()
+
+func _on_recent_popup_pressed(id_pressed:int):
+	if id_pressed == _recent_files.size():
+		_recent_files.clear()
+	else:
+		var path = _recent_files[id_pressed]
+		#_set_current_path(self, path)
+		_on_double_clicked(path)
 
 
 func _on_item_list_double_clicked(path):
@@ -656,17 +724,18 @@ func _on_item_list_double_clicked(path):
 
 func _on_double_clicked(selected_path:String):
 	current_selected_paths = [selected_path]
-	if _path_in_res:
+	if FSUtil.is_path_valid_res(selected_path):
 		var selected_in_fs = filesystem_singleton.ensure_items_selected([selected_path])
 		if not selected_in_fs:
 			return
 		filesystem_singleton.activate_in_fs()
 	else:
 		NonResHelper.open_file(selected_path)
+	_add_path_to_recent(selected_path)
 
 func _on_item_right_clicked(clicked_node:Node, selected_item_path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
-	if _path_in_res:
+	if FSUtil.is_path_valid_res(selected_item_path):
 		fs_popup_handler.right_clicked(clicked_node, selected_item_path, selected_paths)
 	else:
 		var options = non_res_helper.get_right_click_options(selected_item_path, selected_paths)
@@ -675,7 +744,7 @@ func _on_item_right_clicked(clicked_node:Node, selected_item_path:String, select
 
 func _on_item_right_clicked_empty(clicked_node:Node, selected_item_path:String):
 	current_selected_paths = [selected_item_path]
-	if _path_in_res:
+	if FSUtil.is_path_valid_res(selected_item_path):
 		fs_popup_handler.right_clicked_empty_item_list(clicked_node, selected_item_path)
 	else:
 		var options = non_res_helper.get_right_click_options(selected_item_path, [])
@@ -740,7 +809,6 @@ func _on_options_button_pressed():
 	options.add_radio_option(mp_place, _change_view_mode.bind(ViewMode.PLACES), vm == ViewMode.PLACES, [view_icon, _places_icon()])
 	options.add_radio_option(mp_miller, _change_view_mode.bind(ViewMode.MILLER), vm == ViewMode.MILLER, [view_icon, _miller_icon()])
 	
-	
 	#^ elements
 	options.add_option("Element/Toggle Path Bar", _on_path_bar_button_pressed.bind(true), ["GuiVisibilityVisible","CopyNodePath"])
 	if _current_view_mode == ViewMode.TREE:
@@ -759,7 +827,8 @@ func _on_options_button_pressed():
 	options.add_option("Settings/Per Mode - Filter Mode (%s)" % _filter_mode_follow_view_mode, _fm_follow_callable, [settings_icon, "FilenameFilter"])
 	
 	#^ search
-	options.add_option("Settings/Search - Set Current Path (%s)" % _search_select_path, func(): _search_select_path = not _search_select_path, [settings_icon, "Filesystem"])
+	var _ssp_call = func(): _search_select_path = not _search_select_path
+	options.add_option("Settings/Search - Set Current Path (%s)" % _search_select_path, _ssp_call, [settings_icon, "Filesystem"])
 	var _saf_call = func():_search_whole_filesystem = not _search_whole_filesystem
 	options.add_option("Settings/Search - Always All Files (%s)" % _search_whole_filesystem, _saf_call, [settings_icon, "Filesystem"])
 	var _stld_call = func():_search_tree_list_dir = not _search_tree_list_dir
@@ -777,7 +846,17 @@ func _on_options_button_pressed():
 	
 	#^c display
 	var popup_pos = right_click_handler.get_centered_control_position(options_button)
-	right_click_handler.display_popup(options, true, popup_pos)
+	var popup = right_click_handler.display_popup(options, true, popup_pos)
+	
+	if not _recent_files.is_empty():
+		var recents = PopupMenu.new()
+		right_click_handler.mouse_helper.connect_node(recents)
+		recents.id_pressed.connect(_on_recent_popup_pressed)
+		popup.add_submenu_node_item("Recent Files", recents)
+		popup.set_item_icon(popup.item_count - 1, EditorInterface.get_editor_theme().get_icon("History", "EditorIcons"))
+		for path in _recent_files:
+			recents.add_item(path)
+		recents.add_item("Clear Recent Files")
 
 
 func _change_split_mode():
@@ -785,17 +864,14 @@ func _change_split_mode():
 	if _current_split_mode >= SplitMode.size():
 		_current_split_mode = 0
 	_set_split_mode()
-	#refresh()
 	refresh_current_path()
 
 func _set_split_mode(split_mode:SplitMode=_current_split_mode, set_active:=true):
 	tree.show_files = false
-	if split_mode == SplitMode.NONE:
-		tree.show_files = true
-	elif split_mode == SplitMode.HORIZONTAL:
-		main_split_container.vertical = false
-	elif split_mode == SplitMode.VERTICAL:
-		main_split_container.vertical = true
+	match split_mode:
+		SplitMode.NONE: tree.show_files = true
+		SplitMode.HORIZONTAL: main_split_container.vertical = false
+		SplitMode.VERTICAL: main_split_container.vertical = true
 	
 	tree.queue_force_refresh()
 	if split_mode != SplitMode.NONE:
@@ -806,12 +882,10 @@ func _set_split_mode(split_mode:SplitMode=_current_split_mode, set_active:=true)
 		_set_active()
 
 func _get_split_icon():
-	if _current_split_mode == SplitMode.NONE:
-		return EditorInterface.get_editor_theme().get_icon("Panels1", "EditorIcons")
-	elif _current_split_mode == SplitMode.HORIZONTAL:
-		return EditorInterface.get_editor_theme().get_icon("Panels2", "EditorIcons")
-	elif _current_split_mode == SplitMode.VERTICAL:
-		return EditorInterface.get_editor_theme().get_icon("Panels2Alt", "EditorIcons")
+	match _current_split_mode:
+		SplitMode.NONE: return EditorInterface.get_editor_theme().get_icon("Panels1", "EditorIcons")
+		SplitMode.HORIZONTAL: return EditorInterface.get_editor_theme().get_icon("Panels2", "EditorIcons")
+		SplitMode.VERTICAL: return EditorInterface.get_editor_theme().get_icon("Panels2Alt", "EditorIcons")
 
 
 func _change_view_mode(view_mode:ViewMode):
@@ -855,10 +929,7 @@ func _set_view_data():
 	if _places_follow_view_mode:
 		_places_toggled = data.get(DataKeys.PLACES_TOGGLED, _current_view_mode != ViewMode.TREE)
 	if _filter_mode_follow_view_mode:
-		var default_filter_mode = FSFilter.FilterMode.SUBSEQUENCE_SORT
-		if _current_view_mode == ViewMode.TREE:
-			default_filter_mode = FSFilter.FilterMode.EXACT
-		_current_filter_mode = data.get(DataKeys.FILTER_MODE, default_filter_mode)
+		_current_filter_mode = data.get(DataKeys.FILTER_MODE, FilterMode.AUTO)
 	
 	item_list.set_display_as_list(data.get(DataKeys.ITEM_DISPLAY_LIST, false))
 	
@@ -869,30 +940,21 @@ func _set_view_data():
 func _set_view_mode():
 	if _current_view_mode == ViewMode.TREE:
 		tree.show()
-		if _current_split_mode != SplitMode.NONE:
-			right_side_vbox.show()
-			item_list.show()
-		else:
-			right_side_vbox.hide()
-		#places.hide()
+		item_list.visible =  _current_split_mode != SplitMode.NONE
 		miller.hide()
 	elif _current_view_mode == ViewMode.PLACES:
-		#places.show()
-		right_side_vbox.show()
 		item_list.show()
 		tree.hide()
 		miller.hide()
 	elif _current_view_mode == ViewMode.MILLER:
-		#places.show()
-		right_side_vbox.show()
 		miller.show()
 		tree.hide()
 		item_list.hide()
 	
 	places.visible = _places_toggled
 	_check_main_split_vis()
-	
 	item_list.current_view_mode = _current_view_mode
+
 
 func _set_display_as_list():
 	item_list.set_display_as_list(not item_list.display_as_list)
@@ -934,6 +996,8 @@ func _set_search_view(search_view:SearchView):
 func _tree_view_with_split_mode():
 	return _current_view_mode == ViewMode.TREE and _current_split_mode != SplitMode.NONE
 
+func _tree_view_dir_search():
+	return _tree_view_with_split_mode() and _search_tree_list_dir
 
 func check_toolbar_elements():
 	_toolbar_debounce_timer.start(0.2)
@@ -984,7 +1048,6 @@ func _check_toolbar_elements():
 	_toggle_element_respect_meta(_miller_button, show_buttons)
 
 func _on_places_toggled_pressed():
-	print("PLACES TOGGLED: ", _places_toggled)
 	_places_toggled = not _places_toggled
 	places.visible = _places_toggled
 	_check_main_split_vis()
@@ -996,12 +1059,12 @@ func _on_navigate_up():
 	if FSUtil.is_root_folder(current_dir):
 		return
 	var dir = UFile.get_dir(current_dir)
-	_set_current_path(self, dir)
+	_set_current_path(_navigate_up_button, dir)
+	#_set_current_path(self, dir)
 
 func _on_path_bar_button_pressed(show_hide:=false):
 	if show_hide:
 		_toggle_element(path_bar, not path_bar.visible)
-		#path_bar.visible = not path_bar.visible
 	else:
 		if not path_bar.visible:
 			_toggle_element(path_bar, true)
@@ -1110,6 +1173,7 @@ func _get_hidden_element_names():
 
 func _check_main_split_vis():
 	left_split.visible = tree.visible or places.visible
+	right_side_vbox.visible = item_list.visible or miller.visible
 
 
 func _build_nodes():
@@ -1141,18 +1205,28 @@ func _build_nodes():
 	tool_bar_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tool_bar_hbox.resized.connect(check_toolbar_elements)
 	
-	_toggle_places_button = _new_button(true, "Favorites", _on_places_toggled_pressed, "Toggle Side Bar")
+	_toggle_places_button = _new_button(true, "Favorites", _on_places_toggled_pressed, "Toggle Side Bar", false, "Toggle side bar.")
 	tool_bar_hbox.add_child(_toggle_places_button) #^ not sure about this, dont want to toggle in other modes
 	
-	_toggle_path_button = _new_button(true,"CopyNodePath", _on_path_bar_button_pressed, "Path Toggle")
-	tool_bar_hbox.add_child(_toggle_path_button)
 	
-	_navigate_up_button = _new_button(true, "MoveUp",_on_navigate_up, "Navigate Up")
-	tool_bar_hbox.add_child(_navigate_up_button)
+	
+	
 	
 	var sep_1 = VSeparator.new()
 	tool_bar_hbox.add_child(sep_1)
 	sep_1.hide()
+	
+	_history_back_button = _new_button(true, "Back", _dir_history_back, "History Back", false, "Navigate to previous location.")
+	tool_bar_hbox.add_child(_history_back_button)
+	
+	_history_forward_button = _new_button(true, "Forward", _dir_history_forward, "History Forward", false, "Navigate or next location.")
+	tool_bar_hbox.add_child(_history_forward_button)
+	
+	_navigate_up_button = _new_button(true, "MoveUp",_on_navigate_up, "Navigate Up", false, "Navigate up one folder level.")
+	tool_bar_hbox.add_child(_navigate_up_button)
+	
+	_toggle_path_button = _new_button(true,"CopyNodePath", _on_path_bar_button_pressed, "Path Toggle", false, "Toggle path bar to line edit or buttons.")
+	tool_bar_hbox.add_child(_toggle_path_button)
 	
 	path_bar = FileSystemPathBar.new()
 	tool_bar_hbox.add_child(path_bar)
@@ -1221,19 +1295,19 @@ func _build_nodes():
 	sep_2.hide()
 	
 	
-	_tree_button = _new_button(true, _tree_icon(), _change_view_mode.bind(ViewMode.TREE), "Tree View")
+	_tree_button = _new_button(true, _tree_icon(), _change_view_mode.bind(ViewMode.TREE), "Tree View", false, "Switch to Tree view.")
 	tool_bar_hbox.add_child(_tree_button)
 	
-	_places_button = _new_button(true, _places_icon(), _change_view_mode.bind(ViewMode.PLACES), "Places View", true)
+	_places_button = _new_button(true, _places_icon(), _change_view_mode.bind(ViewMode.PLACES), "Places View", true, "Switch to Item List view.")
 	tool_bar_hbox.add_child(_places_button)
 	
-	_miller_button = _new_button(true, _miller_icon(), _change_view_mode.bind(ViewMode.MILLER), "Column View", true)
+	_miller_button = _new_button(true, _miller_icon(), _change_view_mode.bind(ViewMode.MILLER), "Column View", true, "Switch to Column view.")
 	tool_bar_hbox.add_child(_miller_button)
 	
-	var search_button = _new_button(true,"Search", _on_search_pressed, "Search Toggle")
+	var search_button = _new_button(true,"Search", _on_search_pressed, "Search Toggle", false, "Toggle search bar.")
 	tool_bar_hbox.add_child(search_button)
 	
-	options_button = _new_button(false, "TripleBar", _on_options_button_pressed,)
+	options_button = _new_button(false, "TripleBar", _on_options_button_pressed, "", false, "Display options popup.")
 	tool_bar_hbox.add_child(options_button)
 	
 	#^ split
@@ -1313,7 +1387,7 @@ func _build_nodes():
 
 
 
-func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=false):
+func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=false, tooltip:=""):
 	var button = Button.new()
 	if _name != "":
 		button.name = _name
@@ -1325,6 +1399,7 @@ func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=
 		button.icon = icon
 	elif icon != "":
 		button.icon = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
+	button.tooltip_text = tooltip
 	button.theme_type_variation = &"MainScreenButton"
 	button.focus_mode = Control.FOCUS_NONE
 	if icon_color:
@@ -1357,6 +1432,7 @@ class DataKeys:
 	const SPLIT_OFFSET = &"SPLIT_OFFSET"
 	
 	const TOGGLED_ELEMENTS = &"TOGGLED_ELEMENTS"
+	const RECENT_FILES = &"RECENT_FILES"
 	
 	const SEARCH_SELECT_PATH = &"SEARCH_SELECT_PATH"
 	const SEARCH_WHOLE_FS = &"SEARCH_WHOLE_FS"

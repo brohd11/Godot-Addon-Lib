@@ -2,9 +2,14 @@ extends Window
 
 const ThemeSetter = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_setter.gd")
 
-func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800)) -> void:
+func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window_pos=null) -> void:
 	
-	initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
+	if window_pos == null:
+		initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
+	else:
+		initial_position = Window.WINDOW_INITIAL_POSITION_ABSOLUTE
+		position = window_pos
+	
 	size = window_size
 	EditorInterface.get_base_control().add_child(self)
 	var panel = PanelContainer.new()

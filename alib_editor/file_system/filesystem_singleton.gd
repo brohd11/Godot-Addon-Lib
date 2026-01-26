@@ -320,8 +320,10 @@ func _get_type_icon(file_path):
 	if Keys.VALID_FILE_TYPES.has(file_type):
 		return cache.editor_icons[Keys.VALID_FILE_TYPES.get(file_type)]
 	var fs_dir = EditorInterface.get_resource_filesystem().get_filesystem_path(file_path.get_base_dir())
-	if fs_dir.get_file_import_is_valid(fs_dir.find_file_index(file_path.get_file())):
-		return cache.file_icon
+	var idx = fs_dir.find_file_index(file_path.get_file())
+	if idx > -1:
+		if fs_dir.get_file_import_is_valid(idx):
+			return cache.file_icon
 	return EditorInterface.get_editor_theme().get_icon("FileBroken", "EditorIcons")
 
 static func get_preview(path:String):
@@ -495,20 +497,16 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 	var fs_tree = get_filesystem_tree()
 	sel_paths_reversed.reverse()
 	if sel_paths_reversed.size() > 0:
-		#var fs_tree = ALibEditor.Nodes.FileSystem.get_tree() as Tree
 		var fs_item = fs_tree.get_selected()
 		fs_tree.multi_selected.emit(fs_item, 0, true)
 	
 	if navigate and sel_paths_reversed.size() > 0:
 		EditorInterface.get_file_system_dock().navigate_to_path(sel_paths_reversed[0])
 	
-	#var tree = ALibEditor.Nodes.FileSystem.get_tree() as Tree
 	fs_tree.deselect_all()
 	var items = []
 	
 	for path:String in sel_paths_reversed:
-		#if path.get_extension() == "" and not path.ends_with("/"):
-			#path = path + "/"
 		var fs_item = file_system_dock_item_dict.get(path)
 		if is_instance_valid(fs_item):
 			items.append(fs_item)
@@ -524,11 +522,16 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 func _register_dialogs():
 	var fs_dock = EditorInterface.get_file_system_dock()
 	var dialog_nodes = []
+	var move_dialog
 	for n in fs_dock.get_children():
-		if n.get_class() in Keys.DIALOGS_TO_MOVE:
+		var _class = n.get_class()
+		if _class in Keys.DIALOGS_TO_MOVE:
 			dialog_nodes.append(n)
+		if _class == Keys.EDITOR_DIR_DIALOG:
+			move_dialog = n
 	
 	EditorNodeRef.register(Keys.FS_DIALOGS, dialog_nodes)
+	move_dialog.about_to_popup.connect(_move_dialog_create_file_list)
 
 static func get_dialogs():
 	return EditorNodeRef.get_registered(Keys.FS_DIALOGS)
@@ -568,16 +571,20 @@ static func reset_dialogs(parent=null, mouse=null):
 	for dialog:Window in dialog_nodes:
 		dialog.reparent(EditorInterface.get_file_system_dock())
 
+static func _get_move_dialog() -> Window:
+	var dialogs = FileSystemSingleton.get_dialogs()
+	var move_dialog:Window
+	for dialog:Window in dialogs:
+		if dialog.get_class() == Keys.EDITOR_DIR_DIALOG:
+			move_dialog = dialog
+			break
+	return move_dialog
 
 static func show_file_move_dialog(target_dir:=""):
 	var file_system_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 	file_system_popup.id_pressed.emit(9)
 	var dialogs = FileSystemSingleton.get_dialogs()
-	var move_dialog:Window
-	for dialog in dialogs:
-		if dialog.get_class() == "EditorDirDialog":
-			move_dialog = dialog
-			break
+	var move_dialog:Window = _get_move_dialog()
 	
 	var nodes = move_dialog.find_children("*", "Tree", true, false)
 	var dialog_tree = nodes[0] as Tree
@@ -611,6 +618,49 @@ static func show_file_move_dialog(target_dir:=""):
 	item.select(0)
 	dialog_tree.scroll_to_item(item, true)
 	dialog_tree.queue_redraw()
+
+static func _move_dialog_create_file_list():
+	var move_dialog:Window = _get_move_dialog()
+	var nodes = move_dialog.find_children("*", "Tree", true, false)
+	var dialog_tree = nodes[0] as Tree
+	var paths = EditorInterface.get_selected_paths()
+	
+	var file_list_root = VBoxContainer.new()
+	dialog_tree.get_parent().add_child(file_list_root)
+	#file_list_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	file_list_root.custom_minimum_size = Vector2(0, 100)
+	var title_bar = HBoxContainer.new()
+	file_list_root.add_child(title_bar)
+	title_bar.add_spacer(true)
+	var title_button = Button.new()
+	title_button.text = "Files to Move/Copy"
+	title_button.flat = true
+	title_button.focus_mode = Control.FOCUS_NONE
+	
+	var callable = func():
+		if file_list_root.size_flags_vertical == Control.SIZE_EXPAND_FILL:
+			file_list_root.size_flags_vertical = Control.SIZE_FILL
+		else:
+			file_list_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	title_button.pressed.connect(callable)
+	title_bar.add_child(title_button)
+	title_bar.add_spacer(false)
+	
+	var file_list = ItemList.new()
+	file_list_root.add_child(file_list)
+	file_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	for path in paths:
+		file_list.add_item(path)
+	
+	move_dialog.visibility_changed.connect(_free_move_dialog_file_list.bind(move_dialog, file_list_root))
+
+
+static func _free_move_dialog_file_list(move_dialog:Window, control:Control):
+	if not move_dialog.visible:
+		control.queue_free()
+		if move_dialog.visibility_changed.is_connected(_free_move_dialog_file_list):
+			move_dialog.visibility_changed.disconnect(_free_move_dialog_file_list)
 
 
 static func populate_filesystem_popup(calling_node:Node):
@@ -676,11 +726,11 @@ static func fs_dock_in_bottom_panel() -> bool:
 		if dock_par is TabContainer:
 			return false
 		dock_par = dock_par.get_parent()
-		return dock_par.get_class() == "EditorBottomPanel"
+		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL
 	elif minor_version == 6:
 		var dock_par = fs_dock.get_parent()
 		print(dock_par)
-		return dock_par.get_class() == "EditorBottomPanel"
+		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL #^ this may need change for 4.6
 	return false
 
 ## Takes a file path, and the new name of the file. New name is not entire path.
@@ -731,7 +781,9 @@ static func get_drag_preview(paths:Array):
 	return container
 
 func _all_unregistered_callback():
-	pass
+	var move_dialog = _get_move_dialog()
+	if move_dialog.about_to_popup.is_connected(_move_dialog_create_file_list):
+		move_dialog.about_to_popup.disconnect(_move_dialog_create_file_list)
 
 class Cache:
 	var data_cache:= {}
@@ -772,6 +824,9 @@ class FilePaths:
 	const FAVORITES = "res://.godot/editor/favorites"
 
 class Keys:
+	const EDITOR_BOTTOM_PANEL = "EditorBottomPanel"
+	const EDITOR_DIR_DIALOG = "EditorDirDialog"
+	
 	const FOLDER_COLORS = &"FolderColors"
 	const FAVORITES = &"FileSystemFavorites"
 	
@@ -838,14 +893,12 @@ class DropData:
 			if file_dir == target_dir:
 				return
 		
-		calling_node.get_window().gui_cancel_drag() #^r twice calling?
-		FileSystemSingleton.move_dialogs(calling_node)
+		calling_node.get_window().gui_cancel_drag()
 		
 		var selected = FileSystemSingleton.ensure_items_selected(files)
 		if not selected:
 			return
 		
 		calling_node.get_window().grab_focus()
-		
 		FileSystemSingleton.move_dialogs(calling_node)
 		FileSystemSingleton.show_file_move_dialog(target_dir)
