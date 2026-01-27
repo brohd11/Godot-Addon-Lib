@@ -36,7 +36,7 @@ static func get_create_popup():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
 
 
-static func scan_fs_dock(file_system_item_dict, file_data_dict, preview_object=null):
+static func scan_fs_dock(file_system_item_dict, file_data_dict, preview_object=null): #^ this could move to filesystem singleton?
 	file_system_item_dict.clear()
 	file_data_dict.clear()
 	

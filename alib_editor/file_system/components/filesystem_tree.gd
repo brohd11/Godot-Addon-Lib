@@ -55,6 +55,9 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
+	var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+	sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+	add_theme_stylebox_override("panel", sb)
 	
 	custom_minimum_size = _MIN_SIZE
 	

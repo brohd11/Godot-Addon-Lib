@@ -12,6 +12,8 @@ const ClickState = ClickHandlers.ClickState
 
 const MIN_COL_SIZE = 300
 
+var item_list_stylebox:StyleBoxFlat
+
 var scroll_container:ScrollContainer
 var scroll_hbox:HBoxContainer
 var scroll_spacer:Control
@@ -332,6 +334,7 @@ func _new_column(path:String="%SEARCH") -> FileColumn:
 	column.forward_gui.connect(_on_column_list_input_event)
 	
 	column.item_list.draw_alternate_line_colors = draw_alt_color
+	column.item_list.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	if path == "%SEARCH":
 		_search_column = column

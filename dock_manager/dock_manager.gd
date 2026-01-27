@@ -186,14 +186,14 @@ func post_init():
 	else:
 		dock_target = default_dock
 	if dock_target > -3:
-		dock_instance(int(dock_target))
+		await dock_instance(int(dock_target))
 		if dock_target >= 0 and dock_index > -1:
 			var dock_control = get_current_dock_control() as TabContainer
 			dock_control.move_child(plugin_control, dock_index)
 	else:
 		if dock_layout_data != null:
 			_set_window_settings(dock_layout_data)
-		undock_instance()
+		await undock_instance()
 		
 	
 	if save_layout:
@@ -258,18 +258,23 @@ func get_plugin_control():
 
 func show_in_editor():
 	var current_dock = _get_current_dock()
-	if current_dock > -1:
-		var dock_control = get_current_dock_control()
-		if dock_control is TabContainer:
-			var i = dock_control.get_tab_idx_from_control(plugin_control)
-			dock_control.current_tab = i
-	elif current_dock == -2:
-		BottomPanel.show_panel(_docked_name)
+	var version = ALibRuntime.Utils.UVersion.get_minor_version()
+	if version < 6:
+		if current_dock > -1:
+			var dock_control = get_current_dock_control()
+			if dock_control is TabContainer:
+				var i = dock_control.get_tab_idx_from_control(plugin_control)
+				dock_control.current_tab = i
+		elif current_dock == -2:
+			BottomPanel.show_panel(_docked_name)
+	elif version == 6:
+		if current_dock > -1 or current_dock == -2:
+			plugin_control.get_parent().show()
 	
 
 func clean_up():
 	save_layout_data()
-	_remove_control_from_parent()
+	await _remove_control_from_parent()
 	
 	if not external_main_screen_flag and plugin_has_main:
 		main_screen_handler.clean_up()
@@ -284,7 +289,7 @@ func reload_control():
 	var is_scene = plugin_control.scene_file_path != ""
 	var control_path = get_scene_or_script(plugin_control)
 	
-	_remove_control_from_parent()
+	await _remove_control_from_parent()
 	plugin_control.queue_free()
 	if main_screen_handler is MainScreenHandler:
 		main_screen_handler.queue_free()
@@ -298,8 +303,9 @@ func reload_control():
 		plugin_control = script.new()
 	
 	await plugin.get_tree().process_frame
+	
 	add_to_tree()
-	show_in_editor()
+	#show_in_editor()
 
 func free_instance():
 	clean_up()
@@ -399,13 +405,14 @@ func _on_dock_button_pressed():
 		window_always_on_top = not window_always_on_top
 		plugin_window.always_on_top = window_always_on_top
 	elif handled == _slot.get(Slot.FLOATING):
-		undock_instance()
+		await undock_instance()
 	else:
-		dock_instance(handled)
+		await dock_instance(handled)
 	
 	save_layout_data()
 
 func dock_instance(target_dock:int):
+	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	if target_dock == -3:
 		if default_dock > -3:
 			target_dock = default_dock
@@ -418,22 +425,45 @@ func dock_instance(target_dock:int):
 		_last_window_size = window.size
 		_last_window_pos = window.position
 	
-	_remove_control_from_parent()
-	if target_dock > -1:
-		plugin.add_control_to_dock(target_dock, plugin_control)
-		_set_dock_tab_style()
-	elif target_dock == -1:
-		var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
-		panel_wrapper.name = get_docked_name()
-		main_screen_handler.add_main_screen_control(panel_wrapper)
-	elif target_dock == -2:
-		plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
+	await _remove_control_from_parent()
+	if minor_version < 6:
+		if target_dock > -1:
+			plugin.add_control_to_dock(target_dock, plugin_control)
+			_set_dock_tab_style()
+		elif target_dock == -1:
+			var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
+			panel_wrapper.name = get_docked_name()
+			main_screen_handler.add_main_screen_control(panel_wrapper)
+		elif target_dock == -2:
+			plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
+	
+	elif minor_version == 6:
+		if target_dock > -1 or target_dock == -2:
+			var dock = ClassDB.instantiate("EditorDock")
+			if plugin_control.get_parent() == null:
+				dock.add_child(plugin_control)
+			else:
+				plugin_control.reparent(dock)
+			dock.title = get_docked_name()
+			dock.dock_icon = _get_plugin_icon()
+			var dock_slot = target_dock
+			if target_dock == -2:
+				dock_slot = 8 # EditorDock.DockSlot.DOCK_SLOT_BOTTOM
+			print("ADD DOCK")
+			dock.default_slot = dock_slot
+			plugin.add_dock(dock)
+			await plugin.get_tree().process_frame
+			
+		elif target_dock == -1:
+			var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
+			panel_wrapper.name = get_docked_name()
+			main_screen_handler.add_main_screen_control(panel_wrapper)
 	
 	dock_changed.emit(self)
 
 
 func undock_instance():
-	_remove_control_from_parent()
+	await _remove_control_from_parent()
 	var window_size = _default_window_size
 	if _last_window_size is Vector2i:
 		window_size = _last_window_size
@@ -454,24 +484,41 @@ func undock_instance():
 	return window
 
 func _remove_control_from_parent():
+	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	var window = get_dock_manager_window()
 	var current_dock = _get_current_dock()
 	if current_dock != null:
 		last_dock = current_dock
+	
 	var control_parent = plugin_control.get_parent()
 	if is_instance_valid(control_parent):
-		if current_dock > -1:
-			plugin.remove_control_from_docks(plugin_control)
-		elif current_dock == -1:
-			var panel_wrapper = plugin_control.get_parent()
-			main_screen_handler.remove_main_screen_control(panel_wrapper)
-			panel_wrapper.remove_child(plugin_control)
-			panel_wrapper.queue_free()
-		elif current_dock == -2:
-			plugin.remove_control_from_bottom_panel(plugin_control)
-			BottomPanel.show_first_panel()
-		else:
-			control_parent.remove_child(plugin_control)
+		if minor_version < 6:
+			if current_dock > -1:
+				plugin.remove_control_from_docks(plugin_control)
+			elif current_dock == -1:
+				var panel_wrapper = plugin_control.get_parent()
+				main_screen_handler.remove_main_screen_control(panel_wrapper)
+				panel_wrapper.remove_child(plugin_control)
+				panel_wrapper.queue_free()
+			elif current_dock == -2:
+				plugin.remove_control_from_bottom_panel(plugin_control)
+				BottomPanel.show_first_panel()
+			else:
+				control_parent.remove_child(plugin_control)
+		elif minor_version == 6:
+			if control_parent.get_class() == "EditorDock":
+				print("REMOVE DOCK")
+				plugin.remove_dock(control_parent)
+				await get_tree().process_frame
+				control_parent.remove_child(plugin_control)
+				control_parent.queue_free()
+			elif current_dock == -1:
+				var panel_wrapper = plugin_control.get_parent()
+				main_screen_handler.remove_main_screen_control(panel_wrapper)
+				panel_wrapper.remove_child(plugin_control)
+				panel_wrapper.queue_free()
+			else:
+				control_parent.remove_child(plugin_control)
 	
 	if is_instance_valid(window):
 		window.queue_free()
@@ -554,7 +601,15 @@ class PanelWrapper extends PanelContainer:
 		if _empty_pan:
 			panel_sb = StyleBoxEmpty.new()
 		else:
-			panel_sb = get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+			var minor = ALibRuntime.Utils.UVersion.get_minor_version()
+			if minor < 6:
+				print(get_theme_stylebox("panel"))
+				panel_sb = get_theme_stylebox("panel").duplicate()# as StyleBoxFlat #^ this is an empty now?
+				panel_sb.content_margin_left = 4
+				panel_sb.content_margin_right = 4
+			elif minor == 6:
+				panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
+				
 			panel_sb.content_margin_left = 4
 			panel_sb.content_margin_right = 4
 		

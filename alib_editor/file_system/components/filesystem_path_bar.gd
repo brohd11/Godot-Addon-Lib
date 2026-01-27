@@ -153,24 +153,42 @@ func toggle_view_mode():
 		
 
 func _set_style_boxes(_tab_bar:TabBar):
+	var version = ALibRuntime.Utils.UVersion.get_minor_version()
 	var sbs = ["tab_selected", "tab_unselected", "tab_hovered", "tab_focus", "tab_disabled"]
 	for _name in sbs:
-		var sb = _get_style_box(_name)
-		sb.border_width_right = 2
-		sb.border_color = Color.TRANSPARENT
+		var sb
+		if version < 6:
+			sb = _get_style_box_44(_name)
+		elif version == 6:
+			sb = _get_style_box_46(_name)
 		_tab_bar.add_theme_stylebox_override(_name, sb)
 	
 
-func _get_style_box(_name:String):
+func _get_style_box_44(_name:String):
 	if _style_boxes == null:
 		_style_boxes = {}
 	if _style_boxes.has(_name):
 		return _style_boxes[_name]
-	var sb = tab_bar.get_theme_stylebox(_name).duplicate()
+	var sb = tab_bar.get_theme_stylebox(_name).duplicate() as StyleBoxFlat
 	sb.border_width_right = 2
 	sb.border_color = Color.TRANSPARENT
 	if _name == "tab_selected":
 		sb.border_width_top = 0
 		sb.bg_color = sb.bg_color.darkened(0.5)
+	_style_boxes[_name] = sb
+	return sb
+
+func _get_style_box_46(_name:String):
+	if _style_boxes == null:
+		_style_boxes = {}
+	if _style_boxes.has(_name):
+		return _style_boxes[_name]
+	var sb = tab_bar.get_theme_stylebox(_name).duplicate() as StyleBoxFlat
+	sb.border_width_right = 2
+	sb.border_color = Color.TRANSPARENT
+	sb.set_corner_radius_all(0)
+	if _name == "tab_selected":
+		sb.border_width_top = 0
+		sb.bg_color = sb.bg_color.darkened(0.2)
 	_style_boxes[_name] = sb
 	return sb

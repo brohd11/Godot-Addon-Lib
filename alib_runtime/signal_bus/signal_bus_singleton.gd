@@ -1,5 +1,6 @@
 class_name SignalBusSingleton #! singleton-module
-extends Singleton.Base
+extends SingletonBase
+const SingletonBase = Singleton.Base
 
 const SignalBus = preload("res://addons/addon_lib/brohd/alib_runtime/signal_bus/signal_bus.gd")
 

@@ -1,5 +1,6 @@
 #! namespace Singleton.RefCount
-extends Singleton.Base
+extends SingletonBase
+const SingletonBase = Singleton.Base
 
 
 static func _get_singleton_type() -> SingletonType:

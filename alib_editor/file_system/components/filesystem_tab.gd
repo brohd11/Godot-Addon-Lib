@@ -52,6 +52,8 @@ var fs_popup_handler:FSPopupHandler
 var right_click_handler:RightClickHandler
 var non_res_helper:NonResHelper
 
+var item_list_stylebox:StyleBoxFlat
+
 var max_history_size:int = 20
 var _recent_files:= []
 var _dir_history:= []
@@ -1180,6 +1182,9 @@ func _build_nodes():
 	if is_instance_valid(tree):
 		return
 	
+	item_list_stylebox = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+	item_list_stylebox.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+	
 	_toolbar_debounce_timer = Timer.new()
 	add_child(_toolbar_debounce_timer)
 	_toolbar_debounce_timer.timeout.connect(_on_toolbar_debounce_timeout)
@@ -1323,10 +1328,12 @@ func _build_nodes():
 	
 	places = FileSystemPlaces.new()
 	left_split.add_child(places)
+	places.item_list_stylebox = item_list_stylebox
 	
 	tree = FileSystemTree.new()
 	left_split.add_child(tree)
 	tree.owner = self
+	tree.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	#^ split side
 	right_side_vbox = VBoxContainer.new()
@@ -1338,8 +1345,10 @@ func _build_nodes():
 	right_side_vbox.add_child(item_list)
 	right_side_vbox.custom_minimum_size = Vector2(100,100)
 	item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	item_list.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	miller = FileSystemMiller.new()
+	miller.item_list_stylebox = item_list_stylebox
 	right_side_vbox.add_child(miller)
 	
 	
@@ -1398,19 +1407,16 @@ func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=
 	if icon is Texture2D:
 		button.icon = icon
 	elif icon != "":
-		button.icon = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
+		var icon_texture
+		if icon_color:
+			icon_texture = _get_modulated_icon(icon)
+		else:
+			icon_texture = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
+		button.icon = icon_texture
+	
 	button.tooltip_text = tooltip
 	button.theme_type_variation = &"MainScreenButton"
 	button.focus_mode = Control.FOCUS_NONE
-	if icon_color:
-		var col = Color(5,5,5)
-		button.add_theme_color_override("icon_disabled_color", col)
-		button.add_theme_color_override("icon_hover_pressed_color", col)
-		button.add_theme_color_override("icon_hover_color", col)
-		button.add_theme_color_override("icon_pressed_color", col)
-		button.add_theme_color_override("icon_focus_color", col)
-		button.add_theme_color_override("icon_normal_color", col)
-		
 	return button
 
 func _tree_icon():

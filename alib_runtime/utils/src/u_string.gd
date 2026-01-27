@@ -25,6 +25,16 @@ static func strip_comment(line:String):
 	
 	return valid
 
+static func rfind_index_safe(text: String, what: String, from: int = -1) -> int:
+	var limit = text.length()
+	if from > -1:
+		limit = from
+	
+	var max_valid_start = text.length() - what.length()
+	if max_valid_start < 0: return -1
+	
+	var actual_from = min(limit, max_valid_start)
+	return text.rfind(what, actual_from)
 
 static func get_member_access_front(text:String, string_map:StringMap=null):
 	var dot_idx = text.find(".")
@@ -168,19 +178,21 @@ static func string_safe_count(text:String, what:String, from:int=0, to:int=0, st
 static func string_safe_find(text:String, find:String, start:=0, string_map=null):
 	if string_map == null:
 		string_map = get_string_map(text)
-	var idx = -10
+	var idx = -1
 	idx = text.find(find, start)
-	while string_map.string_mask[idx] == 1 and not idx == -1:
+	while idx != -1 and string_map.string_mask[idx] == 1:
 		idx = text.find(find, idx + 1)
 	return idx
 
 static func string_safe_rfind(text:String, find:String, start:=-1, string_map=null):
 	if string_map == null:
 		string_map = get_string_map(text)
-	var idx = -10
-	idx = text.rfind(find, start)
-	while string_map.string_mask[idx] == 1 and not idx == -1:
-		idx = text.rfind(find, idx - 1)
+	var idx = -1
+	idx = rfind_index_safe(text, find, start)
+	while idx != -1 and string_map.string_mask[idx] == 1:
+		idx = rfind_index_safe(text, find, idx - 1)
+		if idx == 0:
+			return -1
 	return idx
 
 static func remove_comment(text:String, string_safe:=false, string_map=null):

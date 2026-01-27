@@ -1,3 +1,4 @@
+const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_string.gd")
 
 const BRACKETS = { "(": ")", "[": "]", "{": "}" }
 enum Mode {
@@ -108,7 +109,7 @@ func get_comment_index(from:int=0):
 	return comment_mask.find(1, from)
 
 func get_line_at_index(index:int):
-	var beginning_new_line_i = string.rfind("\n", index)
+	var beginning_new_line_i = UString.rfind_index_safe(string, "\n", index)
 	if beginning_new_line_i == -1:
 		beginning_new_line_i = 0
 	var end_new_line_i = string.find("\n", index)

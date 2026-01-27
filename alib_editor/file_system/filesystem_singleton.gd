@@ -1,6 +1,7 @@
 @tool
 class_name FileSystemSingleton
-extends Singleton.RefCount
+extends SingletonRefCount
+const SingletonRefCount = Singleton.RefCount
 
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
@@ -710,10 +711,14 @@ static func get_fs_dock_split_mode():
 	var tree = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_TREE)
 	if not tree:
 		return -1
-	var filter_panel = tree.get_parent().get_child(1)
-	if not filter_panel.visible:
+	var search_node = tree
+	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	if minor_version == 6:
+		search_node = search_node.get_parent()
+	var item_list = search_node.get_parent().get_child(1)
+	if not item_list.visible:
 		return 0
-	var split = tree.get_parent() as SplitContainer
+	var split = search_node.get_parent() as SplitContainer
 	if split.vertical:
 		return 1
 	return 2

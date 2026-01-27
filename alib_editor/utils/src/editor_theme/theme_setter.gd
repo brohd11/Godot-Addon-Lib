@@ -48,8 +48,9 @@ static func set_theme_color(node, overide_color_type:=ThemeColor.Type.NONE, colo
 			style_box_type = style
 			break
 	if style_box_type:
-		var stylebox:StyleBoxFlat = node.get_theme_stylebox(style_box_type).duplicate()
-		stylebox.bg_color = color
+		var stylebox = node.get_theme_stylebox(style_box_type).duplicate()
+		if stylebox is StyleBoxFlat:
+			stylebox.bg_color = color
 		node.add_theme_stylebox_override(style_box_type, stylebox)
 
 static func set_theme_setters_in_scene(root_node):

@@ -58,6 +58,9 @@ func _ready() -> void:
 	#allow_rmb_select = true
 	allow_reselect = true
 	
+	var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+	sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+	add_theme_stylebox_override("panel", sb)
 	
 	multi_selected.connect(_on_item_selected)
 	item_clicked.connect(_on_item_clicked)

@@ -1,5 +1,6 @@
 class_name EditorPanelSingleton
-extends Singleton.Base
+extends SingletonBase
+const SingletonBase = Singleton.Base
 
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/panel_singleton.gd")
