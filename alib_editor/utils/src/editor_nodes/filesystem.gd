@@ -1,13 +1,13 @@
-
 #! namespace ALibEditor.Nodes class FileSystem
+
+const PopupID = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/filesystem/popup_id.gd")
 
 static func get_tree():
 	return EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
 
 static func get_tree_line_edit():
 	var tree = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
-	var nodes = tree.get_child(1, true).find_children("*", "LineEdit", true, false)
-	return nodes[0]
+	return ALibRuntime.NodeUtils.NUTree.get_line_edit(tree)
 
 static func populate_popup(calling_node:Control):
 	var popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)

@@ -221,7 +221,7 @@ func _item_list_drop_data(at_position: Vector2, data: Variant) -> void:
 				new_item(f.trim_suffix("/").get_file(), f)
 
 func _item_list_draw():
-	ALibRuntime.NodeUtils.UItemList.AltColor.draw_lines(item_list)
+	ALibRuntime.NodeUtils.NUItemList.AltColor.draw_lines(item_list)
 	
 	if _list_hovered:
 		var accent_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)

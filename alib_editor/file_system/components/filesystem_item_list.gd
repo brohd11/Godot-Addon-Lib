@@ -58,9 +58,9 @@ func _ready() -> void:
 	#allow_rmb_select = true
 	allow_reselect = true
 	
-	var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-	sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
-	add_theme_stylebox_override("panel", sb)
+	#var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+	#sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+	#add_theme_stylebox_override("panel", sb)
 	
 	multi_selected.connect(_on_item_selected)
 	item_clicked.connect(_on_item_clicked)
@@ -69,7 +69,6 @@ func _ready() -> void:
 	_set_list_settings()
 
 func set_active(active_state:bool):
-	print("ITEM ACTIVE: ", active_state)
 	active = active_state
 	if active_state:
 		refresh()
@@ -211,7 +210,6 @@ func _create_items_res():
 			set_item_icon_modulate(idx, icon_color)
 
 func _create_items_not_res():
-	print("ITEM LIST NOT RES")
 	var folder_icon = EditorInterface.get_editor_theme().get_icon("FolderBigThumb", "EditorIcons")
 	var folder_color = filesystem_singleton.get_folder_color()
 	var file_icon = EditorInterface.get_editor_theme().get_icon("FileBigThumb", "EditorIcons")
@@ -290,7 +288,7 @@ func _draw() -> void:
 	var scroll_bar_offset = Vector2(get_h_scroll_bar().value, get_v_scroll_bar().value)
 	if display_as_list:
 		if draw_alternate_line_colors:
-			ALibRuntime.NodeUtils.UItemList.AltColor.draw_lines(self)
+			ALibRuntime.NodeUtils.NUItemList.AltColor.draw_lines(self)
 		if not draw_folder_tris:
 			return
 		var folder_texture = EditorInterface.get_editor_theme().get_icon("TransitionImmediate", "EditorIcons")
@@ -394,13 +392,11 @@ func _on_right_clicked(path):
 
 func _on_double_clicked(selected_item:int):
 	var path = get_item_path(selected_item)
-	#print(path)
 	if not path.ends_with("/"):
 		double_clicked.emit(path)
 	else:
 		if path.ends_with("://"):
 			return
-		#print(path,"   ", folder_view_root)
 		if path != folder_view_root:
 			double_clicked.emit(path)
 		else:

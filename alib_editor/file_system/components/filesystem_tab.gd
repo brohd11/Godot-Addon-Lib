@@ -52,12 +52,10 @@ var fs_popup_handler:FSPopupHandler
 var right_click_handler:RightClickHandler
 var non_res_helper:NonResHelper
 
-var item_list_stylebox:StyleBoxFlat
-
 var max_history_size:int = 20
 var _recent_files:= []
-var _dir_history:= []
-var _dir_history_index:int = -1
+var _history:= []
+var _history_index:int = -1
 var current_path:String = "res://" #^ setting - d
 var current_dir:String = "res://"
 var current_selected_paths:= PackedStringArray()
@@ -89,6 +87,7 @@ var _navigate_up_button:Button
 var _tree_button:Button
 var _places_button:Button
 var _miller_button:Button
+var _search_button:Button
 var options_button:Button
 
 var _async_search:UFile.GetFilesAsync
@@ -167,7 +166,8 @@ func _ready() -> void:
 		place_data = FileSystemPlaces.Data.get_default_data()
 	
 	places.build_item_list(place_data)
-	
+	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
+	path_bar.set_view_mode(path_bar_view_mode)
 	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
 	if not path_bar_visible:
 		_toggle_element(path_bar, false)
@@ -183,7 +183,6 @@ func _ready() -> void:
 	visibility_changed.connect(_on_visibilty_changed, 1)
 	
 	_set_current_path(self, current_path)
-	print("SET: ", current_path)
 
 func _exit_tree() -> void:
 	filesystem_singleton.reset_dialogs(self)
@@ -246,6 +245,7 @@ func get_dock_data() -> Dictionary:
 	data[DataKeys.RECENT_FILES] = _recent_files
 	data[DataKeys.LIST_ALT_COLOR] = _alt_list_color
 	data[DataKeys.TOGGLED_ELEMENTS] = _get_hidden_element_names()
+	data[DataKeys.PATH_BAR_MODE] = path_bar.get_view_mode()
 	data[DataKeys.PATH_BAR_TOGGLED] = path_bar.visible
 	data[DataKeys.PLACES_TOGGLED] = _places_toggled
 	data[DataKeys.PLACES_TOGGLED_FOLLOW] = _places_follow_view_mode
@@ -453,7 +453,6 @@ func _get_filter_text_array():
 
 
 func _get_filtered_paths(include_dirs:=false, use_file_name:=true, filter_mode:=_current_filter_mode):
-	print("GET FILTERED: ", _current_search_dir)
 	var paths:PackedStringArray
 	if _current_search_dir == "res://":
 		if include_dirs:
@@ -615,7 +614,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 			miller.select_path_items(current_path)
 	
 	if who != self and who != _history_back_button and who != _history_forward_button:
-		_add_dir_to_history(current_path)
+		_add_to_history(current_path)
 	
 	if _refresh:
 		refresh()
@@ -660,43 +659,54 @@ func _on_item_list_item_selected(path:String, selected_paths:Array):
 		else:
 			_set_current_path(item_list, path) #^ any other situation or for files just set the path
 	else:
-		_add_dir_to_history(path)
+		_add_to_history(path)
 
 func _update_history_buttons():
-	_history_back_button.disabled = _dir_history_index == 0
-	_history_back_button.flat = true
-	_history_forward_button.disabled = _dir_history_index == _dir_history.size() - 1
-	_history_forward_button.flat = true
+	_history_back_button.disabled = _history_index == 0
+	_history_forward_button.disabled = _history_index == _history.size() - 1
+	
+	if _history_back_button.disabled:
+		_history_back_button.tooltip_text = "Navigate to previous location."
+	elif _history_index - 1 >= 0: 
+		_history_back_button.tooltip_text = "Navigate to previous location: %s" % _history[_history_index - 1]
+	
+	if _history_forward_button.disabled:
+		_history_forward_button.tooltip_text = "Navigate to next location."
+	elif _history_index + 1 < _history.size():
+		_history_forward_button.tooltip_text = "Navigate to next location: %s" % _history[_history_index + 1]
+	
 
-func _add_dir_to_history(new_dir:String):
-	if _dir_history_index >= 0 and _dir_history[_dir_history_index] == new_dir:
+func _add_to_history(new_path:String):
+	if _history_index >= 0 and _history[_history_index] == new_path:
 		return
 	
-	if _dir_history_index < _dir_history.size() - 1:
-		_dir_history = _dir_history.slice(0, _dir_history_index + 1)
-		
-	_dir_history.append(new_dir)
-	_dir_history_index += 1
+	if _history_index < _history.size() - 1:
+		_history = _history.slice(0, _history_index + 1)
 	
-	if _dir_history.size() > max_history_size:
-		_dir_history.pop_front()
-		_dir_history_index -= 1
+	if new_path in _history:
+		_history.erase(new_path)
+	else:
+		_history_index += 1
+	_history.append(new_path)
+	
+	if _history.size() > max_history_size:
+		_history.pop_front()
+		_history_index -= 1
 	
 	_update_history_buttons()
 
-func _dir_history_back():
-	print("BACK", _dir_history)
-	if _dir_history_index > 0:
-		_dir_history_index -= 1
-		_set_current_path(_history_back_button, _dir_history[_dir_history_index])
+func _history_back():
+	#print("BACK", _history)
+	if _history_index > 0:
+		_history_index -= 1
+		_set_current_path(_history_back_button, _history[_history_index])
 	_update_history_buttons()
 
-func _dir_history_forward():
-	if _dir_history_index < _dir_history.size() - 1:
-		_dir_history_index += 1
-		_set_current_path(_history_forward_button, _dir_history[_dir_history_index])
+func _history_forward():
+	if _history_index < _history.size() - 1:
+		_history_index += 1
+		_set_current_path(_history_forward_button, _history[_history_index])
 	_update_history_buttons()
-
 
 func _add_path_to_recent(path:String):
 	if path.ends_with("/"):
@@ -801,6 +811,7 @@ func _on_options_button_pressed():
 		options.add_option(string, _set_display_as_list, _get_display_as_list_icon())
 		options.add_option_data(string, [Color(5,5,5), null])
 	
+	options.add_option("Search", _on_search_pressed, ["Search"])
 	
 	#^ view mode
 	var vm = _current_view_mode
@@ -1038,12 +1049,23 @@ func _check_toolbar_elements():
 		search_hbox.visible = _show_search
 	
 	
+	var hbox_elements_size = 0
+	for c in tool_bar_hbox.get_children():
+		if c.visible and c != tool_bar_spacer and c != path_bar:
+			hbox_elements_size += c.size.x
+	
+	#print(hbox_elements_size + path_bar.size.x)
+	#prints(path_bar.size, tool_bar_hbox.size, path_bar.size.x)
+	
 	var show_buttons = true
-	if size.x < 500 and (path_bar.visible or search_label.visible):
+	if size.x < 500:
 		show_buttons = false
 	
 	_toggle_element_respect_meta(_toggle_places_button, show_buttons)
 	#_toggle_element_respect_meta(_toggle_path_button, show_buttons)
+	#_toggle_element_respect_meta(_history_back_button, show_buttons)
+	#_toggle_element_respect_meta(_history_forward_button, show_buttons)
+	_toggle_element_respect_meta(_search_button, show_buttons)
 	_toggle_element_respect_meta(_navigate_up_button, show_buttons)
 	_toggle_element_respect_meta(_tree_button, show_buttons)
 	_toggle_element_respect_meta(_places_button, show_buttons)
@@ -1182,9 +1204,6 @@ func _build_nodes():
 	if is_instance_valid(tree):
 		return
 	
-	item_list_stylebox = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-	item_list_stylebox.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
-	
 	_toolbar_debounce_timer = Timer.new()
 	add_child(_toolbar_debounce_timer)
 	_toolbar_debounce_timer.timeout.connect(_on_toolbar_debounce_timeout)
@@ -1221,11 +1240,13 @@ func _build_nodes():
 	tool_bar_hbox.add_child(sep_1)
 	sep_1.hide()
 	
-	_history_back_button = _new_button(true, "Back", _dir_history_back, "History Back", false, "Navigate to previous location.")
+	_history_back_button = _new_button(true, "Back", _history_back, "History Back", false, "Navigate to previous location.")
 	tool_bar_hbox.add_child(_history_back_button)
+	_history_back_button.flat = true
 	
-	_history_forward_button = _new_button(true, "Forward", _dir_history_forward, "History Forward", false, "Navigate or next location.")
+	_history_forward_button = _new_button(true, "Forward", _history_forward, "History Forward", false, "Navigate to next location.")
 	tool_bar_hbox.add_child(_history_forward_button)
+	_history_forward_button.flat = true
 	
 	_navigate_up_button = _new_button(true, "MoveUp",_on_navigate_up, "Navigate Up", false, "Navigate up one folder level.")
 	tool_bar_hbox.add_child(_navigate_up_button)
@@ -1309,8 +1330,8 @@ func _build_nodes():
 	_miller_button = _new_button(true, _miller_icon(), _change_view_mode.bind(ViewMode.MILLER), "Column View", true, "Switch to Column view.")
 	tool_bar_hbox.add_child(_miller_button)
 	
-	var search_button = _new_button(true,"Search", _on_search_pressed, "Search Toggle", false, "Toggle search bar.")
-	tool_bar_hbox.add_child(search_button)
+	_search_button = _new_button(true,"Search", _on_search_pressed, "Search Toggle", false, "Toggle search bar.")
+	tool_bar_hbox.add_child(_search_button)
 	
 	options_button = _new_button(false, "TripleBar", _on_options_button_pressed, "", false, "Display options popup.")
 	tool_bar_hbox.add_child(options_button)
@@ -1328,12 +1349,11 @@ func _build_nodes():
 	
 	places = FileSystemPlaces.new()
 	left_split.add_child(places)
-	places.item_list_stylebox = item_list_stylebox
+	
 	
 	tree = FileSystemTree.new()
 	left_split.add_child(tree)
 	tree.owner = self
-	tree.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	#^ split side
 	right_side_vbox = VBoxContainer.new()
@@ -1345,10 +1365,8 @@ func _build_nodes():
 	right_side_vbox.add_child(item_list)
 	right_side_vbox.custom_minimum_size = Vector2(100,100)
 	item_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	item_list.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	miller = FileSystemMiller.new()
-	miller.item_list_stylebox = item_list_stylebox
 	right_side_vbox.add_child(miller)
 	
 	
@@ -1393,6 +1411,11 @@ func _build_nodes():
 	_toggle_element(line_edit_2, false)
 	for e in togglable_elements:
 		e.gui_input.connect(_on_togglable_gui_input.bind(e))
+	
+	_deferred_build_nodes.call_deferred()
+
+func _deferred_build_nodes():
+	search_label.custom_minimum_size.y = path_bar.size.y
 
 
 
@@ -1450,6 +1473,7 @@ class DataKeys:
 	
 	const ITEM_DISPLAY_LIST = &"ITEM_DISPLAY_LIST"
 	
+	const PATH_BAR_MODE = &"PATH_BAR_MODE"
 	const PATH_BAR_TOGGLED = &"PATH_BAR_TOGGLED"
 	const PLACES_TOGGLED = &"PLACES_TOGGLED"
 	const PLACES_TOGGLED_FOLLOW = &"PLACES_TOGGLED_FOLLOW"

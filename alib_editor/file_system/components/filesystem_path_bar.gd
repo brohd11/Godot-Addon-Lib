@@ -1,4 +1,4 @@
-extends HBoxContainer
+extends Control
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
 
@@ -13,10 +13,7 @@ static var _style_boxes = {}
 
 var path_in_res:=true
 
-var back_button:Button
-var forward_button:Button
 var tab_bar:TabBar
-
 var scroll_container:ScrollContainer
 var line_edit:LineEdit
 var button_hbox:HBoxContainer
@@ -28,6 +25,8 @@ var _bar_view:=0
 
 func _ready() -> void:
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	clip_contents = true
 	
 	tab_bar = TabBar.new()
 	add_child(tab_bar)
@@ -36,7 +35,7 @@ func _ready() -> void:
 	tab_bar.select_with_rmb = true
 	tab_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tab_bar.focus_mode = Control.FOCUS_NONE
-	
+	tab_bar.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	
 	_set_style_boxes(tab_bar)
 	
@@ -45,9 +44,13 @@ func _ready() -> void:
 	line_edit.text_submitted.connect(_on_line_edit_text_submitted)
 	line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	#line_edit.expand_to_text_length = true
+	line_edit.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	line_edit.hide()
 	
 	set_current_dir("res://")
+	
+	await get_tree().process_frame
+	line_edit.custom_minimum_size.y = tab_bar.size.y
 
 func set_current_path(path:String):
 	set_current_dir(path)
@@ -69,7 +72,6 @@ func set_current_dir(path:String):
 	
 	var path_is_ancestor = UFile.is_dir_in_or_equal_to_dir(_history_path, _current_dir)
 	if path_is_ancestor and FSUtil.paths_have_same_root(_history_path, _current_dir):
-		print(_history_path, _current_dir)
 		_select_tab_by_path(current_dir)
 		return
 	else:
@@ -91,9 +93,8 @@ func set_current_dir(path:String):
 		working_path = "/" # this needs an os get root thing?
 		tab_bar.add_tab("/")
 		tab_bar.set_tab_metadata(0, working_path)
-	print(current_dir)
-	var current_tab = 0
 	
+	var current_tab = 0
 	for i in range(parts.size()):
 		var part = parts[i]
 		working_path = working_path.path_join(part)
@@ -141,16 +142,20 @@ func toggle_view_mode():
 	#if _bar_view > 2:
 	if _bar_view > 1:
 		_bar_view = 0
-	show()
+	set_view_mode(_bar_view)
+
+func get_view_mode():
+	return _bar_view
+
+func set_view_mode(mode:int):
+	_bar_view = mode
 	if _bar_view == 0:
 		tab_bar.show()
 		line_edit.hide()
 	elif _bar_view == 1:
 		tab_bar.hide()
 		line_edit.show()
-	elif _bar_view == 2:
-		hide()
-		
+
 
 func _set_style_boxes(_tab_bar:TabBar):
 	var version = ALibRuntime.Utils.UVersion.get_minor_version()
@@ -184,7 +189,9 @@ func _get_style_box_46(_name:String):
 	if _style_boxes.has(_name):
 		return _style_boxes[_name]
 	var sb = tab_bar.get_theme_stylebox(_name).duplicate() as StyleBoxFlat
-	sb.border_width_right = 2
+	sb.set_content_margin_all(7)
+	sb.content_margin_right += 3
+	sb.border_width_right = 3
 	sb.border_color = Color.TRANSPARENT
 	sb.set_corner_radius_all(0)
 	if _name == "tab_selected":

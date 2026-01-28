@@ -1,4 +1,3 @@
-#! namespace ALibRuntime.NodeUtils.UCodeEdit class Selection
 
 const StringMap = ALibRuntime.Utils.UString.StringMap
 

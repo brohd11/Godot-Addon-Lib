@@ -59,19 +59,25 @@ func _init(node):
 	cache = Cache.new()
 
 func _ready() -> void:
+	if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
+		ALibEditor.Utils.UEditorTheme.modify_theme_46()
+	
 	editor_node_ref = EditorNodeRef.get_instance()
 	EditorNodeRef.call_on_ready(_register_dialogs)
 	editor_fs = EditorInterface.get_resource_filesystem()
 	while editor_fs.is_scanning():
 		await get_tree().process_frame
+	
 	editor_fs.filesystem_changed.connect(_on_filesystem_changed)
 	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
 	
 	get_filesystem_favorites()
 	#get_filesystem_folder_colors()
-	#rebuild_files()
+	
 	_set_interface_refs()
 	cache.set_editor_icons()
+	rebuild_files()
+	
 	_init_complete = true
 
 
@@ -699,12 +705,14 @@ static func hide_filesystem():
 	
 
 static func _toggle_fs_bottom_panel_button_vis(toggled:bool):
-	var bottom_panel_buttons = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.BOTTOM_PANEL_BUTTONS)
-	for b in bottom_panel_buttons.get_children():
-		if b.text == "FileSystem":
-			b.toggled.emit(false)
-			b.visible = toggled
-			break
+	var minor = ALibRuntime.Utils.UVersion.get_minor_version()
+	if minor < 6:
+		var bottom_panel_buttons = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.BOTTOM_PANEL_BUTTONS)
+		for b in bottom_panel_buttons.get_children():
+			if b.text == "FileSystem":
+				b.toggled.emit(false)
+				b.visible = toggled
+				break
 
 ## 0=None, 1=Vertical, 2=Horizontal, -1=Err
 static func get_fs_dock_split_mode():
@@ -734,8 +742,7 @@ static func fs_dock_in_bottom_panel() -> bool:
 		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL
 	elif minor_version == 6:
 		var dock_par = fs_dock.get_parent()
-		print(dock_par)
-		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL #^ this may need change for 4.6
+		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL
 	return false
 
 ## Takes a file path, and the new name of the file. New name is not entire path.

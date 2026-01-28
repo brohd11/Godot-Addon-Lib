@@ -75,7 +75,7 @@ func _ready() -> void:
 
 func _draw() -> void:
 	if draw_alternate_line_colors:
-		ALibRuntime.NodeUtils.UTree.AltColor.draw_lines(self)
+		ALibRuntime.NodeUtils.NUTree.AltColor.draw_lines(self)
 
 
 func set_dir(target_dir:String, build:=false):
@@ -98,9 +98,9 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	if not is_instance_valid(item):
 		return
 	var path = tree_helper.get_path_from_item(item)
+	if path == FileSystemTab.FAVORITES_META:
+		return
 	return filesystem_singleton.get_custom_tooltip(path)
-
-
 
 
 func set_active(active_state:bool):
@@ -108,7 +108,6 @@ func set_active(active_state:bool):
 	#print("TREE ACTIVE: ", active_state)
 	if active_state:
 		refresh()
-		#_emit_item_selected()
 	else:
 		clear_items()
 
@@ -127,18 +126,13 @@ func refresh():
 
 
 func full_build():
-	print("FULL ", root_dir)
 	_get_file_array(root_dir)
 	filesystem_dirty = false
-	#await get_tree().process_frame # is this necessary?
 	_build_tree()
 
 func quick_build():
 	if tree_helper.item_dict.is_empty():
-		print("QUICK BUILD TREE")
 		_build_tree()
-	else:
-		print("NO BUILD TREE")
 	#_scroll_to_selected_and_emit()
 
 func _get_file_array(dir):
@@ -277,7 +271,6 @@ func _is_filtering():
 	return current_browser_state == FileSystemTab.BrowserState.SEARCH
 
 func _emit_item_selected():
-	print("EMIT")
 	var selected_paths = get_selected_paths()
 	if selected_paths.is_empty():
 		return
@@ -352,8 +345,7 @@ func start_edit():
 	
 	original_file_name = item.get_text(0)
 	edit_selected(true)
-	
-	var line_edit = get_child(1, true).get_child(0, true).get_child(0, true) as LineEdit
+	var line_edit = ALibRuntime.NodeUtils.NUTree.get_line_edit(self) as LineEdit
 	var ext_idx = line_edit.text.find(".")
 	if ext_idx > -1:
 		line_edit.select(0, ext_idx)
@@ -370,14 +362,15 @@ func _on_item_edited():
 		return
 	var old_path = tree_helper.get_path_from_item(item)
 	var new_path = old_path
+	
 	await filesystem_singleton.rename_path(old_path, new_name)
 	
 	#var popup = _rename_popup()
-	while EditorInterface.get_resource_filesystem().is_scanning():
-		await get_tree().process_frame
+	#while EditorInterface.get_resource_filesystem().is_scanning():
+		#await get_tree().process_frame
 	
 	#popup.queue_free()
-	filesystem_singleton.rebuild_files()
+	#filesystem_singleton.rebuild_files()
 
 
 func _rename_popup():

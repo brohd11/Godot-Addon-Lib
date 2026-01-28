@@ -20,6 +20,8 @@ const WORKING_FILE_DIR = "user://addons/dock_manager"
 const SET_DOCK_DATA = "set_dock_data"
 const GET_DOCK_DATA = "get_dock_data"
 
+var _engine_minor_version:int
+
 var main_screen_handler
 var external_main_screen_flag := false
 
@@ -40,6 +42,9 @@ var _default_window_size:= Vector2i(1200,800)
 var save_layout:bool = true
 var allow_scene_reload:bool = false
 var _docked_name:String = ""
+
+#4.6
+var editor_dock
 
 # persistent
 var window_always_on_top:bool = true
@@ -121,6 +126,7 @@ static func get_layout_file_dir(_plugin:EditorPlugin):
 
 func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, 
 	_main_screen_handler=null, _add_to_tree:=true) -> void:
+	_engine_minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	plugin = _plugin
 	plugin.add_child(self) #^ moved here, will never be called in ready..
 	if _control is Control:
@@ -187,9 +193,11 @@ func post_init():
 		dock_target = default_dock
 	if dock_target > -3:
 		await dock_instance(int(dock_target))
-		if dock_target >= 0 and dock_index > -1:
-			var dock_control = get_current_dock_control() as TabContainer
-			dock_control.move_child(plugin_control, dock_index)
+		if dock_index > -1:
+			_set_tab_index(dock_index)
+		#if dock_target >= 0 and dock_index > -1:
+			#var dock_control = get_current_dock_control() as TabContainer
+			#dock_control.move_child(plugin_control, dock_index)
 	else:
 		if dock_layout_data != null:
 			_set_window_settings(dock_layout_data)
@@ -258,18 +266,19 @@ func get_plugin_control():
 
 func show_in_editor():
 	var current_dock = _get_current_dock()
-	var version = ALibRuntime.Utils.UVersion.get_minor_version()
-	if version < 6:
+	if _engine_minor_version < 6:
 		if current_dock > -1:
-			var dock_control = get_current_dock_control()
-			if dock_control is TabContainer:
-				var i = dock_control.get_tab_idx_from_control(plugin_control)
-				dock_control.current_tab = i
+			_show_in_tab_container()
+			#var dock_control = get_current_dock_control()
+			#if dock_control is TabContainer:
+				#var i = dock_control.get_tab_idx_from_control(plugin_control)
+				#dock_control.current_tab = i
 		elif current_dock == -2:
 			BottomPanel.show_panel(_docked_name)
-	elif version == 6:
+	elif _engine_minor_version == 6:
 		if current_dock > -1 or current_dock == -2:
-			plugin_control.get_parent().show()
+			_show_in_tab_container()
+			#plugin_control.get_parent().show()
 	
 
 func clean_up():
@@ -332,8 +341,7 @@ func save_layout_data():
 	if not is_instance_valid(plugin_control):
 		return
 	var current_dock = _get_current_dock()
-	var is_tab = current_dock >= 0
-	current_dock += 3 #^ offset to get the enum val
+	var adjusted_dock_val = current_dock + 3 #^ offset to get the enum val
 	
 	var layout_data = get_plugin_layout_data(plugin)
 	var docks = layout_data.get(Keys.DOCKS)
@@ -341,7 +349,7 @@ func save_layout_data():
 	var file_path = get_scene_or_script(plugin_control)
 	scene_data[Keys.SCENE_PATH] = file_path
 	scene_data[Keys.SCENE_UID] = UFile.path_to_uid(file_path)
-	scene_data[Keys.CURRENT_DOCK] = current_dock
+	scene_data[Keys.CURRENT_DOCK] = adjusted_dock_val
 	scene_data[Keys.ALWAYS_ON_TOP] = window_always_on_top
 	var window = get_dock_manager_window()# as Window
 	if is_instance_valid(window):
@@ -349,9 +357,15 @@ func save_layout_data():
 		scene_data[Keys.WINDOW_SIZE] = var_to_str(window.size)
 		scene_data[Keys.WINDOW_POSITION] = var_to_str(window.position)
 	
-	if is_tab:
-		var dock_control = get_current_dock_control() as TabContainer
-		scene_data[Keys.CURRENT_DOCK_INDEX] = dock_control.get_tab_idx_from_control(plugin_control)
+	#var is_tab = current_dock >= 0
+	#if _engine_minor_version >= 6:
+		#if current_dock == -2:
+			#is_tab = true
+	#if is_tab:
+	var tab_idx = _get_tab_index()
+	if tab_idx != null:
+		scene_data[Keys.CURRENT_DOCK_INDEX] = tab_idx
+	
 	if can_be_freed:
 		scene_data[Keys.TYPE] = Keys.FREEABLE
 	else:
@@ -412,7 +426,6 @@ func _on_dock_button_pressed():
 	save_layout_data()
 
 func dock_instance(target_dock:int):
-	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	if target_dock == -3:
 		if default_dock > -3:
 			target_dock = default_dock
@@ -426,7 +439,7 @@ func dock_instance(target_dock:int):
 		_last_window_pos = window.position
 	
 	await _remove_control_from_parent()
-	if minor_version < 6:
+	if _engine_minor_version < 6:
 		if target_dock > -1:
 			plugin.add_control_to_dock(target_dock, plugin_control)
 			_set_dock_tab_style()
@@ -437,22 +450,22 @@ func dock_instance(target_dock:int):
 		elif target_dock == -2:
 			plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
 	
-	elif minor_version == 6:
+	elif _engine_minor_version == 6:
 		if target_dock > -1 or target_dock == -2:
-			var dock = ClassDB.instantiate("EditorDock")
-			if plugin_control.get_parent() == null:
-				dock.add_child(plugin_control)
-			else:
-				plugin_control.reparent(dock)
-			dock.title = get_docked_name()
-			dock.dock_icon = _get_plugin_icon()
+			if not is_instance_valid(editor_dock):
+				editor_dock = ClassDB.instantiate("EditorDock")
+				editor_dock.title = get_docked_name()
+				editor_dock.dock_icon = _get_plugin_icon()
 			var dock_slot = target_dock
 			if target_dock == -2:
 				dock_slot = 8 # EditorDock.DockSlot.DOCK_SLOT_BOTTOM
+			editor_dock.default_slot = dock_slot
+			if plugin_control.get_parent() == null:
+				editor_dock.add_child(plugin_control)
+			else:
+				plugin_control.reparent(editor_dock)
 			print("ADD DOCK")
-			dock.default_slot = dock_slot
-			plugin.add_dock(dock)
-			await plugin.get_tree().process_frame
+			plugin.add_dock(editor_dock)
 			
 		elif target_dock == -1:
 			var panel_wrapper = PanelWrapper.new(plugin_control, empty_panel)
@@ -484,7 +497,6 @@ func undock_instance():
 	return window
 
 func _remove_control_from_parent():
-	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	var window = get_dock_manager_window()
 	var current_dock = _get_current_dock()
 	if current_dock != null:
@@ -492,7 +504,7 @@ func _remove_control_from_parent():
 	
 	var control_parent = plugin_control.get_parent()
 	if is_instance_valid(control_parent):
-		if minor_version < 6:
+		if _engine_minor_version < 6:
 			if current_dock > -1:
 				plugin.remove_control_from_docks(plugin_control)
 			elif current_dock == -1:
@@ -505,13 +517,16 @@ func _remove_control_from_parent():
 				BottomPanel.show_first_panel()
 			else:
 				control_parent.remove_child(plugin_control)
-		elif minor_version == 6:
-			if control_parent.get_class() == "EditorDock":
+		elif _engine_minor_version == 6:
+			#if control_parent.get_class() == "EditorDock":
+			if control_parent == editor_dock:
 				print("REMOVE DOCK")
-				plugin.remove_dock(control_parent)
-				await get_tree().process_frame
-				control_parent.remove_child(plugin_control)
-				control_parent.queue_free()
+				plugin.remove_dock(editor_dock)
+				#await get_tree().process_frame
+				editor_dock.remove_child(plugin_control)
+				editor_dock.queue_free()
+				editor_dock = null
+				#control_parent.queue_free.call_deferred()
 			elif current_dock == -1:
 				var panel_wrapper = plugin_control.get_parent()
 				main_screen_handler.remove_main_screen_control(panel_wrapper)
@@ -566,10 +581,12 @@ func _get_plugin_icon():
 	return null
 
 func _set_dock_tab_style():
+	if _engine_minor_version >= 6:
+		return
 	var dock = get_current_dock_control()
 	if dock is not TabContainer:
 		return
-	var idx = dock.get_tab_idx_from_control(plugin_control)
+	var idx = _get_tab_index()
 	var plugin_name = get_docked_name()
 	var icon = _get_plugin_icon()
 	if dock_tab_style == 0 or icon == null: #^ text
@@ -582,6 +599,42 @@ func _set_dock_tab_style():
 		dock.set_tab_title(idx, plugin_name)
 		dock.set_tab_icon(idx, icon)
 
+func _get_tab_index():
+	var dock  = get_current_dock_control()
+	if dock is not TabContainer:
+		return
+	if _engine_minor_version < 6:
+		return dock.get_tab_idx_from_control(plugin_control)
+	elif _engine_minor_version == 6:
+		return dock.get_tab_idx_from_control(editor_dock)
+
+func _set_tab_index(idx:int):
+	var dock_control = get_current_dock_control()
+	if dock_control is not TabContainer:
+		return
+	var control_to_move = plugin_control
+	if _engine_minor_version >= 6:
+		control_to_move = editor_dock
+	dock_control.move_child(control_to_move, idx)
+
+func _show_in_tab_container():
+	var dock_control = get_current_dock_control()
+	if dock_control is not TabContainer:
+		return
+	var control_to_show = plugin_control
+	if _engine_minor_version >= 6:
+		control_to_show = editor_dock
+	var i = dock_control.get_tab_idx_from_control(control_to_show)
+	dock_control.current_tab = i
+
+func get_docked_name():
+	if _docked_name != "":
+		return _docked_name
+	if not external_main_screen_flag:
+		if plugin.has_method("_get_plugin_name"):
+			return plugin._get_plugin_name()
+	var _name = plugin_control.name
+	return _name
 
 static func get_scene_or_script(control):
 	return ALibRuntime.Utils.UResource.get_object_file_path(control)
@@ -755,14 +808,7 @@ class InstanceManager:
 			if is_instance_valid(ins):
 				ins.clean_up()
 
-func get_docked_name():
-	if _docked_name != "":
-		return _docked_name
-	if not external_main_screen_flag:
-		if plugin.has_method("_get_plugin_name"):
-			return plugin._get_plugin_name()
-	var _name = plugin_control.name
-	return _name
+
 
 class EditorSet:
 	const DOCK_TAB_STYLE = &"interface/editor/dock_tab_style"

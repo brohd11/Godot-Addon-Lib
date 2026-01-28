@@ -6,10 +6,12 @@ const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_
 
 const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_popup_helper.gd")
 
+const PopupID = ALibEditor.Nodes.FileSystem.PopupID
+
 const ITEM_LIST_EMPTY_HIDE = ["Rename..."]
 
-const _FS_ID_NEED_RESCAN = [4, 5]
-const _FS_ID_NEED_HANDLE = [0, 21, 22, 10]
+var _fs_id_need_rescan = []
+var _fs_id_need_handle = []
 
 const NEW_WINDOW = "New/Window"
 const CREATE_NEW_TAB = "New/Tab"
@@ -34,6 +36,10 @@ var _selected_path:String
 
 func _init() -> void:
 	filesystem_singleton = FileSystemSingleton.get_instance()
+	
+	_fs_id_need_rescan = [PopupID.add_to_favorites(), PopupID.remove_from_favorites()]
+	_fs_id_need_handle = [PopupID.rename(), PopupID.expand_folder(), PopupID.expand_hierarchy(), PopupID.collapse_hierarchy()]
+
 
 func right_clicked_empty_item_list(clicked_node:Node, selected_item_path:String):
 	var hide_names = FSPopupHelper.MenuItems.TO_HIDE_ITEM_LIST_EMPTY
@@ -49,6 +55,7 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 	var items_selected = FileSystemSingleton.ensure_items_selected(selected_paths)
 	if not items_selected:
 		return
+	
 	_clicked_node = clicked_node
 	_selected_path = selected_item_path
 	filesystem_singleton.populate_filesystem_popup(clicked_node)
@@ -104,20 +111,20 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	elif is_create_popup:
 		pass
 	else:
-		if id in _FS_ID_NEED_RESCAN:
+		if id in _fs_id_need_rescan:
 			queue_rescan = true
-		if id in _FS_ID_NEED_HANDLE:
+		if id in _fs_id_need_handle:
 			if _clicked_node is FileSystemTree:
-				if id == 0: # Expand Folder
+				if id == PopupID.expand_folder():
 					_clicked_node.rc_expand_folder()
-				if id == 21: # Expand Hierarchy
+				if id == PopupID.expand_hierarchy():
 					_clicked_node.rc_hierarchy(true)
-				elif id == 22: # Collapse Hierarchy
+				elif id == PopupID.collapse_hierarchy():
 					_clicked_node.rc_hierarchy(false)
-				elif id == 10:
+				elif id == PopupID.rename():
 					_clicked_node.start_edit()
 			elif _clicked_node is FileSystemItemList:
-				if id == 10:
+				if id == PopupID.rename():
 					_clicked_node.start_edit()
 			if queue_rescan:
 				filesystem_singleton.rebuild_files()

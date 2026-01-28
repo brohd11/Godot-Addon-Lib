@@ -11,8 +11,6 @@ const Options = ALibRuntime.Popups.Options
 const ADD_TO_PLACES_STRING = "Add to Places"
 const _MIN_SIZE = Vector2(100,0)
 
-var item_list_stylebox:StyleBoxFlat
-
 signal path_selected(path:String)
 signal right_clicked(index, place_list)
 signal title_right_clicked(place_list)
@@ -47,7 +45,7 @@ func _new_place_list(title:String, idx=-1):
 	parent.add_child(place_list)
 	
 	places[idx] = place_list
-	place_list.item_list.add_theme_stylebox_override("panel", item_list_stylebox)
+	
 	place_list.path_selected.connect(_on_path_selected)
 	place_list.right_clicked.connect(func(index, place_list):right_clicked.emit(index, place_list))
 	place_list.title_right_clicked.connect(func(place_list):title_right_clicked.emit(place_list))

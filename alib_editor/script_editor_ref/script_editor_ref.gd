@@ -5,7 +5,7 @@ const SingletonBase = Singleton.Base
 
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/script_editor_ref/script_editor_ref.gd")
 
-const Selection = ALibRuntime.NodeUtils.UCodeEdit.Selection
+const Selection = ALibRuntime.NodeUtils.NUCodeEdit.Selection
 
 static func get_singleton_name() -> String:
 	return "ScriptEditorRef"

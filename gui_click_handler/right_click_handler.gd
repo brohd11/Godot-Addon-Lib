@@ -28,7 +28,8 @@ func _ready() -> void:
 
 
 func _new_popup():
-	popup = PopupHelper.new()
+	#popup = PopupHelper.new()
+	popup = PopupMenu.new()
 	popup.wrap_controls = true
 	popup.submenu_popup_delay = 0
 	_set_popup_parent()
@@ -48,9 +49,8 @@ func display_popup(options, center_popup:=false, position_overide=null):
 		return
 	
 	if is_instance_valid(popup):
-		popup.clear(true)
-	else:
-		_new_popup()
+		popup.queue_free()
+	_new_popup()
 	
 	PopupHelper.parse_dict_static(options, popup, _popup_id_pressed, mouse_helper)
 	popup.reset_size()
@@ -83,6 +83,7 @@ func _move_popup(popup_position:Vector2i):
 	_set_popup_parent()
 	popup.position = popup_position
 	popup.popup()
+
 
 
 func _popup_id_pressed(id:int, _popup:PopupMenu):

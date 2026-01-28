@@ -25,6 +25,7 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 		panel_sb = panel.get_theme_stylebox("panel").duplicate() # as StyleBoxFlat
 	elif minor == 6:
 		panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
+	
 	panel_sb.draw_center = true
 	panel_sb.set_corner_radius_all(0)
 	panel.add_theme_stylebox_override("panel", panel_sb)

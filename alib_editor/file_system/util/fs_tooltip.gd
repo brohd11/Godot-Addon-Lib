@@ -44,7 +44,7 @@ static func get_custom_tooltip(path: String) -> Object:
 	
 	var uid = UFile.path_to_uid(path)
 	if uid != path:
-		label_text += "\nUID: %s" % uid
+		label_text += "\n%s" % uid
 	
 	var file_specific = _get_file_specific_details(path)
 	if file_specific:
@@ -136,9 +136,14 @@ static func _get_texture_dimensions(path:String, type:String):
 static func _get_dependencies(path:String, show_paths:=true):
 	var deps = ResourceLoader.get_dependencies(path)
 	var dep_string = "\nDependencies: %s" % deps.size()
-	if deps.size() > 0:
+	if deps.size() == 0:
+		return dep_string
+	var force_show_deps = Input.is_key_pressed(KEY_SHIFT)
+	if deps.size() <= 5 or force_show_deps:
 		for d in deps:
 			dep_string += "\n%s" % d.get_slice("::", 2)
+	elif deps.size() > 5:
+		dep_string = "\nDependencies: %s\nHold shift when hovering to list." % deps.size()
 	
 	return dep_string
 

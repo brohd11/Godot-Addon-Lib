@@ -2,9 +2,6 @@ extends RefCounted
 
 const PopupHelper = PopupWrapper.PopupHelper
 
-const FS_ITEMS_TO_HIDE = ["", "Expand Folder", "Expand Hierarchy", "Collapse Hierarchy"]#, "Rename..."]
-const ITEM_LIST_HIDE = ["", "Expand Folder", "Expand Hierarchy", "Collapse Hierarchy"]#, "Rename..."]
-
 static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Array=[], other_items:Dictionary={}):
 	ZyxPopupWrapper.Enable.filesystem(false, false)
 	var fs_popup:PopupMenu = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)

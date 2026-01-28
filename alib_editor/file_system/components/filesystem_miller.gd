@@ -12,8 +12,6 @@ const ClickState = ClickHandlers.ClickState
 
 const MIN_COL_SIZE = 300
 
-var item_list_stylebox:StyleBoxFlat
-
 var scroll_container:ScrollContainer
 var scroll_hbox:HBoxContainer
 var scroll_spacer:Control
@@ -72,7 +70,6 @@ func _ready() -> void:
 	scroll_container.resized.connect(func(): scroll_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, MIN_COL_SIZE))
 
 func set_active(active_state:bool):
-	print("MILLER ACTIVE: ", active_state)
 	active = active_state
 	if active_state:
 		refresh()
@@ -334,7 +331,6 @@ func _new_column(path:String="%SEARCH") -> FileColumn:
 	column.forward_gui.connect(_on_column_list_input_event)
 	
 	column.item_list.draw_alternate_line_colors = draw_alt_color
-	column.item_list.add_theme_stylebox_override("panel", item_list_stylebox)
 	
 	if path == "%SEARCH":
 		_search_column = column
@@ -405,9 +401,7 @@ func _clear_panes(path_to_display:String, clear_all:=false):
 			_columns.erase(path)
 
 func _free_search_column():
-	
 	if is_instance_valid(_search_column):
-		print("FREE SEARCH")
 		scroll_hbox.remove_child(_search_column)
 		_search_column.queue_free()
 
@@ -500,7 +494,6 @@ class FileColumn extends HBoxContainer:
 	func set_current_path(path:String):
 		current_path = path
 		item_list.set_current_dir(path)
-		#print(item_list._selected_paths)
 		_check_mouse_filter()
 	
 	func refresh():
