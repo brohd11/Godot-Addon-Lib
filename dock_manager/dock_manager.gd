@@ -487,6 +487,7 @@ func undock_instance():
 		window_pos = _last_window_pos
 	var window = PanelWindow.new(plugin_control, empty_panel, window_size, window_pos)
 	
+	
 	window.title = window_title
 	window.always_on_top = window_always_on_top
 	window.close_requested.connect(window_close_requested)
@@ -656,13 +657,11 @@ class PanelWrapper extends PanelContainer:
 		else:
 			var minor = ALibRuntime.Utils.UVersion.get_minor_version()
 			if minor < 6:
-				print(get_theme_stylebox("panel"))
-				panel_sb = get_theme_stylebox("panel").duplicate()# as StyleBoxFlat #^ this is an empty now?
-				panel_sb.content_margin_left = 4
-				panel_sb.content_margin_right = 4
+				panel_sb = get_theme_stylebox("panel").duplicate()
 			elif minor == 6:
 				panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
-				
+				panel_sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE)
+			
 			panel_sb.content_margin_left = 4
 			panel_sb.content_margin_right = 4
 		

@@ -3,6 +3,8 @@ extends SplitContainer
 const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
 const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
 
+var places_instance:FileSystemPlaces
+
 var content_panel:PanelContainer
 var content_vbox:VBoxContainer
 var title_button:Button
@@ -19,6 +21,8 @@ signal path_selected(path:String, _self)
 signal right_clicked(index, _self)
 signal title_right_clicked(_self)
 signal move_lists(from, to)
+
+signal list_changed
 
 
 func _init(title:String) -> void:
@@ -72,13 +76,15 @@ func _ready() -> void:
 	item_list.mouse_exited.connect(func():_list_hovered = false; item_list.queue_redraw())
 	
 
+func _emit_list_changed():
+	list_changed.emit.call_deferred()
 
 func build_items(data:Dictionary):
 	var indexes = data.keys()
 	indexes.sort()
 	for index in indexes:
 		var item_data = data[index]
-		new_item(item_data["name"], item_data["path"])
+		new_item(item_data["name"], item_data["path"], false)
 
 func get_item_count():
 	return item_list.item_count
@@ -98,11 +104,13 @@ func has_path(path:String):
 			return true
 	return false
 
-func new_item(text:String, path:String):
+func new_item(text:String, path:String, emit_sig:=true):
 	item_list.add_item(text)
 	var i = item_list.item_count - 1
 	item_list.set_item_metadata(i, path)
 	item_list.set_item_tooltip(i, path)
+	if emit_sig:
+		_emit_list_changed()
 
 func get_item_path(index:int):
 	return item_list.get_item_metadata(index)
@@ -123,12 +131,15 @@ func rename_item(index:int):
 	if text == current_name or text == "":
 		return
 	set_item_title(index, text)
+	_emit_list_changed()
 
 func remove_item(index:int):
 	item_list.remove_item(index)
+	_emit_list_changed()
 
 func move_item(from:int, to:int):
 	item_list.move_item(from, to)
+	_emit_list_changed()
 
 func get_title():
 	return _title
@@ -145,6 +156,7 @@ func rename_title():
 	if submit == "" or submit == get_title():
 		return
 	set_title(submit)
+	_emit_list_changed()
 
 func get_place_data():
 	var data = {}
@@ -171,20 +183,22 @@ func _item_list_get_drag_data(at_position: Vector2) -> Variant:
 	return data
 
 func _item_list_can_drop_data(at_position: Vector2, data: Variant) -> bool:
-	var from = data.get("from") as PlaceList
-	if from and from is PlaceList:
-		if data.has("from_item"):
-			var from_item = data["from_item"]
-			var from_path = from.get_item_path(from_item)
-			var _name = from.get_item_title(from_item)
-			if not has_path(from_path):
-				_highlight_list()
-				return true
-			elif from == self:
-				return true
-			elif from != self:
-				pass #^ maybe do this later TODO
-				#_set_drag_preview("List already has path.")
+	var can_drop_item = _check_can_drop(data, "from_item")
+	
+	if can_drop_item:
+		var from = data.get("from") as PlaceList
+		var from_item = data["from_item"]
+		var from_path = from.get_item_path(from_item)
+		var _name = from.get_item_title(from_item)
+		if not has_path(from_path):
+			_highlight_list()
+			return true
+		elif from == self:
+			return true
+		elif from != self:
+			pass #^ maybe do this later TODO
+			#_set_drag_preview("List already has path.")
+	
 	var type = data.get("type", "")
 	if type == "files_and_dirs":
 		var files = data.get("files")
@@ -238,7 +252,8 @@ func _on_title_gui_input(event:InputEvent):
 
 func _title_can_drop_data(at_position: Vector2, data: Variant) -> bool:
 	var can_drop = _check_can_drop(data, "title")
-	if can_drop and data.get("from") != self:
+	var from = data.get("from")
+	if can_drop and from != self:
 		_highlight_title(true)
 		return true
 	return false
@@ -296,6 +311,8 @@ func _set_drag_preview(text):
 func _check_can_drop(data:Dictionary, key:String):
 	var from = data.get("from")
 	if from and from is PlaceList:
+		if from.places_instance != places_instance:
+			return false
 		if data.has(key):
 			return true
 	return false

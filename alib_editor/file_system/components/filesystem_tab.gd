@@ -7,6 +7,7 @@ const ATTEMPT_RENAME = true
 
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
 const FileSystemTab = FSClasses.FileSystemTab
@@ -165,7 +166,7 @@ func _ready() -> void:
 	if place_data.is_empty():
 		place_data = FileSystemPlaces.Data.get_default_data()
 	
-	places.build_item_list(place_data)
+	#places.build_item_list(place_data)
 	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
 	path_bar.set_view_mode(path_bar_view_mode)
 	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
@@ -267,6 +268,7 @@ func _on_scan_files_complete():
 
 func _set_filesystem_dirty_flag():
 	tree.filesystem_dirty = true
+	places.on_filesystem_changed()
 	miller.on_filesystem_changed()
 
 func refresh(full:=false):
@@ -295,10 +297,12 @@ func _set_active():
 			item_act = true
 		item_list.set_active(item_act)
 		miller.set_active(_current_view_mode == ViewMode.MILLER)
+		places.set_active(places.visible)
 	else:
 		tree.set_active(false)
 		item_list.set_active(false)
 		miller.set_active(false)
+		places.set_active(false)
 
 func _on_filter_type_selected(idx:int):
 	if idx == 0:
@@ -546,8 +550,13 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	if not dir.ends_with("/"):
 		dir = UFile.get_dir(dir)
 	
-	var navigation_selection = who != self and (who == path_bar or who == places)
-	if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
+	#if dir == current_dir: #^ this will stop repeats, but does this need a force flag? for refresh
+		#return
+	#print(dir)
+	
+	var navigation_selection = who != self and (who == path_bar or who == places or who == _navigate_up_button)
+	if _current_view_mode == ViewMode.TREE:
+	#if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
 		if not navigation_selection and who == item_list:
 			navigation_selection = true
 	
@@ -585,7 +594,8 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 		return
 	
 	if _current_view_mode == ViewMode.TREE:
-		if navigation_selection and UFile.is_dir_in_or_equal_to_dir(current_dir, tree.root_dir):
+		var in_tree_root =  UFile.is_dir_in_or_equal_to_dir(current_dir, tree.root_dir)
+		if in_tree_root and navigation_selection:
 			tree.select_paths([current_dir], false, navigation_selection)
 	elif _current_view_mode == ViewMode.PLACES:
 		pass
@@ -776,6 +786,7 @@ func _on_places_title_right_clicked(place_list:FileSystemPlaces.PlaceList) -> vo
 	options.add_option("Rename", place_list.rename_title, ["Edit"])
 	if places.get_place_list_count() > 1:
 		options.add_option("Remove", places.remove_place_list.bind(place_list), ["Close"])
+		options.add_option("Redistribute Lists", places.set_split_offsets, ["ExpandTree"])
 	
 	right_click_handler.display_popup(options)
 
@@ -1074,6 +1085,7 @@ func _check_toolbar_elements():
 func _on_places_toggled_pressed():
 	_places_toggled = not _places_toggled
 	places.visible = _places_toggled
+	places.set_active(_places_toggled)
 	_check_main_split_vis()
 
 
@@ -1489,4 +1501,5 @@ class DataKeys:
 	const VIEW_DATA_PLACES = &"VIEW_DATA_PLACES"
 	const VIEW_DATA_MILLER = &"VIEW_DATA_MILLER"
 	
-	const GLOBAL_NEW_WINDOW_SIGNAL = &"GLOBAL_NEW_WINDOW_SIGNAL"
+	const GLOBAL_NEW_WINDOW_SIGNAL = &"FI_GLOBAL_NEW_WINDOW_SIGNAL"
+	const GLOBAL_NEW_SPLIT_SIGNAL = &"FI_GLOBAL_NEW_SPLIT_SIGNAL"

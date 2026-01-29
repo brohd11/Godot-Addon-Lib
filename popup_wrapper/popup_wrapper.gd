@@ -152,7 +152,7 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 			var icon = popup_to_copy.get_item_icon(i)
 			var submenu_data = {
 				"popup_path": path,
-				ItemParams.ICON: []
+				ItemParams.ICON: [icon]
 			}
 			
 			if custom_ancestor:
@@ -304,7 +304,6 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 		var popup = PopupMenu.new()
 		var _submenu_pressed = func(id, popup, se, callable): callable.call(se, PopupHelper.parse_menu_path(id, popup))
 		popup.id_pressed.connect(_submenu_pressed.bind(popup, popup_args, context_menu_callable))
-		#popup.id_pressed.connect(_context_plugin_submenu_pressed.bind(popup, script_editor, context_menu_callable)) # old
 		popup_items[group] = popup
 		var icon = null
 		var first_item = false
@@ -318,7 +317,6 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 				if icon is String:
 					icon = PopupHelper._get_icon(icon)
 			popup_data[ItemParams.CALLABLE] = _submenu_pressed.bind(popup_args, context_menu_callable)
-			#popup_data[ItemParams.CALLABLE] = _context_plugin_submenu_pressed.bind(script_editor, context_menu_callable) # old
 			PopupHelper.add_single_item(popup, menu_path, popup_data, popup_items)
 		
 		plugin.add_context_submenu_item(group, popup, icon)

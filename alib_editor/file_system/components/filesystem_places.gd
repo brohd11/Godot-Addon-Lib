@@ -1,37 +1,125 @@
 @tool
 extends VBoxContainer
 
-const MultiSplit = preload("res://addons/addon_lib/brohd/alib_runtime/ui/multi_split/multi_split.gd")
-
 const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
-const UFile = ALibRuntime.Utils.UFile
 
+const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
+const UFile = ALibRuntime.Utils.UFile
 const Options = ALibRuntime.Popups.Options
 
 const ADD_TO_PLACES_STRING = "Add to Places"
 const _MIN_SIZE = Vector2(100,0)
+const PROJECT_PLACES_FILE = "user://addons/filesystem_instances/places.json"
+
+const PROJECT_PLACES_UPDATED_SIGNAL = &"FI_PROJECT_PLACES_UPDATED"
 
 signal path_selected(path:String)
 signal right_clicked(index, place_list)
 signal title_right_clicked(place_list)
 
+var active:bool=true
+
+var _places_cache:={}
+var _last_places_hash:int=-1
 
 var places:= {}
 
 func _ready() -> void:
 	custom_minimum_size = _MIN_SIZE
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
+	
+	EditorGlobalSignals.subscribe(PROJECT_PLACES_UPDATED_SIGNAL, refresh)
+	_initial_build()
+
+func on_filesystem_changed():
+	refresh()
+
+func set_active(active_state:bool):
+	active = active_state
+	if active:
+		refresh()
+
+func save_and_refresh():
+	_save_project_data()
+	EditorGlobalSignals.signal_emit(PROJECT_PLACES_UPDATED_SIGNAL)
+
+func _initial_build():
+	var data = _get_project_data()
+	build_item_list(data, true)
+
+func refresh():
+	if not active:
+		return
+	var data = _get_project_data()
+	var hash = data.hash()
+	if hash != _last_places_hash:
+		build_item_list(data)
+	_last_places_hash = hash
+
+func _save_project_data():
+	var place_data = get_place_data()
+	UFile.write_to_json(place_data, PROJECT_PLACES_FILE)
+	var json_data = UFile.read_from_json(PROJECT_PLACES_FILE)
+	CacheHelper.store_data("project_places", json_data, _places_cache, [PROJECT_PLACES_FILE])
+
+func _get_project_data():
+	var data = CacheHelper.get_cached_data("project_places", _places_cache)
+	if data != null:
+		return data
+	
+	if not FileAccess.file_exists(PROJECT_PLACES_FILE):
+		_save_project_data()
+	data = UFile.read_from_json(PROJECT_PLACES_FILE)
+	CacheHelper.store_data("project_places", data, _places_cache, [PROJECT_PLACES_FILE])
+	return data
 
 
-func build_item_list(data:Dictionary):
+func clear_item_lists():
+	for id in places.keys():
+		var list = places[id]
+		list.get_parent().remove_child(list)
+		list.queue_free()
+		places.erase(id)
+
+func build_item_list(data:Dictionary, set_split:=false):
 	var pl_indexs = data.keys()
 	pl_indexs.sort()
 	for p_i in pl_indexs:
 		var place_data = data[p_i]
 		var title = place_data.get("title")
-		var place_list = _new_place_list(title)
-		place_list.split_offset = place_data.get("split_offset", 0)
+		var int_id = int(p_i)
+		var place_list = places.get(int_id)
+		if not is_instance_valid(place_list):
+			place_list = _new_place_list(title, int_id)
+		else:
+			place_list.set_title(title)
+			place_list.item_list.clear()
+		
 		place_list.build_items(place_data.get("items",{}))
+	
+	for id in places.keys():
+		var str_id = str(id)
+		if str_id in pl_indexs:
+			continue
+		var list = places[id]
+		if is_instance_valid(list):
+			list.get_parent().remove_child(list)
+			list.queue_free()
+		places.erase(id)
+	
+	if set_split:
+		set_split_offsets.call_deferred()
+
+func set_split_offsets():
+	var total_chain_size = places.size() - 1
+	for i in range(total_chain_size):
+		var split = places[i]
+		split.split_offset = 0
+		var content_node = split.get_child(0)
+		var next_level_node = split.get_child(1)
+		var items_remaining_down_chain = total_chain_size - i
+		content_node.size_flags_stretch_ratio = 1.0
+		next_level_node.size_flags_stretch_ratio = float(items_remaining_down_chain)
 
 func _new_place_list(title:String, idx=-1):
 	var place_list = PlaceList.new(title)
@@ -46,10 +134,12 @@ func _new_place_list(title:String, idx=-1):
 	
 	places[idx] = place_list
 	
+	place_list.places_instance = self
 	place_list.path_selected.connect(_on_path_selected)
 	place_list.right_clicked.connect(func(index, place_list):right_clicked.emit(index, place_list))
 	place_list.title_right_clicked.connect(func(place_list):title_right_clicked.emit(place_list))
 	place_list.move_lists.connect(_on_move_place_list)
+	place_list.list_changed.connect(save_and_refresh)
 	return place_list
 
 
@@ -70,7 +160,7 @@ func add_place_item(path:String, place_list:PlaceList):
 		_name = path
 	if not path.ends_with("/"):
 		path += "/"
-	place_list.new_item(_name, path)
+	place_list.new_item(_name, path) # refresh handled in new_item
 
 func get_place_data():
 	var data = {}
@@ -89,6 +179,8 @@ func add_place_list(place_list:PlaceList):
 	if text == "":
 		return
 	_new_place_list(text)
+	
+	save_and_refresh()
 
 func remove_place_list(place_list:PlaceList):
 	if place_list.get_item_count() > 0:
@@ -111,6 +203,8 @@ func remove_place_list(place_list:PlaceList):
 		_reindex_lists()
 	else:
 		print("Could not remove list.")
+	
+	save_and_refresh()
 
 func _on_move_place_list(from:PlaceList, to:PlaceList):
 	var from_is_ancestor = from.is_ancestor_of(to)
@@ -125,6 +219,7 @@ func _on_move_place_list(from:PlaceList, to:PlaceList):
 	from.split_offset = to_split
 	
 	_reindex_lists()
+	save_and_refresh()
 
 func _move_place_list(ancestor:PlaceList, child:PlaceList):
 	var child_par = child.get_parent()

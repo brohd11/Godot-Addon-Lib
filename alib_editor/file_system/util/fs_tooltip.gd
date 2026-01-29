@@ -60,6 +60,7 @@ static func get_custom_tooltip(path: String) -> Object:
 		texture_rect.texture = preview.preview
 		texture_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		texture_rect.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		texture_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		
 		var texture_dimension = _get_texture_dimensions(path, type)
 		if texture_dimension != Vector2i(-1, -1) and texture_dimension < Vector2i(64, 64):

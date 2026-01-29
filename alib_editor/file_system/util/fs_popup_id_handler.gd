@@ -15,6 +15,11 @@ var _fs_id_need_handle = []
 
 const NEW_WINDOW = "New/Window"
 const CREATE_NEW_TAB = "New/Tab"
+const _NEW_SPLIT = "New/Split/"
+const NEW_SPLIT_LEFT = _NEW_SPLIT + "Left"
+const NEW_SPLIT_RIGHT = _NEW_SPLIT + "Right"
+const NEW_SPLIT_UP = _NEW_SPLIT + "Up"
+const NEW_SPLIT_DOWN = _NEW_SPLIT + "Down"
 const ADD_TO_PLACES = "Add to Places"
 const SET_ROOT = "Set Root"
 const RESET_ROOT = "Reset Root"
@@ -72,12 +77,14 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 		elif _selected_path != "res://" and selected_is_dir:
 			items["pre"][SET_ROOT] = {
 				PopupWrapper.ItemParams.ICON:["NewRoot"]
-			}#!icon
+			}
 	if selected_is_dir and selected_paths.size() == 1:# and not tree_helper.is_item_in_favorites(selected_item):
 		items["pre"][NEW_WINDOW] = {PopupWrapper.ItemParams.ICON:["New", "Window"]}
-		items["pre"][CREATE_NEW_TAB] = {
-				PopupWrapper.ItemParams.ICON:["New", ALibEditor.Singletons.EditorIcons.get_icon_white("TabContainer")]
-			}
+		items["pre"][CREATE_NEW_TAB] = {PopupWrapper.ItemParams.ICON:["New", ALibEditor.Singletons.EditorIcons.get_icon_white("TabContainer")]}
+		var split_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("SplitContainer", 1)
+		for direction in [NEW_SPLIT_LEFT, NEW_SPLIT_RIGHT, NEW_SPLIT_UP, NEW_SPLIT_DOWN]:
+			items["pre"][direction] = {PopupWrapper.ItemParams.ICON:["New", split_icon, null]}
+		
 		var places_options = places.get_add_to_places_options(_selected_path).get_options()
 		for option in places_options.keys():
 			items["pre"][option] = places_options[option]
@@ -168,12 +175,21 @@ func _handle_non_fs(id, popup):
 			filesystem_tab._current_search_dir = _selected_path.get_base_dir() + "/"
 		print(filesystem_tab._current_search_dir)
 		filesystem_tab._set_filter_texts()
-		
+	
+	elif id_text.begins_with(_NEW_SPLIT):
+		_new_split(id_text)
 
 
 func _rc_new_tab():
 	if _selected_path and _selected_path.ends_with("/"):
 		new_tab.emit(_selected_path)
+
+func _new_split(id_text:String):
+	var fs_data = filesystem_tab.get_dock_data()
+	if filesystem_tab._current_view_mode == FileSystemTab.ViewMode.TREE:
+		fs_data[FileSystemTab.DataKeys.ROOT] = _selected_path
+	fs_data[FileSystemTab.DataKeys.CURRENT_PATH] = _selected_path
+	EditorGlobalSignals.signal_emitv(FileSystemTab.DataKeys.GLOBAL_NEW_SPLIT_SIGNAL, [filesystem_tab, id_text, fs_data])
 
 func _add_to_places(meta:Dictionary):
 	var place_list = meta.get("place_list")

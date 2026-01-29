@@ -7,6 +7,17 @@ const Token = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/strin
 const Filter = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/string/filter.gd")
 const StringMap = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/string/string_map.gd")
 
+static func hash_string(text:String, hash_type:=HashingContext.HASH_SHA256, chars:int=-1):
+	
+	var ctx = HashingContext.new()
+	ctx.start(hash_type)
+	ctx.update(text.to_utf8_buffer())
+	var hash = ctx.finish()
+	var hash_encode = hash.hex_encode()
+	if chars > 0:
+		hash_encode = hash_encode.substr(0, chars)
+	return hash_encode
+
 static func strip_comment(line:String):
 	var valid = ""
 	var string_char = ""

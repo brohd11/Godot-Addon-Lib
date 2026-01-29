@@ -136,6 +136,12 @@ static func get_split_panel_instances():
 	instance.clean_split_panel_instances()
 	return instance._split_panel_instances
 
+static func get_split_panel_ancestor(node:Node):
+	var panel_instances = get_split_panel_instances()
+	for inst:Node in panel_instances:
+		if inst.is_ancestor_of(node):
+			return inst
+
 func clean_split_panel_instances():
 	var valid = []
 	for ins in _split_panel_instances:

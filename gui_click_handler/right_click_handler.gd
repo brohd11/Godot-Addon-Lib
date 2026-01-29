@@ -148,4 +148,5 @@ static func get_centered_control_position(control:Control):
 	return get_window_offset_position(control, button_pos)
 
 static func get_window_offset_position(control:Control, position:Vector2i):
-	return control.get_window().position + position
+	var window_pos = ALibRuntime.Utils.UWindow.get_window_global_position(control.get_window(), false)
+	return window_pos + position

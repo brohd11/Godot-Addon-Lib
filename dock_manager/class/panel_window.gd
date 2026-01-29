@@ -1,8 +1,8 @@
 extends Window
 
-const ThemeSetter = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_setter.gd")
-
 func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window_pos=null) -> void:
+	
+	
 	
 	if window_pos == null:
 		initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
@@ -11,6 +11,7 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 		position = window_pos
 	
 	size = window_size
+	
 	EditorInterface.get_base_control().add_child(self)
 	var panel = PanelContainer.new()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -25,12 +26,13 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 		panel_sb = panel.get_theme_stylebox("panel").duplicate() # as StyleBoxFlat
 	elif minor == 6:
 		panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
+		panel_sb.content_margin_top += 4 * EditorInterface.get_editor_scale()
+		panel_sb.content_margin_bottom += 4 * EditorInterface.get_editor_scale()
 	
 	panel_sb.draw_center = true
+	panel_sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE)
 	panel_sb.set_corner_radius_all(0)
 	panel.add_theme_stylebox_override("panel", panel_sb)
-	
-	ThemeSetter.set_theme_color(panel, ThemeSetter.ThemeColor.Type.BASE)
 	
 	if empty_panel:
 		panel_sb = StyleBoxEmpty.new()

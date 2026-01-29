@@ -5,6 +5,7 @@ const SingletonRefCount = Singleton.RefCount
 
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
+const ScenePreview = preload("res://addons/addon_lib/brohd/preview_gen/scene_preview/scene_preview.gd")
 
 const FileTypes = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/file_types.gd")
 const FSTooltop = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tooltip.gd")
@@ -50,8 +51,12 @@ var _file_and_dir_paths_dict:={}
 var editor_base_control:Control
 var editor_resource_preview:EditorResourcePreview
 
+var _preview_gen_started:=false
 var _previews_generated:=false #^ need a flag to retrigger when all are built after initial build
+var _preview_balance:=0
 var _init_complete:=false
+
+var _scene_preview:ScenePreview
 
 signal filesystem_changed
 
@@ -59,8 +64,6 @@ func _init(node):
 	cache = Cache.new()
 
 func _ready() -> void:
-	if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
-		ALibEditor.Utils.UEditorTheme.modify_theme_46()
 	
 	editor_node_ref = EditorNodeRef.get_instance()
 	EditorNodeRef.call_on_ready(_register_dialogs)
@@ -71,6 +74,10 @@ func _ready() -> void:
 	editor_fs.filesystem_changed.connect(_on_filesystem_changed)
 	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
 	
+	_scene_preview = ScenePreview.new()
+	add_child(_scene_preview)
+	_scene_preview.queue_processed.connect(_scene_preview_queue_processed)
+	
 	get_filesystem_favorites()
 	#get_filesystem_folder_colors()
 	
@@ -78,7 +85,8 @@ func _ready() -> void:
 	cache.set_editor_icons()
 	rebuild_files()
 	
-	_init_complete = true
+	_generate_previews() # init set in here so all previews generated at start
+	
 
 
 
@@ -86,9 +94,17 @@ func _get_ready_bool():
 	return _init_complete
 
 func _generate_previews():
+	if _preview_gen_started:
+		return
+	_preview_gen_started = true
 	for path:String in file_paths:
+		_preview_balance += 1
 		queue_preview(path)
+	
+	while _preview_balance > 0:
+		await get_tree().process_frame
 	_previews_generated = true
+	_init_complete = true
 
 func _set_interface_refs():
 	cache.set_folder_icon()
@@ -113,7 +129,10 @@ func clear_all_caches():
 	
 	cache.clear()
 	cache.set_editor_icons()
-	_previews_generated = false # trigger a build if needed
+	
+	_preview_gen_started = false # trigger a build if needed
+	_previews_generated = false
+	_preview_balance = 0
 
 func _on_filesystem_changed():
 	_set_interface_refs()
@@ -275,6 +294,9 @@ func get_file_data(path:String):
 	var file_type = get_file_type(path)
 	var icon = _get_type_icon(path)
 	
+	if file_type == "PackedScene":
+		_scene_preview.get_path_hash(path)
+	
 	if file_type == "":
 		file_type = FileData.FOLDER
 	
@@ -341,12 +363,23 @@ func _get_preview(path:String):
 	var cached_preview = CacheHelper.get_cached_data(path, cache.resource_previews)
 	if cached_preview != null:
 		return cached_preview
+	if _scene_preview.hash_cache.has(path):
+		var hash = _scene_preview.hash_cache[path]
+		var preview_data = _scene_preview.cache.get(hash)
+		if preview_data != null:
+			var preview = preview_data.get(ScenePreview.PREVIEW)
+			var preview_path = preview_data.get(ScenePreview.PREVIEW_PATH)
+			CacheHelper.store_data(path, preview_data, cache.resource_previews, [preview_path])
+			return preview
+		return
 	queue_preview(path)
 
 func queue_preview(path:String):
 	editor_resource_preview.queue_resource_preview(path, self, &"_get_resource_preview", null)
 
 func _get_resource_preview(path, preview, thumbnail, user_data):
+	if not _previews_generated:
+		_preview_balance -= 1
 	if preview == null:
 		return
 	
@@ -355,6 +388,43 @@ func _get_resource_preview(path, preview, thumbnail, user_data):
 		FileData.Preview.THUMBNAIL: thumbnail
 	}
 	CacheHelper.store_data(path, data, cache.resource_previews, [path])
+
+static func clear_scene_preview_cache():
+	get_instance()._scene_preview.clear_texture_cache()
+
+static func generate_all_scene_previews():
+	get_instance()._generate_all_scene_previews()
+
+func _generate_all_scene_previews():
+	var scn_files = get_paths_of_type(["PackedScene"])
+	_generate_scene_previews(scn_files)
+
+static func generate_scene_previews(paths:PackedStringArray):
+	get_instance()._generate_scene_previews(paths)
+
+func _generate_scene_previews(paths:PackedStringArray):
+	_scene_preview.preview_size = 128
+	_scene_preview.queue_paths(paths)
+
+func _scene_preview_queue_processed():
+	_scene_preview.threaded_load_cache()
+	await _scene_preview.cache_loaded
+	rebuild_files()
+
+func get_paths_of_ext(ext_array:=[]):
+	var valid = []
+	for path in _file_paths_dict.keys():
+		if path.get_extension() in ext_array:
+			valid.append(path)
+	return valid
+
+func get_paths_of_type(type_array:=[]):
+	var valid = []
+	for path in _file_paths_dict.keys():
+		if get_file_type(path) in type_array:
+			valid.append(path)
+	return valid
+	
 
 func get_folder_icon():
 	return cache.folder_icon
@@ -527,6 +597,9 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 
 
 func _register_dialogs():
+	if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
+		ALibEditor.Utils.UEditorTheme.modify_theme_46()
+	
 	var fs_dock = EditorInterface.get_file_system_dock()
 	var dialog_nodes = []
 	var move_dialog

@@ -39,6 +39,8 @@ enum DropZone {
 
 
 func _ready():
+	var editor_scale = EditorInterface.get_editor_scale()
+	
 	EditorInterface.get_base_control().theme_changed.connect(_on_editor_theme_changed)
 	_create_style_boxes()
 	
@@ -54,7 +56,16 @@ func _ready():
 	main_container.name = "MainContainer"
 	main_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	var dog_ear_size = 16 * EditorInterface.get_editor_scale()
+	var main_marg = 0
+	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	if minor_version == 6:
+		main_marg = -2 * editor_scale
+	main_container.add_theme_constant_override("margin_top", main_marg)
+	main_container.add_theme_constant_override("margin_left", main_marg)
+	main_container.add_theme_constant_override("margin_right", main_marg)
+	main_container.add_theme_constant_override("margin_bottom", main_marg)
+	
+	var dog_ear_size = 16 * editor_scale
 	var dog_ear = DogEarButton.new(DogEarButton.Position.TOP_RIGHT, dog_ear_size)
 	add_child(dog_ear)
 	
@@ -67,10 +78,11 @@ func _ready():
 	var margin = MarginContainer.new()
 	buttons_bg.add_child(margin)
 	margin.set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_top", 2)
-	margin.add_theme_constant_override("margin_left", 2)
-	margin.add_theme_constant_override("margin_right", 2)
-	margin.add_theme_constant_override("margin_bottom", 2)
+	var button_marg = 2 * editor_scale
+	margin.add_theme_constant_override("margin_top", button_marg)
+	margin.add_theme_constant_override("margin_left", button_marg)
+	margin.add_theme_constant_override("margin_right", button_marg)
+	margin.add_theme_constant_override("margin_bottom", button_marg)
 	
 	margin.resized.connect(
 		func():
@@ -140,8 +152,24 @@ func _move_panel_to_split(dragging_panel: Control, target_panel: Control, direct
 		DropZone.RIGHT: split_type = SplitType.HORIZONTAL_R
 	_new_split_panel(target_panel, dragging_panel, split_type)
 
+func new_split(calling_node: Control, new_panel:Control, direction: SplitType):
+	var target_panel = calling_node
+	while is_instance_valid(target_panel):
+		if target_panel is MoveablePanel:
+			break
+		target_panel = target_panel.get_parent()
+		
+	if not is_instance_valid(target_panel):
+		print("COULD NOT GET PANEL")
+		return
+	
+	var new_movable_panel = _new_movable_panel()
+	
+	_new_split_panel(target_panel, new_movable_panel, direction)
+	
+	new_movable_panel.add_control(new_panel)
 
-func _new_split_panel(target_panel: Control, new_panel:Control, direction: SplitType):
+func _new_split_panel(target_panel: MoveablePanel, new_panel:Control, direction: SplitType):
 	var parent = target_panel.get_parent()
 	var vertical = direction == SplitType.VERTICAL_U or direction == SplitType.VERTICAL_D
 	var new_split = _new_split_node(vertical)

@@ -21,6 +21,7 @@ static func get_scene() -> PackedScene:
 
 @onready var v_box: VBoxContainer = %VBox
 
+var load_default:= true
 var _default_tabs:Array = []
 
 var _standalone_panel:=true
@@ -57,7 +58,7 @@ func _ready() -> void:
 	dock_button.theme_type_variation = &"MainScreenButton"
 	
 	await get_tree().process_frame
-	if tab_bar.tab_count == 0:
+	if load_default and tab_bar.tab_count == 0:
 		_load_default()
 
 func set_standalone_panel(toggled:bool):
@@ -67,7 +68,7 @@ func set_standalone_panel(toggled:bool):
 func get_split_options() -> RightClickHandler.Options:
 	var options:RightClickHandler.Options
 	var tab_contol = get_current_tab_control()
-	if tab_contol.has_method("get_split_options"):
+	if is_instance_valid(tab_contol) and tab_contol.has_method("get_split_options"):
 		options = tab_contol.get_split_options()
 	else:
 		options = RightClickHandler.Options.new()
@@ -166,6 +167,10 @@ func _on_new_plugin_tab(tab_control=null, select:=false):
 	_panel_checks()
 	if select:
 		_show_tab(tab_bar.tab_count - 1)
+
+func add_tab(tab_control:Control):
+	_add_tab(tab_control)
+	_panel_checks()
 
 func _add_tab(tab_control:Control):
 	v_box.add_child(tab_control)
@@ -353,6 +358,8 @@ func _panel_checks():
 	await get_tree().process_frame
 	_check_close_policy()
 	tab_bar.queue_redraw()
+	if tab_bar.tab_count == 1:
+		_show_tab(0)
 
 
 func _current_tab_can_be_freed():
