@@ -1,3 +1,4 @@
+@tool
 extends VBoxContainer
 
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
@@ -44,6 +45,8 @@ signal right_clicked(self_node, path, array)
 signal double_clicked(path)
 
 func _ready() -> void:
+	if is_part_of_edited_scene():
+		return
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll_container = ScrollContainer.new()
 	add_child(scroll_container)

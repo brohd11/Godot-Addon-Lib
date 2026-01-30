@@ -1,3 +1,4 @@
+@tool
 extends Control
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
@@ -24,6 +25,8 @@ var _current_dir := ""
 var _bar_view:=0
 
 func _ready() -> void:
+	if is_part_of_edited_scene():
+		return
 	size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	clip_contents = true

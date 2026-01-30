@@ -91,6 +91,8 @@ var _miller_button:Button
 var _search_button:Button
 var options_button:Button
 
+var _search_scope_button:Button
+
 var _async_search:UFile.GetFilesAsync
 var _search_tick:int = 1
 var _async_is_searching:= false
@@ -151,35 +153,17 @@ func set_dir(target_dir:String):
 	item_list.tree_root = target_dir
 
 func _ready() -> void:
+	if is_part_of_edited_scene():
+		return
 	filesystem_singleton = FileSystemSingleton.get_instance()
 	filesystem_singleton.filesystem_changed.connect(_on_scan_files_complete, 1)
 	
 	_build_nodes()
-	tool_bar_hbox.custom_minimum_size.y = path_bar.line_edit.size.y
 	
-	var root = _dock_data.get(DataKeys.ROOT, "res://")
-	set_dir(root)
-	var item_meta = _dock_data.get(DataKeys.TREE_ITEM_META, {})
-	tree.tree_helper.data_dict = item_meta
-	
-	var place_data = _dock_data.get(DataKeys.PLACE_DATA, {})
-	if place_data.is_empty():
-		place_data = FileSystemPlaces.Data.get_default_data()
-	
-	#places.build_item_list(place_data)
-	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
-	path_bar.set_view_mode(path_bar_view_mode)
-	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
-	if not path_bar_visible:
-		_toggle_element(path_bar, false)
-	var hidden_elements = _dock_data.get(DataKeys.TOGGLED_ELEMENTS, [])
-	for element in togglable_elements:
-		if not element.name in hidden_elements:
-			continue
-		_toggle_element(element, false)
+	_set_data_on_ready()
 	
 	_set_draw_list_lines(_alt_list_color)
-	
+	_update_history_buttons()
 	_set_view_data() #^ must ensure root dir is set before calling
 	visibility_changed.connect(_on_visibilty_changed, 1)
 	
@@ -202,6 +186,7 @@ func get_split_options() -> RightClickHandler.Options:
 
 func set_dock_data(data:Dictionary):
 	_build_nodes()
+	
 	_dock_data = data
 	
 	current_path = _dock_data.get(DataKeys.CURRENT_PATH, "res://")
@@ -218,9 +203,31 @@ func set_dock_data(data:Dictionary):
 	_search_whole_filesystem = _dock_data.get(DataKeys.SEARCH_WHOLE_FS, false)
 	_current_search_view = _dock_data.get(DataKeys.SEARCH_VIEW, SearchView.AUTO)
 	_alt_list_color = _dock_data.get(DataKeys.LIST_ALT_COLOR, false)
-	tree.show_item_preview = _dock_data.get(DataKeys.TREE_PREVIEW_ICONS, false)
+	
 	_search_tree_list_dir = _dock_data.get(DataKeys.TREE_SEARCH_LIST_DIR, false)
 
+func _set_data_on_ready():
+	
+	set_dir(_dock_data.get(DataKeys.ROOT, "res://"))
+	tree.tree_helper.data_dict = _dock_data.get(DataKeys.TREE_ITEM_META, {})
+	tree.show_item_preview = _dock_data.get(DataKeys.TREE_PREVIEW_ICONS, false)
+	
+	var place_data = _dock_data.get(DataKeys.PLACE_DATA, {})
+	if place_data.is_empty():
+		place_data = FileSystemPlaces.Data.get_default_data()
+	
+	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
+	path_bar.set_view_mode(path_bar_view_mode)
+	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
+	if not path_bar_visible:
+		_toggle_element(path_bar, false)
+	var hidden_elements = _dock_data.get(DataKeys.TOGGLED_ELEMENTS, [])
+	for element in togglable_elements:
+		if not element.name in hidden_elements:
+			continue
+		_toggle_element(element, false)
+	
+	_set_search_visible(_dock_data.get(DataKeys.SEARCH_VISIBLE, false))
 
 func get_dock_data() -> Dictionary:
 	_get_view_data()
@@ -238,6 +245,7 @@ func get_dock_data() -> Dictionary:
 	data[DataKeys.TREE_ITEM_META] = item_meta
 	data[DataKeys.TREE_PREVIEW_ICONS] = tree.show_item_preview
 	data[DataKeys.TREE_SEARCH_LIST_DIR] = _search_tree_list_dir
+	data[DataKeys.SEARCH_VISIBLE] = search_hbox.visible
 	data[DataKeys.SEARCH_SELECT_PATH] = _search_select_path
 	data[DataKeys.SEARCH_WHOLE_FS] = _search_whole_filesystem
 	data[DataKeys.SEARCH_VIEW] = _current_search_view
@@ -338,9 +346,13 @@ func _set_filter_texts():
 	_last_browser_state = _current_browser_state
 
 func _set_filter_text_search():
+	var is_tree = _current_view_mode == ViewMode.TREE
 	if _last_browser_state != _current_browser_state:
-		if _search_whole_filesystem and _path_in_res:
-			_current_search_dir = "res://"
+		if _path_in_res and _search_whole_filesystem:
+			if is_tree:
+				_current_search_dir = tree.root_dir
+			else:
+				_current_search_dir = "res://"
 		else:
 			_current_search_dir = current_dir
 		_get_view_data() #^ save current view data when switching state
@@ -643,7 +655,7 @@ func _set_current_path_search_mode(who, dir:String, navigation_selection:bool):
 		item_list.set_filtered_paths(dir_paths)
 		item_list.queue_force_refresh()
 		item_list.refresh()
-	
+
 
 
 func _on_path_bar_path_selected(path:String):
@@ -670,6 +682,9 @@ func _on_item_list_item_selected(path:String, selected_paths:Array):
 			_set_current_path(item_list, path) #^ any other situation or for files just set the path
 	else:
 		_add_to_history(path)
+
+func _select_paths_in_fs():
+	return filesystem_singleton.ensure_items_selected(current_selected_paths)
 
 func _update_history_buttons():
 	_history_back_button.disabled = _history_index == 0
@@ -747,8 +762,7 @@ func _on_item_list_double_clicked(path):
 func _on_double_clicked(selected_path:String):
 	current_selected_paths = [selected_path]
 	if FSUtil.is_path_valid_res(selected_path):
-		var selected_in_fs = filesystem_singleton.ensure_items_selected([selected_path])
-		if not selected_in_fs:
+		if not _select_paths_in_fs():
 			return
 		filesystem_singleton.activate_in_fs()
 	else:
@@ -758,6 +772,8 @@ func _on_double_clicked(selected_path:String):
 func _on_item_right_clicked(clicked_node:Node, selected_item_path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
 	if FSUtil.is_path_valid_res(selected_item_path):
+		if not _select_paths_in_fs():
+			return
 		fs_popup_handler.right_clicked(clicked_node, selected_item_path, selected_paths)
 	else:
 		var options = non_res_helper.get_right_click_options(selected_item_path, selected_paths)
@@ -767,6 +783,8 @@ func _on_item_right_clicked(clicked_node:Node, selected_item_path:String, select
 func _on_item_right_clicked_empty(clicked_node:Node, selected_item_path:String):
 	current_selected_paths = [selected_item_path]
 	if FSUtil.is_path_valid_res(selected_item_path):
+		if not _select_paths_in_fs():
+			return
 		fs_popup_handler.right_clicked_empty_item_list(clicked_node, selected_item_path)
 	else:
 		var options = non_res_helper.get_right_click_options(selected_item_path, [])
@@ -787,7 +805,7 @@ func _on_places_title_right_clicked(place_list:FileSystemPlaces.PlaceList) -> vo
 	if places.get_place_list_count() > 1:
 		options.add_option("Remove", places.remove_place_list.bind(place_list), ["Close"])
 		options.add_option("Redistribute Lists", places.set_split_offsets, ["ExpandTree"])
-	
+	options.add_option("Create 'Other' List", places.new_other_paths_list, ["Filesystem"])
 	right_click_handler.display_popup(options)
 
 func _on_path_bar_right_clicked(path:String):
@@ -916,7 +934,6 @@ func _change_view_mode(view_mode:ViewMode):
 	_get_view_data()
 	_current_view_mode = view_mode
 	_set_view_data()
-	#refresh()
 	refresh_current_path()
 
 func _get_view_data():
@@ -925,7 +942,8 @@ func _get_view_data():
 		DataKeys.SPLIT_MODE:_current_split_mode,
 		DataKeys.ITEM_DISPLAY_LIST: item_list.display_as_list,
 		DataKeys.PLACES_TOGGLED: _places_toggled,
-		DataKeys.FILTER_MODE: _current_filter_mode
+		DataKeys.FILTER_MODE: _current_filter_mode,
+		DataKeys.SEARCH_WHOLE_FS: _search_whole_filesystem,
 		}
 	if _current_view_mode == ViewMode.TREE:
 		_view_data[DataKeys.VIEW_DATA_TREE] = data
@@ -950,6 +968,8 @@ func _set_view_data():
 		if _current_split_mode == SplitMode.NONE:
 			_current_split_mode = SplitMode.HORIZONTAL
 	
+	_search_whole_filesystem = data.get(DataKeys.SEARCH_WHOLE_FS, _current_view_mode != ViewMode.PLACES)
+	
 	if _places_follow_view_mode:
 		_places_toggled = data.get(DataKeys.PLACES_TOGGLED, _current_view_mode != ViewMode.TREE)
 	if _filter_mode_follow_view_mode:
@@ -957,6 +977,7 @@ func _set_view_data():
 	
 	item_list.set_display_as_list(data.get(DataKeys.ITEM_DISPLAY_LIST, false))
 	
+	_set_search_scope()
 	_set_view_mode()
 	_set_split_mode(_current_split_mode, false) #^ do not want to set active twice
 	_set_active()
@@ -1076,7 +1097,7 @@ func _check_toolbar_elements():
 	#_toggle_element_respect_meta(_toggle_path_button, show_buttons)
 	#_toggle_element_respect_meta(_history_back_button, show_buttons)
 	#_toggle_element_respect_meta(_history_forward_button, show_buttons)
-	_toggle_element_respect_meta(_search_button, show_buttons)
+	#_toggle_element_respect_meta(_search_button, show_buttons)
 	_toggle_element_respect_meta(_navigate_up_button, show_buttons)
 	_toggle_element_respect_meta(_tree_button, show_buttons)
 	_toggle_element_respect_meta(_places_button, show_buttons)
@@ -1096,7 +1117,6 @@ func _on_navigate_up():
 		return
 	var dir = UFile.get_dir(current_dir)
 	_set_current_path(_navigate_up_button, dir)
-	#_set_current_path(self, dir)
 
 func _on_path_bar_button_pressed(show_hide:=false):
 	if show_hide:
@@ -1108,8 +1128,27 @@ func _on_path_bar_button_pressed(show_hide:=false):
 			path_bar.toggle_view_mode()
 	_check_toolbar_elements()
 
+func _on_search_scope_pressed():
+	_search_whole_filesystem = not _search_whole_filesystem
+	_set_search_scope()
+
+func _set_search_scope():
+	var icon
+	var tooltip = ""
+	if _search_whole_filesystem:
+		icon = EditorInterface.get_editor_theme().get_icon("Filesystem", "EditorIcons")
+		tooltip = "Search whole file system."
+	else:
+		icon = EditorInterface.get_editor_theme().get_icon("Folder", "EditorIcons")
+		tooltip = "Search from current directory."
+	_search_scope_button.icon = icon
+	_search_scope_button.tooltip_text = tooltip
+
 func _on_search_pressed():
-	if search_hbox.visible:
+	_set_search_visible(not search_hbox.visible)
+
+func _set_search_visible(state:bool=search_hbox.visible):
+	if not state:
 		file_type_filter.select(0)
 		_on_filter_type_selected(0)
 		for f in filters:
@@ -1211,7 +1250,6 @@ func _check_main_split_vis():
 	left_split.visible = tree.visible or places.visible
 	right_side_vbox.visible = item_list.visible or miller.visible
 
-
 func _build_nodes():
 	if is_instance_valid(tree):
 		return
@@ -1229,12 +1267,7 @@ func _build_nodes():
 	right_click_handler = RightClickHandler.new()
 	add_child(right_click_handler)
 	
-	non_res_helper = NonResHelper.new()
-	
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
-	
-	#var spacer = Control.new()
-	#add_child(spacer)
 	
 	tool_bar_hbox = HBoxContainer.new()
 	add_child(tool_bar_hbox)
@@ -1244,21 +1277,17 @@ func _build_nodes():
 	_toggle_places_button = _new_button(true, "Favorites", _on_places_toggled_pressed, "Toggle Side Bar", false, "Toggle side bar.")
 	tool_bar_hbox.add_child(_toggle_places_button) #^ not sure about this, dont want to toggle in other modes
 	
-	
-	
-	
-	
 	var sep_1 = VSeparator.new()
 	tool_bar_hbox.add_child(sep_1)
 	sep_1.hide()
 	
 	_history_back_button = _new_button(true, "Back", _history_back, "History Back", false, "Navigate to previous location.")
 	tool_bar_hbox.add_child(_history_back_button)
-	_history_back_button.flat = true
+	#_history_back_button.flat = true
 	
 	_history_forward_button = _new_button(true, "Forward", _history_forward, "History Forward", false, "Navigate to next location.")
 	tool_bar_hbox.add_child(_history_forward_button)
-	_history_forward_button.flat = true
+	#_history_forward_button.flat = true
 	
 	_navigate_up_button = _new_button(true, "MoveUp",_on_navigate_up, "Navigate Up", false, "Navigate up one folder level.")
 	tool_bar_hbox.add_child(_navigate_up_button)
@@ -1288,6 +1317,9 @@ func _build_nodes():
 	search_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search_hbox.hide()
 	
+	_search_scope_button = _new_button(true,  "Filesystem", _on_search_scope_pressed, "Search Scope", false, "")
+	search_hbox.add_child(_search_scope_button)
+	
 	_search_bar_spacer = Control.new()
 	search_hbox.add_child(_search_bar_spacer)
 	_search_bar_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1311,12 +1343,17 @@ func _build_nodes():
 	line_edit_2.placeholder_text = "Filter Files"
 	line_edit_2.text_changed.connect(_on_filter_text_changed)
 	
-	filters = [line_edit, line_edit_2]
+	filters = [line_edit, line_edit_2] #^r needs to move
 	for f:LineEdit in filters:
 		f.visibility_changed.connect(func():if not f.visible:f.clear(), 1)
 	
+	
+	
+	
 	file_type_filter = OptionButton.new()
 	search_hbox.add_child(file_type_filter)
+	file_type_filter.theme_type_variation = "FlatButton"
+	file_type_filter.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	file_type_filter.item_selected.connect(_on_filter_type_selected)
 	file_type_filter.allow_reselect = true
 	file_type_filter.focus_mode = Control.FOCUS_NONE
@@ -1327,11 +1364,9 @@ func _build_nodes():
 		var icon = EditorInterface.get_editor_theme().get_icon(FSFilter.Types.get_icon(_name), "EditorIcons")
 		file_type_filter.add_icon_item(icon, _name)
 	
-	
 	var sep_2 = VSeparator.new()
 	tool_bar_hbox.add_child(sep_2)
 	sep_2.hide()
-	
 	
 	_tree_button = _new_button(true, _tree_icon(), _change_view_mode.bind(ViewMode.TREE), "Tree View", false, "Switch to Tree view.")
 	tool_bar_hbox.add_child(_tree_button)
@@ -1362,10 +1397,8 @@ func _build_nodes():
 	places = FileSystemPlaces.new()
 	left_split.add_child(places)
 	
-	
 	tree = FileSystemTree.new()
 	left_split.add_child(tree)
-	tree.owner = self
 	
 	#^ split side
 	right_side_vbox = VBoxContainer.new()
@@ -1382,6 +1415,9 @@ func _build_nodes():
 	right_side_vbox.add_child(miller)
 	
 	
+	non_res_helper = NonResHelper.new()
+	non_res_helper.places = places
+	
 	fs_popup_handler = FSPopupHandler.new()
 	fs_popup_handler.filesystem_tab = self
 	fs_popup_handler.tree = tree
@@ -1389,8 +1425,6 @@ func _build_nodes():
 	fs_popup_handler.places = places
 	
 	fs_popup_handler.new_tab.connect(_on_rc_new_tab)
-	
-	non_res_helper.places = places
 	
 	item_list.navigate_up.connect(_on_navigate_up)
 	
@@ -1419,6 +1453,7 @@ func _build_nodes():
 		line_edit_2,
 		file_type_filter
 	])
+	
 	line_edit.hide()
 	_toggle_element(line_edit_2, false)
 	for e in togglable_elements:
@@ -1428,7 +1463,7 @@ func _build_nodes():
 
 func _deferred_build_nodes():
 	search_label.custom_minimum_size.y = path_bar.size.y
-
+	tool_bar_hbox.custom_minimum_size.y = path_bar.line_edit.size.y
 
 
 func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=false, tooltip:=""):
@@ -1450,7 +1485,7 @@ func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=
 		button.icon = icon_texture
 	
 	button.tooltip_text = tooltip
-	button.theme_type_variation = &"MainScreenButton"
+	button.theme_type_variation = &"FlatButton"
 	button.focus_mode = Control.FOCUS_NONE
 	return button
 
@@ -1475,6 +1510,7 @@ class DataKeys:
 	const TOGGLED_ELEMENTS = &"TOGGLED_ELEMENTS"
 	const RECENT_FILES = &"RECENT_FILES"
 	
+	const SEARCH_VISIBLE = &"SEARCH_VISIBLE"
 	const SEARCH_SELECT_PATH = &"SEARCH_SELECT_PATH"
 	const SEARCH_WHOLE_FS = &"SEARCH_WHOLE_FS"
 	const SEARCH_VIEW = &"SEARCH_VIEW"

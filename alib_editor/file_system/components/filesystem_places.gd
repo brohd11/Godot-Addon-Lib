@@ -25,6 +25,8 @@ var _last_places_hash:int=-1
 var places:= {}
 
 func _ready() -> void:
+	if is_part_of_edited_scene():
+		return
 	custom_minimum_size = _MIN_SIZE
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
@@ -279,18 +281,29 @@ func get_add_to_places_options(path:String):
 		options.add_option(menu_path, add_place_item.bind(path, place_list), ["ControlAlignLeftWide", null], {"place_list": place_list})
 	return options
 
+func new_other_paths_list():
+	var other_places_data = Data.get_other_places_data()
+	var place_list:PlaceList = _new_place_list(other_places_data.get("title"))
+	place_list.build_items(other_places_data.get("items"))
+
 
 class Data:
 	static func get_default_data():
-		var home = ALibRuntime.Utils.UOs.get_home_dir()
-		var editor_paths = EditorInterface.get_editor_paths()
-		
 		var _places = {
 		"title":"Places",
 		"items":{
 			0:get_place_dict("res://","res://"),
 			}
 		}
+		var data = {
+				0:_places,
+				1: get_other_places_data(),
+			}
+		return data
+	
+	static func get_other_places_data():
+		var home = ALibRuntime.Utils.UOs.get_home_dir()
+		var editor_paths = EditorInterface.get_editor_paths()
 		var other = {
 			"title": "Other",
 			"items":{
@@ -300,11 +313,7 @@ class Data:
 				3:get_place_dict("Editor Config", editor_paths.get_config_dir())
 			},
 		}
-		var data = {
-				0:_places,
-				1: other,
-			}
-		return data
+		return other
 
 	static func get_place_dict(_name:String, path:String):
 		return {"name":_name, "path":path}

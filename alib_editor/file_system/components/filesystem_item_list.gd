@@ -1,3 +1,4 @@
+@tool
 extends ItemList
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")

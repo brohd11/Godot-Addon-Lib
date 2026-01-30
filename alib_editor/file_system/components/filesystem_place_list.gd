@@ -1,3 +1,4 @@
+@tool
 extends SplitContainer
 
 const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")

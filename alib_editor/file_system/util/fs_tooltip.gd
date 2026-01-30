@@ -88,13 +88,13 @@ static func _get_file_specific_details(path:String):
 			label_text += "\nScript Class: %s" % custom_type
 		
 	elif ext == "tscn":
-		var root = UResource.PackedSceneFileAccess.get_root_type(path)
+		var root = UResource.UPackedScene.ReadFile.get_root_type(path)
 		if root:
 			var inh = root.begins_with("res://")
 			var inh_text = ""
 			if inh:
 				inh_text = "\nInherits: %s" % root
-				root = UResource.PackedSceneFileAccess.get_root_type(path, true)
+				root = UResource.UPackedScene.ReadFile.get_root_type(path, true)
 			label_text += "\nScene Root: %s" % root
 			label_text += inh_text
 		

@@ -597,8 +597,8 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 
 
 func _register_dialogs():
-	if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
-		ALibEditor.Utils.UEditorTheme.modify_theme_46()
+	#if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
+		#ALibEditor.Utils.UEditorTheme.modify_theme_46()
 	
 	var fs_dock = EditorInterface.get_file_system_dock()
 	var dialog_nodes = []
@@ -645,7 +645,7 @@ static func reset_dialogs(parent=null, mouse=null):
 	var first_dialog = dialog_nodes[0]
 	if first_dialog.get_parent() == EditorInterface.get_file_system_dock():
 		return
-	if parent is Node:
+	if is_instance_valid(parent) and parent is Node:
 		if first_dialog.get_window() != parent.get_window():
 			return
 	for dialog:Window in dialog_nodes:
