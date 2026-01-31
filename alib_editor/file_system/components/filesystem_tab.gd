@@ -356,6 +356,9 @@ func _set_filter_text_search():
 		else:
 			_current_search_dir = current_dir
 		_get_view_data() #^ save current view data when switching state
+		
+		tree.select_paths([], false)
+		item_list.deselect_all()
 	
 	path_bar.hide()
 	search_label.show()
@@ -552,12 +555,14 @@ func _set_path_in_res(path_in_res:=_path_in_res):
 	miller.path_in_res = path_in_res
 	path_bar.path_in_res = path_in_res
 
+func navigate_to_path(path:String):
+	_set_current_path(self, path, true, true)
 
 func refresh_current_path():
 	_set_current_path(self, current_path)
 
 ## Path coming must be file or dir with trailing slash. If dir doesn't have slash, will treat as file.
-func _set_current_path(who:Control, path:String, _refresh:=true):
+func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:=false):
 	var dir = path
 	if not dir.ends_with("/"):
 		dir = UFile.get_dir(dir)
@@ -571,6 +576,8 @@ func _set_current_path(who:Control, path:String, _refresh:=true):
 	#if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
 		if not navigation_selection and who == item_list:
 			navigation_selection = true
+	if force_navigate:
+		navigation_selection = true
 	
 	if _current_browser_state == BrowserState.SEARCH:
 		if not _search_select_path:

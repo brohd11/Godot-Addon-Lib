@@ -45,10 +45,6 @@ func _on_viewport_size_changed():
 	if view:
 		viewport_size_mul = get_window().size.x / view.size.x # on view port size changed??
 		viewport_size_mul = clampf(viewport_size_mul, 1, 10)
-	
-
-
-
 
 
 func _process(delta: float) -> void:

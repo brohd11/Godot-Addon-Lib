@@ -2,6 +2,9 @@ class_name EditorPanelSingleton
 extends SingletonBase
 const SingletonBase = Singleton.Base
 
+const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
+const PluginTabContainer = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_tab_container.gd")
+
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/panel_singleton.gd")
 static func get_singleton_name() -> String:

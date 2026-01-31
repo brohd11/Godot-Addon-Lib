@@ -420,6 +420,9 @@ func get_panel_count() -> int:
 	var panels = _get_panels()
 	return panels.size()
 
+func get_panels():
+	return _get_panels()
+
 func _get_panels():
 	var nodes = []
 	for c in main_container.get_children():

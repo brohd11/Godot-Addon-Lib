@@ -553,6 +553,11 @@ static func get_filesystem_favorites():
 		return []
 
 
+static func activate_path(path:String):
+	var sel = ensure_items_selected([path])
+	if sel:
+		activate_in_fs()
+
 static func activate_in_fs():
 	var fs_tree = get_filesystem_tree() as Tree
 	fs_tree.item_activated.emit()
@@ -827,6 +832,29 @@ static func is_new_name_valid(original_file_name:String, new_file_name:String) -
 
 static func fs_navigate_to_path(path:String, activate_rename:=false):
 	FSRename.show_item_in_dock(path, activate_rename)
+
+
+static func navigate_to_path(path:String, calling_node:Node):
+	var sibling_filesystem = get_sibling_filesystem(calling_node)
+	if not is_instance_valid(sibling_filesystem):
+		EditorInterface.get_file_system_dock().navigate_to_path(path)
+		return
+	sibling_filesystem.navigate_to_path(path)
+
+static func get_sibling_filesystem(calling_node:Node):
+	var editor_panel_singleton = ALibEditor.Utils.UClassDetail.get_global_class_script("EditorPanelSingleton")
+	if not is_instance_valid(editor_panel_singleton):
+		return
+	var split_panel = editor_panel_singleton.get_split_panel_ancestor(calling_node)
+	if not is_instance_valid(split_panel):
+		return
+	for panel in split_panel.get_panels():
+		var content = panel.get_control()
+		if content.has_method("get_all_tab_controls"):
+			for tab in content.get_all_tab_controls():
+				var script = tab.get_script()
+				if script and script.resource_path.get_file() == "filesystem_tab.gd":
+					return tab
 
 static func get_custom_tooltip(path:String):
 	return FSTooltop.get_custom_tooltip(path)

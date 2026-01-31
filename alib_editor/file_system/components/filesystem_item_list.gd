@@ -444,7 +444,9 @@ func _make_custom_tooltip(for_text: String) -> Object:
 	return null
 
 func _get_drag_data(at_position):
-	return FileSystemSingleton.GetDropData.files(get_selected_paths(), self)
+	var sel_paths = get_selected_paths()
+	set_drag_preview(FileSystemSingleton.get_drag_preview(sel_paths))
+	return FileSystemSingleton.GetDropData.files(sel_paths, self)
 
 func _can_drop_data(at_position: Vector2, data: Variant) -> bool:
 	if current_browser_state == FileSystemTab.BrowserState.SEARCH:

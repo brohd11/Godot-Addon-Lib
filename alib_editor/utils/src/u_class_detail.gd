@@ -564,6 +564,11 @@ static func get_all_global_class_paths():
 		class_dict[name] = path
 	return class_dict
 
+static func get_global_class_script(class_nm:String):
+	var path = get_global_class_path(class_nm)
+	if path != "":
+		return load(path)
+
 static func get_global_class_path(class_nm:String):
 	connect_fs_signal()
 	return global_class_registry.get(class_nm, "")
