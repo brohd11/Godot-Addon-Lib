@@ -99,8 +99,6 @@ var _async_is_searching:= false
 var _current_search_dir:= ""
 
 var filters:= []
-var _filters_toggled:= false
-var _filter_debounce:= false
 var _filter_timer:Timer
 
 var _search_bar_spacer:Control
@@ -170,7 +168,7 @@ func _ready() -> void:
 	_set_current_path(self, current_path)
 
 func _exit_tree() -> void:
-	filesystem_singleton.reset_dialogs(self)
+	FileSystemSingleton.reset_dialogs(self)
 
 func get_split_options() -> RightClickHandler.Options:
 	var options = RightClickHandler.Options.new()
@@ -317,7 +315,7 @@ func _on_filter_type_selected(idx:int):
 		_last_prefix_filters.clear()
 	_start_filter_debounce()
 
-func _on_filter_text_changed(new_text:String):
+func _on_filter_text_changed(_new_text:String):
 	_start_filter_debounce()
 
 func _start_filter_debounce():
@@ -429,7 +427,7 @@ func _set_search_view_item_list():
 		_set_split_mode(SplitMode.HORIZONTAL)
 	item_list.show()
 	if places.visible and _current_view_mode == ViewMode.TREE:
-		main_split_container.split_offset = places.size.x
+		main_split_container.split_offset = int(places.size.x)
 	tree.hide()
 	miller.hide()
 	_check_main_split_vis()
@@ -691,7 +689,7 @@ func _on_item_list_item_selected(path:String, selected_paths:Array):
 		_add_to_history(path)
 
 func _select_paths_in_fs():
-	return filesystem_singleton.ensure_items_selected(current_selected_paths)
+	return FileSystemSingleton.ensure_items_selected(current_selected_paths)
 
 func _update_history_buttons():
 	_history_back_button.disabled = _history_index == 0
@@ -771,7 +769,7 @@ func _on_double_clicked(selected_path:String):
 	if FSUtil.is_path_valid_res(selected_path):
 		if not _select_paths_in_fs():
 			return
-		filesystem_singleton.activate_in_fs()
+		FileSystemSingleton.activate_in_fs()
 	else:
 		NonResHelper.open_file(selected_path)
 	_add_path_to_recent(selected_path)
@@ -799,7 +797,6 @@ func _on_item_right_clicked_empty(clicked_node:Node, selected_item_path:String):
 
 
 func _on_places_right_clicked(index:int, place_list:FileSystemPlaces.PlaceList):
-	var item_title = place_list.get_item_title(index)
 	var options = RightClickHandler.Options.new()
 	options.add_option("Rename", place_list.rename_item.bind(index), ["Edit"])
 	options.add_option("Remove", place_list.remove_item.bind(index), ["Close"])
@@ -894,8 +891,7 @@ func _on_options_button_pressed():
 		options.add_radio_option("Settings/Filter Mode/" + _name, func():_current_filter_mode = val, _current_filter_mode == val, icons)
 	
 	#^c display
-	var popup_pos = right_click_handler.get_centered_control_position(options_button)
-	var popup = right_click_handler.display_popup(options, true, popup_pos)
+	var popup = right_click_handler.display_on_control(options, options_button)
 	
 	if not _recent_files.is_empty():
 		var recents = PopupMenu.new()
@@ -1086,15 +1082,6 @@ func _check_toolbar_elements():
 		if file_type_filter.visible:
 			_show_search = true
 		search_hbox.visible = _show_search
-	
-	
-	var hbox_elements_size = 0
-	for c in tool_bar_hbox.get_children():
-		if c.visible and c != tool_bar_spacer and c != path_bar:
-			hbox_elements_size += c.size.x
-	
-	#print(hbox_elements_size + path_bar.size.x)
-	#prints(path_bar.size, tool_bar_hbox.size, path_bar.size.x)
 	
 	var show_buttons = true
 	if size.x < 500:
@@ -1498,7 +1485,7 @@ func _new_button(hideable:=false, icon="", callable=null, _name="", icon_color:=
 
 func _tree_icon():
 	return "FileTree"
-	return _get_modulated_icon("FileTree")
+	#return _get_modulated_icon("FileTree")
 func _places_icon():
 	return _get_modulated_icon("ItemList")
 func _miller_icon():

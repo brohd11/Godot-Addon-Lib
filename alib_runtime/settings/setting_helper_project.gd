@@ -1,4 +1,4 @@
-#! namespace ALibRuntime class ProjSettingHelper
+#! namespace ALibRuntime.Settings class SettingHelperProject
 
 extends "res://addons/addon_lib/brohd/abstract/setting_helper_base.gd"
 

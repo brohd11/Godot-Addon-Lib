@@ -29,6 +29,10 @@ static func collapse_hierarchy():
 	if minor <= 6:
 		return 22
 
+static func reimport():
+	var minor = _get_minor_version()
+	if minor <= 6:
+		return 13
 
 
 static func _get_minor_version():

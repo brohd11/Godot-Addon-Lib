@@ -21,12 +21,21 @@ func _on_item_mouse_selected(mouse_pos:Vector2, mouse_button_index:int):
 	if mouse_button_index == 2:
 		var selected = get_item_at_position(mouse_pos)
 		var meta = selected.get_metadata(0)
-		if meta != "":
-			item_right_clicked.emit(meta)
+		var path = meta.get("path", "")
+		if path != "":
+			item_right_clicked.emit(path)
 
 func _on_button_clicked(item:TreeItem, col:int, id:int, mouse_button_index:int):
-	var path = item.get_metadata(0)
-	FileSystemSingleton.activate_path(path)
+	var meta = item.get_metadata(0)
+	if id == 0:
+		var path = meta.get("path", "")
+		FileSystemSingleton.activate_path(path)
+	elif id == 5:
+		var object = meta.get("object")
+		if is_instance_valid(object) and object is Node3D:
+			object.visible = not object.visible
+			refresh()
+	
 
 func clear_tree(msg:="No scene loaded", clear_current_scene:=false):
 	clear()
@@ -58,6 +67,7 @@ func build_tree():
 	if not visible:
 		clear_tree()
 		return
+	
 	clear()
 	scene_info.clear()
 	tree_items.clear()
@@ -111,23 +121,46 @@ func build_tree():
 
 func _set_node_item_params(item:TreeItem, node:Node):
 	item.set_text(0, node.name)
-	item.set_icon(0, _get_class_icon(node))
-	item.set_metadata(0, node.scene_file_path)
-	if node.scene_file_path != "":
-		item.add_button(0, EditorInterface.get_editor_theme().get_icon("Load", "EditorIcons"))
+	item.set_icon(0, ALibEditor.Singletons.EditorIcons.get_class_icon(node))
+	var meta = {"path":node.scene_file_path, "object": node}
+	item.set_metadata(0, meta)
+	if node.scene_file_path != "" and FileAccess.file_exists(node.scene_file_path):
+		item.add_button(0, EditorInterface.get_editor_theme().get_icon("Load", "EditorIcons"), 0)
+	if node is Node3D:#EditorInterface.get_editor_theme().get_icon("GuiVisibilityVisible", "EditorIcons")
+		item.add_button(0, ALibEditor.Singletons.EditorIcons.get_visibility_icon(node.visible), 5)
 
 func _set_resource_item_params(item:TreeItem, resource:Resource):
 	item.set_text(0, _get_resource_name(resource))
-	item.set_icon(0, _get_class_icon(resource))
-	item.set_metadata(0, resource.resource_path)
-	if resource.resource_path != "":
-		item.add_button(0, EditorInterface.get_editor_theme().get_icon("Load", "EditorIcons"))
+	item.set_icon(0, ALibEditor.Singletons.EditorIcons.get_class_icon(resource))
+	var meta = {"path":resource.resource_path, "object": resource}
+	item.set_metadata(0, meta)
+	if resource.resource_path != "" and FileAccess.file_exists(resource.resource_path):
+		item.add_button(0, EditorInterface.get_editor_theme().get_icon("Load", "EditorIcons"), 0)
 
 func _get_resource_name(resource:Resource):
 	var res_name = resource.resource_name
 	if res_name == "":
 		res_name = "No resource name."
 	return res_name
+
+func _make_custom_tooltip(for_text:String):
+	var item = get_item_at_position(get_local_mouse_position())
+	if not item:
+		return
+	var meta = item.get_metadata(0)
+	var path = meta.get("path")
+	if FileAccess.file_exists(path):
+		return FileSystemSingleton.get_custom_tooltip(path)
+	
+	var object = meta.get("object") as Object
+	var _class = object.get_class()
+	
+	var label = Label.new()
+	label.text = for_text
+	label.text += "\nLocal to Scene"
+	label.text += "\nClass: %s" % _class
+	return label
+
 
 func _read_scene(node:Node, root_node:Node):
 	if node != root_node and node.owner != root_node:
@@ -143,17 +176,3 @@ func _read_scene(node:Node, root_node:Node):
 	var node_children = node.get_children()
 	for n in node_children:
 		_read_scene(n, root_node)
-
-
-func _get_class_icon(node:Object):
-	var node_class:String = node.get_class()
-	var editor_base_control:Control = EditorInterface.get_base_control()
-	var icon:Texture2D = editor_base_control.get_theme_icon(node_class, &"EditorIcons")
-	if icon:
-		return icon
-	else:
-		icon = EditorInterface.get_editor_theme().get_icon(node_class, &"EditorIcons")
-		if not icon:
-			icon = EditorInterface.get_editor_theme().get_icon("MissingNode",  &"EditorIcons")
-		
-		return icon

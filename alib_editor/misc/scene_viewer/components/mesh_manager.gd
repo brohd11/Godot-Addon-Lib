@@ -169,6 +169,14 @@ func _process_scene(path):
 		scene_data["aabb"] = scn_aabb
 		ins.add_child(new_mesh)
 	
+	var collision_shapes = ALibRuntime.Utils.UNode.get_all_nodes_of_type(ins, CollisionShape3D)
+	for col_shape:CollisionShape3D in collision_shapes:
+		add_debug_shape(col_shape)
+		
+		
+		pass
+	print(collision_shapes)
+	
 	var label = Label3D.new()
 	ins.add_child(label)
 	label.text = ins.name
@@ -181,6 +189,36 @@ func _process_scene(path):
 		label.position = Vector3(0,1,0)
 	
 	scene_data["scene_processed"] = true
+
+
+func add_debug_shape(collision_node: CollisionShape3D):
+	# 1. Check if the node has a valid shape resource
+	if not collision_node.shape:
+		return
+
+	# 2. Get the debug mesh (This is built-in to Godot)
+	# This returns an ArrayMesh constructed of LINES
+	var debug_mesh = collision_node.shape.get_debug_mesh()
+
+	# 3. Create a MeshInstance to hold it
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.mesh = debug_mesh
+	
+	# 4. Create a StandardMaterial3D to make it look like a debug shape
+	#var material = StandardMaterial3D.new()
+	#material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	#material.albedo_color = Color(0, 1, 1, 1) # Cyan color
+	#material.vertex_color_use_as_albedo = true # Use existing wireframe colors if present
+	
+	# Important: Override the material on the mesh instance
+	#mesh_instance.material_override = material
+	
+	# 5. Add it to the scene
+	# We usually add it as a child of the collision node so it moves with it
+	collision_node.add_child(mesh_instance)
+	
+	# Optional: Set owner if you want it to persist in the scene tree editor
+	# mesh_instance.owner = get_tree().edited_scene_root
 
 
 func _set_label_settings(path:String, is_current:=false):
@@ -207,11 +245,7 @@ func _set_label_settings(path:String, is_current:=false):
 			scn_label.pixel_size = 0.005 * label_size
 			scn_label.pixel_size = clampf(scn_label.pixel_size, 0.001, 0.1)
 
-func get_active_scene_instance():
-	return _scene_cache[current_scene].get("ins")
 
-func get_loaded_paths():
-	return _scene_cache.keys()
 
 func show_next_mesh():
 	if _scene_cache.is_empty():
@@ -231,9 +265,22 @@ func show_prev_mesh():
 	var paths = _scene_cache.keys()
 	show_scene(paths[_current_mesh_index], paths)
 
+func rotate_active_mesh(rotate_val:float):
+	var ins = get_active_scene_instance() as Node3D
+	if is_instance_valid(ins):
+		ins.rotation.y = deg_to_rad(rotate_val)
 
 func _get_mesh_nodes(scn_ins):
 	return ALibRuntime.Utils.UNode.get_all_nodes_of_type(scn_ins, MeshInstance3D)
+
+func get_active_scene_instance():
+	return _scene_cache.get(current_scene, {}).get("ins")
+
+func get_loaded_paths():
+	return _scene_cache.keys()
+
+func get_scene_instance(path:String):
+	return _scene_cache.get(path, {}).get("ins")
 
 func get_current_scene_stats(scene:Node3D):
 	var m = ALibRuntime.Utils.UNode.find_first_node_of_type(scene, MeshInstance3D)

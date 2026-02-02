@@ -57,7 +57,6 @@ static func disconnect_signal(callable:Callable, _signal:Signal):
 		_signal.disconnect(callable)
 
 static func get_signal_callable(object:Object, signal_name:StringName, callable_name:StringName):
-	var fs_tree = ALibEditor.Nodes.FileSystem.get_tree() as Tree
 	for data in object.get_signal_connection_list(signal_name):
 		var callable = data.get("callable") as Callable
 		if callable and callable.get_method() == callable_name:

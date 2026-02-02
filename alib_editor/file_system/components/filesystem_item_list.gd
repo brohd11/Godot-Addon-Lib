@@ -146,10 +146,10 @@ func set_current_dir(path:String, _refresh:=true):
 
 func check_current_dir_contents():
 	_current_paths = get_paths_at_dir(_current_dir, path_in_res)
-	var hash = _current_paths.hash()
+	var _hash = _current_paths.hash()
 	#if not filesystem_dirty:
-	filesystem_dirty = hash != _current_path_hash
-	_current_path_hash = hash
+	filesystem_dirty = _hash != _current_path_hash
+	_current_path_hash = _hash
 
 
 
@@ -184,7 +184,7 @@ func _create_items_res():
 		if path.ends_with("/"):
 			item_icon = folder_thumb
 		else:
-			var preview_data = filesystem_singleton.get_preview(path)
+			var preview_data = FileSystemSingleton.get_preview(path)
 			if display_as_list:
 				if preview_data != null:
 					item_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
@@ -229,7 +229,6 @@ func _create_items_not_res():
 		set_item_metadata(0, view_root)
 	
 	for path:String in paths:
-		var file_type_icon = file_icon
 		var item_icon:Texture2D
 		var icon_color = Color.WHITE
 		if path.ends_with("/"):
@@ -355,7 +354,7 @@ func set_selected_paths(paths:Array):
 func get_item_path(idx:int):
 	return get_item_metadata(idx)
 
-func _on_empty_clicked(at_pos:Vector2, mouse_button_idx:int):
+func _on_empty_clicked(_at_pos:Vector2, mouse_button_idx:int):
 	
 	if mouse_button_idx == 1 or mouse_button_idx == 2:
 		deselect_all()
@@ -371,7 +370,7 @@ func _on_item_selected(idx:int, selected:bool):
 		last_selected_path = path
 	selection_changed.emit()
 
-func _on_item_clicked(index:int, at_pos:Vector2, mouse_button_idx:int):
+func _on_item_clicked(_index:int, at_pos:Vector2, mouse_button_idx:int):
 	if mouse_button_idx == 2:
 		var item_at_pos = get_item_at_position(at_pos)
 		if not is_item_selectable(item_at_pos):
@@ -406,7 +405,7 @@ func _on_double_clicked(selected_item:int):
 func start_edit():
 	if not FileSystemTab.ATTEMPT_RENAME:
 		var path = get_selected_paths()[0]
-		filesystem_singleton.fs_navigate_to_path(path, true)
+		FileSystemSingleton.fs_navigate_to_path(path, true)
 		return
 	var selected = get_selected_items()[0]
 	var old_name = get_item_text(selected)
@@ -423,27 +422,27 @@ func start_edit():
 	line.set_text(old_name, ALibRuntime.Dialog.LineSubmitHandler.SelectMode.BASENAME)
 	var new_name = await line.line_submitted
 	
-	if not filesystem_singleton.is_new_name_valid(old_name, new_name):
+	if not FileSystemSingleton.is_new_name_valid(old_name, new_name):
 		return
 	
 	var old_path = get_selected_paths()[0]
-	await filesystem_singleton.rename_path(old_path, new_name)
+	await FileSystemSingleton.rename_path(old_path, new_name)
 	
-	while EditorInterface.get_resource_filesystem().is_scanning():
-		await get_tree().process_frame
-		
-	filesystem_singleton.rebuild_files()
+	#while EditorInterface.get_resource_filesystem().is_scanning():
+		#await get_tree().process_frame
+		#
+	#filesystem_singleton.rebuild_files()
 	
 
-func _make_custom_tooltip(for_text: String) -> Object:
+func _make_custom_tooltip(_for_text: String) -> Object:
 	var item = get_item_at_position(get_local_mouse_position(), true)
 	if item > -1:
 		var path = get_item_path(item)
 		if path:
-			return filesystem_singleton.get_custom_tooltip(path)
+			return FileSystemSingleton.get_custom_tooltip(path)
 	return null
 
-func _get_drag_data(at_position):
+func _get_drag_data(_at_position):
 	var sel_paths = get_selected_paths()
 	set_drag_preview(FileSystemSingleton.get_drag_preview(sel_paths))
 	return FileSystemSingleton.GetDropData.files(sel_paths, self)

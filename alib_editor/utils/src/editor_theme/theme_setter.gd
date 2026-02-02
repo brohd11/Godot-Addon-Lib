@@ -20,6 +20,7 @@ func _ready() -> void:
 	_set_theme()
 
 func _on_scan_files():
+	return
 	print("THEME CHANGED ", self.get_parent())
 	_set_theme()
 

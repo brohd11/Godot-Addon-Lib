@@ -27,6 +27,15 @@ static func get_icon_white(icon_name:String, brightness:=0.8, overwite:=false):
 static func get_icon(icon_name:String, color=null, brightness:=0.8, overwite:=false):
 	return get_instance()._get_icon(icon_name, color, brightness, overwite)
 
+static func get_visibility_icon(visible:bool):
+	if visible:
+		return get_instance()._get_icon_simple("GuiVisibilityVisible")
+	return get_instance()._get_icon_simple("GuiVisibilityHidden")
+
+static func get_class_icon(object:Object):
+	return get_instance()._get_class_icon(object)
+
+
 static func clear_cache():
 	get_instance()._cache.clear()
 
@@ -39,6 +48,8 @@ func _ready() -> void:
 	editor_theme = EditorInterface.get_editor_theme()
 	icon_list = editor_theme.get_icon_list("EditorIcons")
 
+func _get_icon_simple(icon_name:String):
+	return editor_theme.get_icon(icon_name, "EditorIcons")
 
 func _get_icon(icon_name:String, color=null, brightness:=0.8, overwrite:=false):
 	if not icon_list.has(icon_name):
@@ -57,3 +68,11 @@ func _get_icon(icon_name:String, color=null, brightness:=0.8, overwrite:=false):
 	var texture = ALibRuntime.Utils.UResource.get_modulated_icon(icon, color)
 	color_dict[brightness] = texture
 	return texture
+
+func _get_class_icon(node:Object):
+	var node_class:String = node.get_class()
+	var icon:Texture2D = editor_theme.get_icon(node_class, &"EditorIcons")
+	if icon:
+		return icon
+	else:
+		return editor_theme.get_icon("MissingNode",  &"EditorIcons")

@@ -26,21 +26,11 @@ func _ready() -> void:
 		return
 	_new_popup()
 
-
-func _new_popup():
-	#popup = PopupHelper.new()
-	popup = PopupMenu.new()
-	popup.wrap_controls = true
-	popup.submenu_popup_delay = 0
-	_set_popup_parent()
-	mouse_helper = MouseHelper.new(popup, _on_mouse_helper_timeout)
-	
-	popup.popup_hide.connect(_on_popup_hide)
-
-
-func set_custom_id_pressed_callable(callable):
-	_custom_id_pressed_callable = callable
-
+func display_on_control(options:Options, control:Control, offset:=Vector2.ZERO):
+	var pos = get_centered_control_position(control)
+	if offset != Vector2.ZERO:
+		pos += Vector2i(offset)
+	display_popup(options, true, pos)
 
 func display_popup(options, center_popup:=false, position_overide=null):
 	if options is Options:
@@ -84,7 +74,19 @@ func _move_popup(popup_position:Vector2i):
 	popup.position = popup_position
 	popup.popup()
 
+func _new_popup():
+	#popup = PopupHelper.new()
+	popup = PopupMenu.new()
+	popup.wrap_controls = true
+	popup.submenu_popup_delay = 0
+	_set_popup_parent()
+	mouse_helper = MouseHelper.new(popup, _on_mouse_helper_timeout)
+	
+	popup.popup_hide.connect(_on_popup_hide)
 
+
+func set_custom_id_pressed_callable(callable):
+	_custom_id_pressed_callable = callable
 
 func _popup_id_pressed(id:int, _popup:PopupMenu):
 	if _custom_id_pressed_callable.is_valid():

@@ -53,10 +53,10 @@ func refresh():
 	if not active:
 		return
 	var data = _get_project_data()
-	var hash = data.hash()
-	if hash != _last_places_hash:
+	var _hash = data.hash()
+	if _hash != _last_places_hash:
 		build_item_list(data)
-	_last_places_hash = hash
+	_last_places_hash = _hash
 
 func _save_project_data():
 	var place_data = get_place_data()
@@ -138,8 +138,8 @@ func _new_place_list(title:String, idx=-1):
 	
 	place_list.places_instance = self
 	place_list.path_selected.connect(_on_path_selected)
-	place_list.right_clicked.connect(func(index, place_list):right_clicked.emit(index, place_list))
-	place_list.title_right_clicked.connect(func(place_list):title_right_clicked.emit(place_list))
+	place_list.right_clicked.connect(func(index, _place_list):right_clicked.emit(index, _place_list))
+	place_list.title_right_clicked.connect(func(_place_list):title_right_clicked.emit(_place_list))
 	place_list.move_lists.connect(_on_move_place_list)
 	place_list.list_changed.connect(save_and_refresh)
 	return place_list

@@ -63,7 +63,7 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 	
 	_clicked_node = clicked_node
 	_selected_path = selected_item_path
-	filesystem_singleton.populate_filesystem_popup(clicked_node)
+	FileSystemSingleton.populate_filesystem_popup(clicked_node)
 	var selected_is_dir = _selected_path.ends_with("/")
 	var items = {
 		"pre":{},
@@ -96,7 +96,7 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 	var window = clicked_node.get_window()
 	var popup = PopupMenu.new()
 	window.add_child(popup)
-	popup.popup_hide.connect(_on_popup_hide.bind(popup))
+	popup.popup_hide.connect(_on_popup_hide.bind(popup), 1)
 	FSPopupHelper.recreate_popup(popup, _on_wrapper_clicked, names_to_hide, items)
 	popup.position = DisplayServer.mouse_get_position()
 	popup.popup()
@@ -110,7 +110,7 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	var queue_rescan = false
 	var is_folder_popup = fs_popup.get_item_text(0) == "Default (Reset)"
 	var is_create_popup = fs_popup == EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
-	filesystem_singleton.move_dialogs(_clicked_node)
+	FileSystemSingleton.move_dialogs(_clicked_node)
 	if is_folder_popup:
 		fs_popup.id_pressed.emit(id)
 		filesystem_singleton.rebuild_files()
@@ -140,12 +140,23 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	if id < 5000:
 		if fs_popup == EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_BOTTOM_POPUP):
 			fs_popup = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
-		fs_popup.id_pressed.emit(id)
+		if id == PopupID.reimport():
+			await _reimport_pressed(fs_popup, popup)
+		else:
+			fs_popup.id_pressed.emit(id)
+		
 	else:
 		_handle_non_fs(id, popup)
 	
 	if queue_rescan:
 		filesystem_singleton.rebuild_files()
+
+func _reimport_pressed(fs_popup, popup_wrapper):
+	fs_popup.position = popup_wrapper.position
+	fs_popup.show()
+	await tree.get_tree().process_frame
+	fs_popup.id_pressed.emit(PopupID.reimport())
+	fs_popup.hide()
 
 
 func _handle_non_fs(id, popup):

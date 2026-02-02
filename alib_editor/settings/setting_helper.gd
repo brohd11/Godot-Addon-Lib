@@ -1,4 +1,4 @@
-#! namespace ALibEditor class SettingHelper
+#! namespace ALibEditor.Settings class SettingHelperEditor
 
 extends "res://addons/addon_lib/brohd/abstract/setting_helper_base.gd"
 

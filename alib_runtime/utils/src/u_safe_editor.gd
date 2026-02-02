@@ -12,6 +12,7 @@ static func scan_files():
 	var editor_interface = get_editor_interface()
 	if not editor_interface:
 		return
+	print("CALLED")
 	editor_interface.get_resource_filesystem().scan()
 
 

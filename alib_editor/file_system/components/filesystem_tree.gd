@@ -33,9 +33,6 @@ var only_send_to_filter:bool
 var show_files:bool = false
 var show_item_preview:bool = false
 
-
-var _filter_debounce:=false
-
 var sel_item_path:= ""
 
 var filesystem_singleton:FileSystemSingleton
@@ -55,9 +52,9 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
-	var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-	sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
-	add_theme_stylebox_override("panel", sb)
+	#var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+	#sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+	#add_theme_stylebox_override("panel", sb)
 	
 	custom_minimum_size = _MIN_SIZE
 	
@@ -93,14 +90,14 @@ func _new_tree_helper():
 	tree_helper.mouse_left_clicked.connect(_on_tree_helper_mouse_left_clicked)
 	tree_helper.mouse_right_clicked.connect(_on_tree_helper_mouse_right_clicked)
 
-func _make_custom_tooltip(for_text: String) -> Object:
+func _make_custom_tooltip(_for_text: String) -> Object:
 	var item = get_item_at_position(get_local_mouse_position())
 	if not is_instance_valid(item):
 		return
 	var path = tree_helper.get_path_from_item(item)
 	if path == FileSystemTab.FAVORITES_META:
 		return
-	return filesystem_singleton.get_custom_tooltip(path)
+	return FileSystemSingleton.get_custom_tooltip(path)
 
 
 func set_active(active_state:bool):
@@ -151,8 +148,8 @@ func _build_tree():
 	
 	var selected_paths = tree_helper.selected_item_paths.duplicate()
 	
-	var folder_icon = filesystem_singleton.get_folder_icon()
-	var folder_color = filesystem_singleton.get_folder_color()
+	#var folder_icon = filesystem_singleton.get_folder_icon()
+	#var folder_color = filesystem_singleton.get_folder_color()
 	
 	var target_dir = root_dir
 	
@@ -164,10 +161,10 @@ func _build_tree():
 	var tree_root = create_item()
 	if target_dir == "res://": # handle favorites
 		var favorites_item = create_item(tree_root)
-		favorites_item.set_text(0, filesystem_singleton.get_favorites_text())
-		favorites_item.set_icon(0, filesystem_singleton.get_favorites_icon())
+		favorites_item.set_text(0, FileSystemSingleton.get_favorites_text())
+		favorites_item.set_icon(0, FileSystemSingleton.get_favorites_icon())
 		favorites_item.set_metadata(0, {FileData.PATH: FileSystemTab.FAVORITES_META})
-		var favorites = filesystem_singleton.get_filesystem_favorites()
+		var favorites = FileSystemSingleton.get_filesystem_favorites()
 		for path in favorites:
 			var item = create_item(favorites_item)
 			var text = path.get_file()
@@ -340,7 +337,7 @@ func start_edit():
 	var item = get_selected()
 	if not FileSystemTab.ATTEMPT_RENAME:
 		var path = tree_helper.get_path_from_item(item)
-		filesystem_singleton.fs_navigate_to_path(path, true)
+		FileSystemSingleton.fs_navigate_to_path(path, true)
 		return
 	
 	original_file_name = item.get_text(0)
@@ -356,14 +353,13 @@ func _on_item_edited():
 	var item = get_edited()
 	var new_name = item.get_text(0)
 	
-	if not filesystem_singleton.is_new_name_valid(original_file_name, new_name):
+	if not FileSystemSingleton.is_new_name_valid(original_file_name, new_name):
 		item.set_text(0, original_file_name)
 		original_file_name = ""
 		return
 	var old_path = tree_helper.get_path_from_item(item)
-	var new_path = old_path
 	
-	await filesystem_singleton.rename_path(old_path, new_name)
+	await FileSystemSingleton.rename_path(old_path, new_name)
 	
 	#var popup = _rename_popup()
 	#while EditorInterface.get_resource_filesystem().is_scanning():
@@ -388,9 +384,14 @@ func _rename_popup():
 #endregion
 
 
-func _get_drag_data(at_position):
-	set_drag_preview(FileSystemSingleton.get_drag_preview(tree_helper.selected_item_paths))
-	return FileSystemSingleton.GetDropData.files(tree_helper.selected_item_paths, self)
+func _get_drag_data(_at_position):
+	var files = tree_helper.selected_item_paths.duplicate()
+	files.erase(FileSystemTab.FAVORITES_META)
+	if files.is_empty():
+		return null
+	set_drag_preview(FileSystemSingleton.get_drag_preview(files))
+	return FileSystemSingleton.GetDropData.files(files, self)
+
 
 func _can_drop_data(at_position, data):
 	if current_browser_state == FileSystemTab.BrowserState.SEARCH:

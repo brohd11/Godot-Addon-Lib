@@ -60,7 +60,7 @@ var _scene_preview:ScenePreview
 
 signal filesystem_changed
 
-func _init(node):
+func _init(_node):
 	cache = Cache.new()
 
 func _ready() -> void:
@@ -71,7 +71,7 @@ func _ready() -> void:
 	while editor_fs.is_scanning():
 		await get_tree().process_frame
 	
-	editor_fs.filesystem_changed.connect(_on_filesystem_changed)
+	editor_fs.filesystem_changed.connect(_on_filesystem_changed, 1)
 	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
 	
 	_scene_preview = ScenePreview.new()
@@ -135,6 +135,9 @@ func clear_all_caches():
 	_preview_balance = 0
 
 func _on_filesystem_changed():
+	while editor_fs.is_scanning():
+		await get_tree().process_frame
+	
 	_set_interface_refs()
 	
 	_file_paths_dict.clear()
@@ -364,8 +367,8 @@ func _get_preview(path:String):
 	if cached_preview != null:
 		return cached_preview
 	if _scene_preview.hash_cache.has(path):
-		var hash = _scene_preview.hash_cache[path]
-		var preview_data = _scene_preview.cache.get(hash)
+		var _hash = _scene_preview.hash_cache[path]
+		var preview_data = _scene_preview.cache.get(_hash)
 		if preview_data != null:
 			var preview = preview_data.get(ScenePreview.PREVIEW)
 			var preview_path = preview_data.get(ScenePreview.PREVIEW_PATH)
@@ -377,7 +380,7 @@ func _get_preview(path:String):
 func queue_preview(path:String):
 	editor_resource_preview.queue_resource_preview(path, self, &"_get_resource_preview", null)
 
-func _get_resource_preview(path, preview, thumbnail, user_data):
+func _get_resource_preview(path, preview, thumbnail, _user_data):
 	if not _previews_generated:
 		_preview_balance -= 1
 	if preview == null:
@@ -453,15 +456,15 @@ func get_background_color(file_path:String):
 	if file_system_dock_item_dict.has(file_path):
 		var item = file_system_dock_item_dict.get(file_path)
 		if is_instance_valid(item):
-			var color = item.get_custom_bg_color(0)
-			cache.folder_color_path_cache[file_path] = color
-			return color
+			var item_color = item.get_custom_bg_color(0)
+			cache.folder_color_path_cache[file_path] = item_color
+			return item_color
 	
 	if cache.folder_colors_raw.has(file_path):
-		var color = Keys.FOLDER_COLORS_DICT.get(cache.folder_colors_raw.get(file_path))
-		color.a = 0.1
-		cache.folder_color_path_cache[file_path] = color
-		return color
+		var cached_color = Keys.FOLDER_COLORS_DICT.get(cache.folder_colors_raw.get(file_path))
+		cached_color.a = 0.1
+		cache.folder_color_path_cache[file_path] = cached_color
+		return cached_color
 	var color = get_folder_color(file_path)
 	if color != cache.folder_color:
 		color *= 0.7
@@ -549,7 +552,7 @@ static func get_filesystem_favorites():
 			CacheHelper.store_data(Keys.FAVORITES, favorites_array, data_cache, [FilePaths.FAVORITES])
 		return favorites_array
 	else:
-		printerr("Could not get favorites file.")
+		#printerr("Could not get favorites file.")
 		return []
 
 
@@ -602,9 +605,6 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 
 
 func _register_dialogs():
-	#if ALibRuntime.Utils.UVersion.get_minor_version() >= 6:
-		#ALibEditor.Utils.UEditorTheme.modify_theme_46()
-	
 	var fs_dock = EditorInterface.get_file_system_dock()
 	var dialog_nodes = []
 	var move_dialog
@@ -645,7 +645,7 @@ static func _on_dialog_visibility_changed(dialog_changed:Window):
 				dialog.visibility_changed.disconnect(_on_dialog_visibility_changed)
 		reset_dialogs()
 
-static func reset_dialogs(parent=null, mouse=null):
+static func reset_dialogs(parent=null, _mouse=null):
 	var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
 	var first_dialog = dialog_nodes[0]
 	if first_dialog.get_parent() == EditorInterface.get_file_system_dock():
@@ -668,7 +668,6 @@ static func _get_move_dialog() -> Window:
 static func show_file_move_dialog(target_dir:=""):
 	var file_system_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 	file_system_popup.id_pressed.emit(9)
-	var dialogs = FileSystemSingleton.get_dialogs()
 	var move_dialog:Window = _get_move_dialog()
 	
 	var nodes = move_dialog.find_children("*", "Tree", true, false)
@@ -869,7 +868,8 @@ static func get_drag_preview(paths:Array):
 	var container = VBoxContainer.new()
 	container.add_theme_constant_override("separation", 0)
 	var path_size = paths.size()
-	for i in range(5):
+	var to_list = 6 if path_size < 7 else 5
+	for i in range(to_list):
 		if i >= path_size:
 			break
 		var path = paths[i]
@@ -885,8 +885,8 @@ static func get_drag_preview(paths:Array):
 		hbox.add_child(texture)
 		hbox.add_child(lab)
 		container.add_child(hbox)
-	if path_size > 5:
-		var leftover = path_size - 5
+	if path_size > to_list:
+		var leftover = path_size - to_list
 		var lab = Label.new()
 		lab.text = "%s more files" % leftover
 		container.add_child(lab)
@@ -979,7 +979,18 @@ class FileData:
 
 class GetDropData:
 	static func files(selected_item_paths, from_node):
-		return UTree.get_drop_data.files(selected_item_paths, from_node)
+		#return UTree.get_drop_data.files(selected_item_paths, from_node)
+		var data_type = "files"
+		var selected_paths = []
+		for path in selected_item_paths:
+			if path.ends_with("/"):
+				data_type = "files_and_dirs"
+				selected_paths.append(path)
+			else:
+				selected_paths.append(path)
+		var data = {"type": data_type, "files": selected_paths, "from": from_node}
+		
+		return data
 
 class CanDropData:
 	static func files(at_position: Vector2, data: Variant, extensions:Array=[]) -> bool:
