@@ -8,8 +8,11 @@ var decal_preview:Mesh
 var _scene_cache:= {}
 var current_scene:String=""
 
+#^ impl
 var show_only_active:=false
+var collision_shapes_toggled:=true
 
+#^ not impl
 var label_height:float = 1
 var label_size = 1
 var label_current:=false
@@ -17,7 +20,6 @@ var show_labels:=true
 
 var _current_mesh_index:=0
 
-signal send_scene_stats(stats)
 signal active_scene_set(scene, stats)
 
 signal meshes_shown(scene_paths)
@@ -27,7 +29,7 @@ func _ready() -> void:
 
 
 
-func load_scenes(scenes_to_load:PackedStringArray, search_scope):
+func load_scenes(scenes_to_load:PackedStringArray):
 	_clean_cache(scenes_to_load)
 	_get_or_inst_scenes(scenes_to_load)
 	_current_mesh_index = 0
@@ -50,7 +52,7 @@ func _clean_cache(current_paths:PackedStringArray):
 		var scene_data = _scene_cache.get(path)
 		if scene_data == null:
 			continue
-		var ins = scene_data.get("ins")
+		var ins = scene_data.get(Keys.INSTANCE)
 		if is_instance_valid(ins):
 			if ins.is_inside_tree():
 				remove_child(ins)
@@ -75,7 +77,7 @@ func _get_or_inst_scenes(current_paths:PackedStringArray):
 			continue
 		
 		_scene_cache[path] = {
-			"ins": scn
+			Keys.INSTANCE: scn
 		}
 
 
@@ -108,7 +110,7 @@ func _show_scenes(current_scene_path:String, scns_to_show:Array):
 	for path in scns_to_show:
 		_process_scene(path)
 		var scene_data = _scene_cache[path]
-		var scn_aabb = scene_data.get("aabb")
+		var scn_aabb = scene_data.get(Keys.SCN_AABB)
 		if scn_aabb == null:
 			continue
 		var aabb_adj_size = scn_aabb.size.x * extra_space_mul
@@ -117,11 +119,11 @@ func _show_scenes(current_scene_path:String, scns_to_show:Array):
 		else:
 			pos_offset += Vector3(aabb_adj_size * 2, 0, 0)
 		
-		scene_data["offset"] = pos_offset
+		scene_data[Keys.POS_OFFSET] = pos_offset
 	
 	var current_scn_data = _scene_cache[current_scene_path]
-	var current_scn_ins = current_scn_data.get("ins")
-	var current_scn_pos = current_scn_data.get("offset")
+	var current_scn_ins = current_scn_data.get(Keys.INSTANCE)
+	var current_scn_pos = current_scn_data.get(Keys.POS_OFFSET)
 	var adjusted_offset = Vector3.ZERO - current_scn_pos
 	_set_label_settings(current_scene_path, true)
 	
@@ -138,8 +140,8 @@ func _show_scenes(current_scene_path:String, scns_to_show:Array):
 			continue
 		_set_label_settings(path, false)
 		var scene_data = _scene_cache[path]
-		var ins = scene_data.get("ins")
-		var offset = scene_data.get("offset")
+		var ins = scene_data.get(Keys.INSTANCE)
+		var offset = scene_data.get(Keys.POS_OFFSET)
 		
 		var new_position = offset + adjusted_offset
 		add_child(ins)
@@ -148,16 +150,16 @@ func _show_scenes(current_scene_path:String, scns_to_show:Array):
 
 func _process_scene(path):
 	var scene_data = _scene_cache[path]
-	if scene_data.get("scene_processed", false) == true:
+	if scene_data.get(Keys.PROCESSED, false) == true:
 		return
 	
-	var ins = scene_data.get("ins")
+	var ins = scene_data.get(Keys.INSTANCE)
 	var scn_aabb:AABB
 
 	var has_mesh = is_instance_valid(ALibRuntime.Utils.UNode.find_first_node_of_type(ins, MeshInstance3D))
 	if has_mesh:
 		scn_aabb = ALibRuntime.Utils.UResource.UPackedScene.get_scene_aabb(ins)
-		scene_data["aabb"] = scn_aabb
+		scene_data[Keys.SCN_AABB] = scn_aabb
 	
 	elif ins is Decal:
 		var new_mesh = MeshInstance3D.new()
@@ -166,16 +168,14 @@ func _process_scene(path):
 		
 		scn_aabb.size = Vector3(ins.size.x, ins.size.y, ins.size.z)
 		new_mesh.mesh.size = Vector2(ins.size.x, ins.size.z)
-		scene_data["aabb"] = scn_aabb
+		scene_data[Keys.SCN_AABB] = scn_aabb
 		ins.add_child(new_mesh)
 	
 	var collision_shapes = ALibRuntime.Utils.UNode.get_all_nodes_of_type(ins, CollisionShape3D)
+	if not collision_shapes.is_empty():
+		scene_data[Keys.COLLISION] = collision_shapes
 	for col_shape:CollisionShape3D in collision_shapes:
 		add_debug_shape(col_shape)
-		
-		
-		pass
-	print(collision_shapes)
 	
 	var label = Label3D.new()
 	ins.add_child(label)
@@ -188,43 +188,24 @@ func _process_scene(path):
 	else:
 		label.position = Vector3(0,1,0)
 	
-	scene_data["scene_processed"] = true
+	scene_data[Keys.PROCESSED] = true
 
 
 func add_debug_shape(collision_node: CollisionShape3D):
-	# 1. Check if the node has a valid shape resource
 	if not collision_node.shape:
 		return
-
-	# 2. Get the debug mesh (This is built-in to Godot)
-	# This returns an ArrayMesh constructed of LINES
 	var debug_mesh = collision_node.shape.get_debug_mesh()
-
-	# 3. Create a MeshInstance to hold it
 	var mesh_instance = MeshInstance3D.new()
 	mesh_instance.mesh = debug_mesh
-	
-	# 4. Create a StandardMaterial3D to make it look like a debug shape
-	#var material = StandardMaterial3D.new()
-	#material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	#material.albedo_color = Color(0, 1, 1, 1) # Cyan color
-	#material.vertex_color_use_as_albedo = true # Use existing wireframe colors if present
-	
-	# Important: Override the material on the mesh instance
-	#mesh_instance.material_override = material
-	
-	# 5. Add it to the scene
-	# We usually add it as a child of the collision node so it moves with it
 	collision_node.add_child(mesh_instance)
-	
-	# Optional: Set owner if you want it to persist in the scene tree editor
-	# mesh_instance.owner = get_tree().edited_scene_root
+	if not collision_shapes_toggled:
+		collision_node.hide()
 
 
 func _set_label_settings(path:String, is_current:=false):
 	var scene_data = _scene_cache[path]
 	
-	var ins = scene_data.get("ins")
+	var ins = scene_data.get(Keys.INSTANCE)
 	var scn_label = ALibRuntime.Utils.UNode.find_first_node_of_type(ins, Label3D)
 	if scn_label is Label3D:
 		if not show_labels:
@@ -236,7 +217,7 @@ func _set_label_settings(path:String, is_current:=false):
 		else:
 			scn_label.modulate = Color.WHITE
 		
-		var aabb = scene_data["aabb"]
+		var aabb = scene_data[Keys.SCN_AABB]
 		if aabb:
 			scn_label.position = Vector3(0, aabb.size.y * label_height + 0.25, 0)
 			#if HelperInst.ABConfig.label_adaptive_size:
@@ -270,17 +251,28 @@ func rotate_active_mesh(rotate_val:float):
 	if is_instance_valid(ins):
 		ins.rotation.y = deg_to_rad(rotate_val)
 
+func toggle_collision_shapes():
+	collision_shapes_toggled = not collision_shapes_toggled
+	for scene in _scene_cache.keys():
+		var scene_data = _scene_cache[scene]
+		var collisions = scene_data.get(Keys.COLLISION, [])
+		for c in collisions:
+			c.visible = collision_shapes_toggled
+
 func _get_mesh_nodes(scn_ins):
 	return ALibRuntime.Utils.UNode.get_all_nodes_of_type(scn_ins, MeshInstance3D)
 
+func _get_collision_nodes(scn_ins):
+	return ALibRuntime.Utils.UNode.get_all_nodes_of_type(scn_ins, CollisionShape3D)
+
 func get_active_scene_instance():
-	return _scene_cache.get(current_scene, {}).get("ins")
+	return _scene_cache.get(current_scene, {}).get(Keys.INSTANCE)
 
 func get_loaded_paths():
 	return _scene_cache.keys()
 
 func get_scene_instance(path:String):
-	return _scene_cache.get(path, {}).get("ins")
+	return _scene_cache.get(path, {}).get(Keys.INSTANCE)
 
 func get_current_scene_stats(scene:Node3D):
 	var m = ALibRuntime.Utils.UNode.find_first_node_of_type(scene, MeshInstance3D)
@@ -303,8 +295,20 @@ func get_current_scene_stats(scene:Node3D):
 		edge_count += m_tool.get_edge_count()
 	
 	var scn_stats ={
-		"face_count": face_count,
-		"vert_count": vert_count,
-		"edge_count": edge_count,
+		Keys.FACE_COUNT: face_count,
+		Keys.VERT_COUNT: vert_count,
+		Keys.EDGE_COUNT: edge_count,
 	}
 	return scn_stats
+
+
+class Keys:
+	const INSTANCE = &"INSTANCE"
+	const POS_OFFSET = &"POS_OFFSET"
+	const SCN_AABB = &"SCN_AABB"
+	const COLLISION = &"COLLISION"
+	const PROCESSED = &"PROCESSED"
+	
+	const FACE_COUNT = &"FACE_COUNT"
+	const VERT_COUNT = &"VERT_COUNT"
+	const EDGE_COUNT = &"EDGE_COUNT"

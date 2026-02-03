@@ -11,17 +11,16 @@ const ADD_TO_PLACES_STRING = "Add to Places"
 const _MIN_SIZE = Vector2(100,0)
 const PROJECT_PLACES_FILE = "user://addons/filesystem_instances/places.json"
 
-const PROJECT_PLACES_UPDATED_SIGNAL = &"FI_PROJECT_PLACES_UPDATED"
-
 signal path_selected(path:String)
 signal right_clicked(index, place_list)
 signal title_right_clicked(place_list)
 
+var setting_helper:ALibRuntime.Settings.SettingHelperJson
+
 var active:bool=true
+var _initial_build_flag:bool = false
 
-var _places_cache:={}
-var _last_places_hash:int=-1
-
+var _places_cache:={} #^ the settings data
 var places:= {}
 
 func _ready() -> void:
@@ -30,50 +29,28 @@ func _ready() -> void:
 	custom_minimum_size = _MIN_SIZE
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	EditorGlobalSignals.subscribe(PROJECT_PLACES_UPDATED_SIGNAL, refresh)
-	_initial_build()
+	setting_helper = ALibRuntime.Settings.SettingHelperSingleton.get_file_helper(PROJECT_PLACES_FILE)
+	setting_helper.subscribe_property(self, &"_places_cache", &"place_data", Data.get_default_data())
+	setting_helper.object_initialize(self)
+	setting_helper.settings_changed.connect(refresh, 1)
+	build_item_list(_places_cache)
+
 
 func on_filesystem_changed():
-	refresh()
+	#refresh()
+	pass
 
 func set_active(active_state:bool):
 	active = active_state
-	if active:
-		refresh()
+	#if active: #^ just going to run it every change, it is quite cheap now
+		#refresh()
 
 func save_and_refresh():
-	_save_project_data()
-	EditorGlobalSignals.signal_emit(PROJECT_PLACES_UPDATED_SIGNAL)
-
-func _initial_build():
-	var data = _get_project_data()
-	build_item_list(data, true)
+	setting_helper.set_setting(&"place_data", get_place_data())
 
 func refresh():
-	if not active:
-		return
-	var data = _get_project_data()
-	var _hash = data.hash()
-	if _hash != _last_places_hash:
-		build_item_list(data)
-	_last_places_hash = _hash
+	build_item_list(_places_cache)
 
-func _save_project_data():
-	var place_data = get_place_data()
-	UFile.write_to_json(place_data, PROJECT_PLACES_FILE)
-	var json_data = UFile.read_from_json(PROJECT_PLACES_FILE)
-	CacheHelper.store_data("project_places", json_data, _places_cache, [PROJECT_PLACES_FILE])
-
-func _get_project_data():
-	var data = CacheHelper.get_cached_data("project_places", _places_cache)
-	if data != null:
-		return data
-	
-	if not FileAccess.file_exists(PROJECT_PLACES_FILE):
-		_save_project_data()
-	data = UFile.read_from_json(PROJECT_PLACES_FILE)
-	CacheHelper.store_data("project_places", data, _places_cache, [PROJECT_PLACES_FILE])
-	return data
 
 
 func clear_item_lists():
@@ -83,7 +60,7 @@ func clear_item_lists():
 		list.queue_free()
 		places.erase(id)
 
-func build_item_list(data:Dictionary, set_split:=false):
+func build_item_list(data:Dictionary):
 	var pl_indexs = data.keys()
 	pl_indexs.sort()
 	for p_i in pl_indexs:
@@ -97,19 +74,20 @@ func build_item_list(data:Dictionary, set_split:=false):
 			place_list.set_title(title)
 			place_list.item_list.clear()
 		
-		place_list.build_items(place_data.get("items",{}))
+		place_list.build_items(place_data.get("items", {}))
 	
 	for id in places.keys():
-		var str_id = str(id)
-		if str_id in pl_indexs:
+		if id in pl_indexs or str(id) in pl_indexs:
 			continue
 		var list = places[id]
 		if is_instance_valid(list):
 			list.get_parent().remove_child(list)
 			list.queue_free()
+		
 		places.erase(id)
 	
-	if set_split:
+	if not _initial_build_flag:
+		_initial_build_flag = true
 		set_split_offsets.call_deferred()
 
 func set_split_offsets():
@@ -160,9 +138,7 @@ func add_place_item(path:String, place_list:PlaceList):
 	var _name = path.trim_suffix("/").get_file()
 	if UFile.path_is_root(path):
 		_name = path
-	if not path.ends_with("/"):
-		path += "/"
-	place_list.new_item(_name, path) # refresh handled in new_item
+	place_list.new_item(_name, UFile.ensure_dir_slash(path)) # refresh handled in new_item
 
 func get_place_data():
 	var data = {}
@@ -308,9 +284,9 @@ class Data:
 			"title": "Other",
 			"items":{
 				0:get_place_dict("user://","user://"),
-				1:get_place_dict("home",home),
-				2:get_place_dict("Project Settings", editor_paths.get_project_settings_dir()),
-				3:get_place_dict("Editor Config", editor_paths.get_config_dir())
+				1:get_place_dict("home", UFile.ensure_dir_slash(home)),
+				2:get_place_dict("Project Settings", UFile.ensure_dir_slash(editor_paths.get_project_settings_dir())),
+				3:get_place_dict("Editor Config", UFile.ensure_dir_slash(editor_paths.get_config_dir()))
 			},
 		}
 		return other

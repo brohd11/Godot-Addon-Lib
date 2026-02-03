@@ -95,7 +95,7 @@ func _on_item_selected(index:int):
 	path_selected.emit(item_path, self)
 	item_list.deselect_all()
 
-func _on_item_clicked(index:int, at_pos:Vector2, button_idx:int):
+func _on_item_clicked(index:int, _at_pos:Vector2, button_idx:int):
 	if button_idx == 2:
 		right_clicked.emit(index, self)
 
@@ -183,7 +183,7 @@ func _item_list_get_drag_data(at_position: Vector2) -> Variant:
 	_set_drag_preview(get_item_title(from_item))
 	return data
 
-func _item_list_can_drop_data(at_position: Vector2, data: Variant) -> bool:
+func _item_list_can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var can_drop_item = _check_can_drop(data, "from_item")
 	
 	if can_drop_item:
@@ -219,7 +219,7 @@ func _item_list_drop_data(at_position: Vector2, data: Variant) -> void:
 		else:
 			var _name = from.get_item_title(from_item)
 			var _path = from.get_item_path(from_item)
-			from.remove_item(from_item)
+			from.item_list.remove_item(from_item) #^ operate on item list so list_changed doesn't fire
 			new_item(_name, _path)
 			var to_item = item_list.get_item_at_position(at_position, true)
 			if to_item == -1:
@@ -251,7 +251,7 @@ func _on_title_gui_input(event:InputEvent):
 		if click_state == ClickHandlers.ClickState.State.RMB_PRESSED:
 			title_right_clicked.emit(self)
 
-func _title_can_drop_data(at_position: Vector2, data: Variant) -> bool:
+func _title_can_drop_data(_at_position: Vector2, data: Variant) -> bool:
 	var can_drop = _check_can_drop(data, "title")
 	var from = data.get("from")
 	if can_drop and from != self:
@@ -259,12 +259,12 @@ func _title_can_drop_data(at_position: Vector2, data: Variant) -> bool:
 		return true
 	return false
 
-func _title_drop_data(at_position: Vector2, data: Variant) -> void:
+func _title_drop_data(_at_position: Vector2, data: Variant) -> void:
 	_highlight_title(false)
 	var from = data.get("from")
 	move_lists.emit(from, self)
 
-func _title_get_drag_data(at_position: Vector2) -> Variant:
+func _title_get_drag_data(_at_position: Vector2) -> Variant:
 	var data = {
 		"from": self,
 		"title":true
@@ -272,7 +272,7 @@ func _title_get_drag_data(at_position: Vector2) -> Variant:
 	_set_drag_preview(get_title())
 	return data
 
-func _highlight_list(state:bool=true):
+func _highlight_list(_state:bool=true):
 	_list_hovered = true
 	item_list.queue_redraw()
 

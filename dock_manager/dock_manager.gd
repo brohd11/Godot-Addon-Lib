@@ -128,7 +128,7 @@ func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL,
 	_main_screen_handler=null, _add_to_tree:=true) -> void:
 	_engine_minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
 	plugin = _plugin
-	plugin.add_child(self) #^ moved here, will never be called in ready..
+	plugin.add_child(self)
 	if _control is Control:
 		plugin_control = _control
 	elif _control is PackedScene:
@@ -177,7 +177,6 @@ func post_init():
 		if dock_id == -1:
 			var meta = layout_data.get(Keys.META)
 			dock_id = meta.get(Keys.NEXT_ID)
-			
 			save_plugin_layout_data(plugin, layout_data)
 			save_layout_data.call_deferred()
 		else:
@@ -195,9 +194,6 @@ func post_init():
 		await dock_instance(int(dock_target))
 		if dock_index > -1:
 			_set_tab_index(dock_index)
-		#if dock_target >= 0 and dock_index > -1:
-			#var dock_control = get_current_dock_control() as TabContainer
-			#dock_control.move_child(plugin_control, dock_index)
 	else:
 		if dock_layout_data != null:
 			_set_window_settings(dock_layout_data)
@@ -257,9 +253,6 @@ func set_default_window_size(size:Vector2i):
 func set_window_title(title:String):
 	window_title = title
 
-func _ready() -> void:
-	#plugin.add_child(self)
-	pass
 
 func get_plugin_control():
 	return plugin_control
@@ -269,17 +262,12 @@ func show_in_editor():
 	if _engine_minor_version < 6:
 		if current_dock > -1:
 			_show_in_tab_container()
-			#var dock_control = get_current_dock_control()
-			#if dock_control is TabContainer:
-				#var i = dock_control.get_tab_idx_from_control(plugin_control)
-				#dock_control.current_tab = i
 		elif current_dock == -2:
 			BottomPanel.show_panel(_docked_name)
 	elif _engine_minor_version == 6:
 		if current_dock > -1 or current_dock == -2:
 			_show_in_tab_container()
-			#plugin_control.get_parent().show()
-	
+
 
 func clean_up():
 	save_layout_data()
@@ -355,7 +343,7 @@ func save_layout_data():
 	if is_instance_valid(window):
 		scene_data[Keys.CURRENT_SCREEN] = window.current_screen
 		scene_data[Keys.WINDOW_SIZE] = var_to_str(window.size)
-		scene_data[Keys.WINDOW_POSITION] = var_to_str(window.position)
+		scene_data[Keys.WINDOW_POSITION] = var_to_str(ALibRuntime.Utils.UWindow.get_window_global_position(window, false))
 	
 	#var is_tab = current_dock >= 0
 	#if _engine_minor_version >= 6:
@@ -464,7 +452,6 @@ func dock_instance(target_dock:int):
 				editor_dock.add_child(plugin_control)
 			else:
 				plugin_control.reparent(editor_dock)
-			print("ADD DOCK")
 			plugin.add_dock(editor_dock)
 			
 		elif target_dock == -1:
@@ -519,15 +506,11 @@ func _remove_control_from_parent():
 			else:
 				control_parent.remove_child(plugin_control)
 		elif _engine_minor_version == 6:
-			#if control_parent.get_class() == "EditorDock":
 			if control_parent == editor_dock:
-				print("REMOVE DOCK")
 				plugin.remove_dock(editor_dock)
-				#await get_tree().process_frame
 				editor_dock.remove_child(plugin_control)
 				editor_dock.queue_free()
 				editor_dock = null
-				#control_parent.queue_free.call_deferred()
 			elif current_dock == -1:
 				var panel_wrapper = plugin_control.get_parent()
 				main_screen_handler.remove_main_screen_control(panel_wrapper)
@@ -558,7 +541,6 @@ func window_close_requested() -> void:
 	dock_instance(last_dock)
 func _on_window_mouse_entered(window:Window):
 	return
-	#return
 	if plugin.get_window().gui_is_dragging():
 		window.grab_focus()
 func _on_window_mouse_exited():
@@ -662,8 +644,8 @@ class PanelWrapper extends PanelContainer:
 				panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
 				panel_sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE)
 			
-			panel_sb.content_margin_left = 4
-			panel_sb.content_margin_right = 4
+			panel_sb.content_margin_left = 4 * EditorInterface.get_editor_scale()
+			panel_sb.content_margin_right = 4 * EditorInterface.get_editor_scale()
 		
 		add_theme_stylebox_override("panel", panel_sb)
 
@@ -791,16 +773,16 @@ class InstanceManager:
 	func clean_dock_manager_array():
 		_clean_dock_manager_array(instances)
 	
-	static func _clean_dock_manager_array(instances:Array):
+	static func _clean_dock_manager_array(_instances:Array):
 		var invalid_positions = []
-		for i in range(instances.size()):
-			if is_instance_valid(instances[i]):
+		for i in range(_instances.size()):
+			if is_instance_valid(_instances[i]):
 				continue
 			invalid_positions.append(i)
 	
 		invalid_positions.reverse()
 		for i in invalid_positions:
-			instances.remove_at(i)
+			_instances.remove_at(i)
 	
 	func clean_up():
 		for ins in instances:

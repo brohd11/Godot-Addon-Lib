@@ -25,16 +25,17 @@ func _on_item_mouse_selected(mouse_pos:Vector2, mouse_button_index:int):
 		if path != "":
 			item_right_clicked.emit(path)
 
-func _on_button_clicked(item:TreeItem, col:int, id:int, mouse_button_index:int):
+func _on_button_clicked(item:TreeItem, _col:int, id:int, mouse_button_index:int):
 	var meta = item.get_metadata(0)
-	if id == 0:
-		var path = meta.get("path", "")
-		FileSystemSingleton.activate_path(path)
-	elif id == 5:
-		var object = meta.get("object")
-		if is_instance_valid(object) and object is Node3D:
-			object.visible = not object.visible
-			refresh()
+	if mouse_button_index == 1:
+		if id == 0:
+			var path = meta.get("path", "")
+			FileSystemSingleton.activate_path(path)
+		elif id == 5:
+			var object = meta.get("object")
+			if is_instance_valid(object) and object is Node3D:
+				object.visible = not object.visible
+				refresh()
 	
 
 func clear_tree(msg:="No scene loaded", clear_current_scene:=false):
@@ -88,9 +89,9 @@ func build_tree():
 	
 	for node in scene_info:
 		var node_data = scene_info.get(node)
-		var node_name = node_data.get("name")
+		#var node_name = node_data.get("name")
+		#var node_class = node_data.get("node_class")
 		var node_parent = node_data.get("parent")
-		var node_class = node_data.get("node_class")
 		var item:TreeItem
 		if not node_parent in tree_items.keys():
 			item = create_item()

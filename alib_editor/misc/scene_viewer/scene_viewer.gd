@@ -62,10 +62,11 @@ func _ready() -> void:
 	setting_helper = ALibRuntime.Settings.SettingHelperSingleton.get_file_helper(SETTING_FILE_PATH)
 	setting_helper.subscribe_property(self, "_global_settings", "global_settings", {})
 	setting_helper.settings_changed.connect(_on_global_settings_changed)
-	setting_helper.initialize()
+	setting_helper.object_initialize(self)
 	
 	
 	mesh_manager.show_only_active = _dock_data.get(Keys.SHOW_ONLY_ACTIVE, false)
+	mesh_manager.collision_shapes_toggled = _dock_data.get(Keys.COLLISIONS_TOGGLED, true)
 	main_split_container.split_offset = _dock_data.get(Keys.SPLIT_OFFSET, 0)
 	node_tree.visible = _dock_data.get(Keys.NODE_TREE_VISIBLE, false)
 	
@@ -82,6 +83,7 @@ func set_dock_data(data:Dictionary):
 func get_dock_data() -> Dictionary:
 	var data = {}
 	data[Keys.SHOW_ONLY_ACTIVE] = mesh_manager.show_only_active
+	data[Keys.COLLISIONS_TOGGLED] = mesh_manager.collision_shapes_toggled
 	data[Keys.SPLIT_OFFSET] = main_split_container.split_offset
 	data[Keys.NODE_TREE_VISIBLE] = node_tree.visible
 	
@@ -95,10 +97,11 @@ func get_tab_title():
 	return "Scene Viewer"
 
 
-func _on_active_scene_set(scene_path:String, data:Dictionary):
+func _on_active_scene_set(_scene_path:String, data:Dictionary):
 	var active_scene = mesh_manager.get_active_scene_instance()
 	stats_panel.set_text(data)
 	node_tree.send_scene_instance(active_scene)
+	model_rotate_slider.visible = not data.is_empty()
 	model_rotate_slider.slider.value = rad_to_deg(active_scene.rotation.y) #^ reset slider
 	#active_scene.rotation.y = deg_to_rad(model_rotate_slider.slider.value) #^ set model to slider
 
@@ -106,23 +109,29 @@ func _on_active_scene_set(scene_path:String, data:Dictionary):
 func _on_options_button_clicked():
 	var options = ALibRuntime.Popups.Options.new()
 	
-	options.add_option("Show | Hide SceneTree", _on_node_tree_button_pressed, ["FileTree"])
-	options.add_option("Show | Hide Camera Controls", func():camera_panel.visible = not camera_panel.visible, ["Camera"])
+	options.add_option("Toggle SceneTree", _on_node_tree_button_pressed, ["FileTree"])
+	var col_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("CollisionShape3D")
+	options.add_option("Toggle Collision", _on_toggle_collision, [col_icon])
+	options.add_option("Toggle Camera Controls", func():camera_panel.visible = not camera_panel.visible, ["Camera"])
 	var light_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("DirectionalLight3D")
-	options.add_option("Show | Hide Light Controls", func():light_panel.visible = not light_panel.visible, [light_icon])
+	options.add_option("Toggle Light Controls", func():light_panel.visible = not light_panel.visible, [light_icon])
 	options.add_option("Clear Scenes", _on_clear_pressed, ["Clear"])
 	
 	right_click_handler.display_on_control(options, options_button)
 
 func _on_node_tree_button_pressed():
 	node_tree.visible = not node_tree.visible
-	if node_tree.visible:
-		node_tree.refresh()
+	node_tree.refresh()
 
 func _on_clear_pressed():
+	stats_panel.set_text({})
+	model_rotate_slider.hide()
 	mesh_manager.clear_cache()
 	node_tree.clear_tree("Scene cleared", true)
 
+func _on_toggle_collision():
+	mesh_manager.toggle_collision_shapes()
+	node_tree.refresh()
 
 func _list_loaded_scenes():
 	var options = ALibRuntime.Popups.Options.new()
@@ -192,7 +201,7 @@ func _on_sub_viewport_can_drop_data(_at_position: Vector2, data: Variant) -> boo
 func _on_sub_viewport_drop_data(_at_position: Vector2, data: Variant) -> void:
 	stats_panel.set_text({})
 	var files = data.get("files")
-	mesh_manager.load_scenes(files, files[0])
+	mesh_manager.load_scenes(files)
 
 func _on_sub_viewport_get_drag_data(_at_position: Vector2) -> Variant:
 	return null
@@ -231,9 +240,9 @@ class StatsPanel extends VBoxContainer:
 		visible = not data.is_empty()
 		if data.is_empty():
 			return
-		_face_label.text = str(data.face_count)
-		_vert_label.text = str(data.vert_count)
-		_edge_label.text = str(data.edge_count)
+		_face_label.text = str(data.get(MeshManager.Keys.FACE_COUNT))
+		_vert_label.text = str(data.get(MeshManager.Keys.VERT_COUNT))
+		_edge_label.text = str(data.get(MeshManager.Keys.EDGE_COUNT))
 
 
 class CameraPanel extends VBoxContainer:
@@ -368,6 +377,7 @@ class Keys:
 	const SHOW_ONLY_ACTIVE = &"SHOW_ONLY_ACTIVE"
 	const SPLIT_OFFSET = &"SPLIT_OFFSET"
 	const NODE_TREE_VISIBLE = &"NODE_TREE_VISIBLE"
+	const COLLISIONS_TOGGLED = &"COLLISIONS_TOGGLED"
 	
 	const LIGHT_PANEL_VIS = &"LIGHT_PANEL_VIS"
 	const LIGHT_SETTINGS = &"LIGHT_SETTINGS"

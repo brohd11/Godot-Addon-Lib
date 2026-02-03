@@ -76,10 +76,12 @@ func set_active(active_state:bool):
 	active = active_state
 	if active_state:
 		refresh()
-		scroll_container.scroll_horizontal = _current_scroll_amount
+		#if current_browser_state == FileSystemTab.BrowserState.SEARCH:
+			#start_search()
+		scroll_container.scroll_horizontal = int(_current_scroll_amount)
 	else:
 		_current_scroll_amount = scroll_container.scroll_horizontal
-		_clear_panes("", true)
+		_clear_columns("", true)
 
 func on_filesystem_changed():
 	for col:FileColumn in get_columns():
@@ -142,7 +144,7 @@ func _build_normal_columns():
 		current_dir = multi_select_dir
 	
 	_free_search_column()
-	_clear_panes(path_to_display, force_rebuild)
+	_clear_columns(path_to_display, force_rebuild)
 	
 	var path_parts = _get_path_parts(path_to_display)
 	var root = path_parts.root
@@ -173,9 +175,9 @@ func _build_normal_columns():
 
 
 func set_filtered_paths(path_array:Array):
-	var hash = path_array.hash()
-	_new_filtered_paths = _filtered_item_paths_hash != hash
-	_filtered_item_paths_hash = hash
+	var _hash = path_array.hash()
+	_new_filtered_paths = _filtered_item_paths_hash != _hash
+	_filtered_item_paths_hash = _hash
 	_filtered_item_paths = path_array
 	var sort = func(a:String, b:String):
 		var a_dir = a.ends_with("/")
@@ -195,7 +197,7 @@ func update_filter():
 	start_search()
 
 func start_search():
-	_clear_panes("", true)
+	_clear_columns("", true)
 	_search_history_path = _current_dir
 	_search(_search_history_path)
 
@@ -209,12 +211,11 @@ func _search(current_search_path:String):
 
 
 func _build_columns_search(search_path:String):
-	#print("BEGIN SEARCH: ", search_path)
 	var selected_search_item_path = _get_search_column_selected_path()
 	var force_column_rebuild = selected_search_item_path != _last_selected_search_item_path
 	
 	if selected_search_item_path == "" or not selected_search_item_path.ends_with("/"):
-		_clear_panes("%SEARCH", true)
+		_clear_columns("%SEARCH", true)
 		_set_current_column(_search_column)
 		_search_history_path = selected_search_item_path
 		return
@@ -243,7 +244,7 @@ func _build_columns_search(search_path:String):
 	#print("TAIL: ", path_tail)
 	#print("FORCE: ", force_column_rebuild)
 	
-	_clear_panes(path_to_display, force_column_rebuild)
+	_clear_columns(path_to_display, force_column_rebuild)
 	
 	var working_path = selected_search_item_path
 	var current_col = _get_or_build_column(working_path)
@@ -283,16 +284,18 @@ func _get_search_column_selected_path():
 
 
 
-func _build_path_parts(current_dir:String, working_path:String, parts:PackedStringArray, select:=true):
+func _build_path_parts(current_dir:String, working_path:String, parts:PackedStringArray, select:=true): #^ select was causing issues probably remove
 	var current_col
 	for i in range(parts.size()):
 		var part = parts[i]
-		var dir_path = working_path
+		#var dir_path = working_path #^ for select
+		
 		working_path = working_path.path_join(part)
 		var is_dir = DirAccess.dir_exists_absolute(working_path)
 		if is_dir:
 			working_path += "/"
-		#_select_item_path(dir_path, working_path)
+		
+		#_select_item_path(dir_path, working_path) #^ select is for this
 		
 		if not is_dir:
 			break
@@ -389,9 +392,9 @@ func show_current_column():
 			scroll_container.ensure_control_visible(col.item_list)
 
 func clear_columns():
-	_clear_panes("", true)
+	_clear_columns("", true)
 
-func _clear_panes(path_to_display:String, clear_all:=false):
+func _clear_columns(path_to_display:String, clear_all:=false):
 	for column:FileColumn in scroll_hbox.get_children():
 		if column == _search_column:
 			continue

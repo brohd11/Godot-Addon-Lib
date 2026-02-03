@@ -115,7 +115,7 @@ var _current_browser_state:= BrowserState.BROWSE
 
 var _current_search_view:SearchView=SearchView.AUTO #^ setting - dd
 
-var _search_whole_filesystem:bool=false #^ setting - dd
+var _search_whole_filesystem:bool=true #^ setting - dd
 var _search_select_path:bool=true #^ setting - dd
 var _search_tree_list_dir:bool=false #^ setting - dd
 var _current_filter_mode:FSFilter.FilterMode = FSFilter.FilterMode.AUTO #^ setting - dd
@@ -158,7 +158,10 @@ func _ready() -> void:
 	
 	_build_nodes()
 	
+	var fresh_instance = _dock_data.is_empty()
 	_set_data_on_ready()
+	if fresh_instance:
+		_set_editor_defaults()
 	
 	_set_draw_list_lines(_alt_list_color)
 	_update_history_buttons()
@@ -210,10 +213,6 @@ func _set_data_on_ready():
 	tree.tree_helper.data_dict = _dock_data.get(DataKeys.TREE_ITEM_META, {})
 	tree.show_item_preview = _dock_data.get(DataKeys.TREE_PREVIEW_ICONS, false)
 	
-	var place_data = _dock_data.get(DataKeys.PLACE_DATA, {})
-	if place_data.is_empty():
-		place_data = FileSystemPlaces.Data.get_default_data()
-	
 	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
 	path_bar.set_view_mode(path_bar_view_mode)
 	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
@@ -226,6 +225,11 @@ func _set_data_on_ready():
 		_toggle_element(element, false)
 	
 	_set_search_visible(_dock_data.get(DataKeys.SEARCH_VISIBLE, false))
+
+func _set_editor_defaults():
+	var ed_settings = EditorInterface.get_editor_settings()
+	_alt_list_color = ed_settings.get_setting(EditorSet.LIST_ALT_COLOR)
+	_current_view_mode = ed_settings.get_setting(EditorSet.VIEW_MODE) as ViewMode
 
 func get_dock_data() -> Dictionary:
 	_get_view_data()
@@ -262,7 +266,6 @@ func get_dock_data() -> Dictionary:
 	data[DataKeys.VIEW_MODE] = _current_view_mode
 	data[DataKeys.VIEW_DATA] = _view_data
 	
-	data[DataKeys.PLACE_DATA] = places.get_place_data()
 	return data
 
 
@@ -321,6 +324,10 @@ func _on_filter_text_changed(_new_text:String):
 func _start_filter_debounce():
 	_filter_timer.start(FILTER_DELAY)
 
+func _restart_search():
+	_last_browser_state = BrowserState.BROWSE
+	_set_filter_texts()
+
 func _set_filter_texts():
 	if _is_filtering():
 		_current_browser_state = BrowserState.SEARCH
@@ -329,7 +336,8 @@ func _set_filter_texts():
 	
 	if _async_is_searching:
 		if _current_browser_state == BrowserState.BROWSE:
-			_async_search.cancel()
+			if is_instance_valid(_async_search):
+				_async_search.cancel()
 		_filter_timer.start(FILTER_DELAY)
 		return
 	
@@ -346,7 +354,7 @@ func _set_filter_texts():
 func _set_filter_text_search():
 	var is_tree = _current_view_mode == ViewMode.TREE
 	if _last_browser_state != _current_browser_state:
-		if _path_in_res and _search_whole_filesystem:
+		if (_path_in_res or is_tree) and _search_whole_filesystem:
 			if is_tree:
 				_current_search_dir = tree.root_dir
 			else:
@@ -356,6 +364,8 @@ func _set_filter_text_search():
 		_get_view_data() #^ save current view data when switching state
 		
 		tree.select_paths([], false)
+		if is_tree:
+			tree.select_paths.call_deferred([_current_search_dir], false)
 		item_list.deselect_all()
 	
 	path_bar.hide()
@@ -556,8 +566,8 @@ func _set_path_in_res(path_in_res:=_path_in_res):
 func navigate_to_path(path:String):
 	_set_current_path(self, path, true, true)
 
-func refresh_current_path():
-	_set_current_path(self, current_path)
+func refresh_current_path(_refresh:=true):
+	_set_current_path(self, current_path, _refresh)
 
 ## Path coming must be file or dir with trailing slash. If dir doesn't have slash, will treat as file.
 func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:=false):
@@ -598,12 +608,12 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	_set_path_in_res()
 	
 	miller.current_path = current_path
-	item_list.set_current_dir(current_dir, true)
+	var item_list_refresh = _current_browser_state == BrowserState.BROWSE
+	item_list.set_current_dir(current_dir, item_list_refresh) #^ limit refresh
 	path_bar.set_current_dir(current_dir)
 	
-	
 	if _path_in_res and who != self:
-		filesystem_singleton.select_items_in_fs(current_selected_paths)
+		_select_current_paths_in_fs()
 		#^r this may need some more coordination
 	
 	if _current_browser_state == BrowserState.SEARCH:
@@ -661,7 +671,16 @@ func _set_current_path_search_mode(who, dir:String, navigation_selection:bool):
 		item_list.queue_force_refresh()
 		item_list.refresh()
 
-
+func _select_current_paths_in_fs():
+	#filesystem_singleton.select_items_in_fs(current_selected_paths) #^ on start the fs item dict is empty and this fails, below forces rebuild
+	var valid_paths = []
+	for sel_path in current_selected_paths:
+		if FSUtil.is_path_valid_res(sel_path):
+			valid_paths.append(sel_path)
+	var selected = FileSystemSingleton.ensure_items_selected(valid_paths)
+	if not selected:
+		printerr("Could not select paths, ensure Editor FileSystem is not in split mode.")
+		printerr(valid_paths)
 
 func _on_path_bar_path_selected(path:String):
 	_set_current_path(path_bar, path)
@@ -687,6 +706,7 @@ func _on_item_list_item_selected(path:String, selected_paths:Array):
 			_set_current_path(item_list, path) #^ any other situation or for files just set the path
 	else:
 		_add_to_history(path)
+		_select_current_paths_in_fs()
 
 func _select_paths_in_fs():
 	return FileSystemSingleton.ensure_items_selected(current_selected_paths)
@@ -875,9 +895,7 @@ func _on_options_button_pressed():
 	#^ search
 	var _ssp_call = func(): _search_select_path = not _search_select_path
 	options.add_option("Settings/Search - Set Current Path (%s)" % _search_select_path, _ssp_call, [settings_icon, "Filesystem"])
-	var _saf_call = func():_search_whole_filesystem = not _search_whole_filesystem
-	options.add_option("Settings/Search - Always All Files (%s)" % _search_whole_filesystem, _saf_call, [settings_icon, "Filesystem"])
-	var _stld_call = func():_search_tree_list_dir = not _search_tree_list_dir
+	var _stld_call = func():_search_tree_list_dir = not _search_tree_list_dir; _restart_search()
 	options.add_option("Settings/Search - Tree Split Dir View (%s)" % _search_tree_list_dir, _stld_call, [settings_icon, "Folder"])
 	
 	
@@ -937,7 +955,10 @@ func _change_view_mode(view_mode:ViewMode):
 	_get_view_data()
 	_current_view_mode = view_mode
 	_set_view_data()
-	refresh_current_path()
+	refresh_current_path(false) # refresh should be handled in set_active
+	if _current_browser_state == BrowserState.SEARCH:
+		_restart_search()
+	
 
 func _get_view_data():
 	var data = {
@@ -955,15 +976,19 @@ func _get_view_data():
 	elif _current_view_mode == ViewMode.MILLER:
 		_view_data[DataKeys.VIEW_DATA_MILLER] = data
 
+func _get_current_view_data():
+	if _current_view_mode == ViewMode.TREE:
+		return _view_data.get(DataKeys.VIEW_DATA_TREE, {})
+	elif _current_view_mode == ViewMode.PLACES:
+		return _view_data.get(DataKeys.VIEW_DATA_PLACES, {})
+	elif _current_view_mode == ViewMode.MILLER:
+		return _view_data.get(DataKeys.VIEW_DATA_MILLER, {})
+
+func _write_view_data_var(key, val):
+	_get_current_view_data()[key] = val
 
 func _set_view_data():
-	var data
-	if _current_view_mode == ViewMode.TREE:
-		data = _view_data.get(DataKeys.VIEW_DATA_TREE, {})
-	elif _current_view_mode == ViewMode.PLACES:
-		data = _view_data.get(DataKeys.VIEW_DATA_PLACES, {})
-	elif _current_view_mode == ViewMode.MILLER:
-		data = _view_data.get(DataKeys.VIEW_DATA_MILLER, {})
+	var data = _get_current_view_data()
 	
 	main_split_container.split_offset = data.get(DataKeys.SPLIT_OFFSET, 0)
 	_current_split_mode = data.get(DataKeys.SPLIT_MODE, SplitMode.NONE)
@@ -1100,6 +1125,7 @@ func _check_toolbar_elements():
 func _on_places_toggled_pressed():
 	_places_toggled = not _places_toggled
 	places.visible = _places_toggled
+	_write_view_data_var(DataKeys.PLACES_TOGGLED, _places_toggled)
 	places.set_active(_places_toggled)
 	_check_main_split_vis()
 
@@ -1125,6 +1151,8 @@ func _on_path_bar_button_pressed(show_hide:=false):
 func _on_search_scope_pressed():
 	_search_whole_filesystem = not _search_whole_filesystem
 	_set_search_scope()
+	if _current_browser_state == BrowserState.SEARCH:
+		_restart_search()
 
 func _set_search_scope():
 	var icon
@@ -1495,6 +1523,33 @@ func _miller_icon():
 func _get_modulated_icon(text: String, brightness:=0.8) -> Texture2D:
 	return ALibEditor.Singletons.EditorIcons.get_icon_white(text, brightness)
 
+class EditorSet:
+	const _DEFAULT_SETTINGS = &"plugin/filesystem_instances/defaults/"
+	const LIST_ALT_COLOR = _DEFAULT_SETTINGS + &"alternate_item_colors"
+	const VIEW_MODE = _DEFAULT_SETTINGS + &"view_mode"
+	
+	const _DEFAULTS = {
+		LIST_ALT_COLOR: false,
+		VIEW_MODE: 0
+	}
+	
+	static func ensure_settings():
+		var ed_settings = EditorInterface.get_editor_settings()
+		for setting in _DEFAULTS.keys():
+			if not ed_settings.has_setting(setting):
+				ed_settings.set_setting(setting, _DEFAULTS[setting])
+	
+		var view_mode = {
+			&"name": VIEW_MODE,
+			&"type": TYPE_INT, # (2)
+			&"hint": PROPERTY_HINT_ENUM, # (2)
+			&"hint_string": "Tree,Items,Columns",
+		}
+		ed_settings.add_property_info(view_mode)
+		
+		pass
+	
+
 class DataKeys:
 	const ROOT = &"ROOT"
 	const CURRENT_PATH = &"CURRENT_PATH"
@@ -1523,7 +1578,6 @@ class DataKeys:
 	const FILTER_MODE_FOLLOW = &"FILTER_MODE_FOLLOW"
 	const LIST_ALT_COLOR = &"LIST_ALT_COLOR"
 	
-	const PLACE_DATA = &"PLACE_DATA"
 	
 	const VIEW_MODE = &"VIEW_MODE"
 	const VIEW_DATA = &"VIEW_DATA"

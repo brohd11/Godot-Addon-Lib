@@ -59,9 +59,10 @@ func _ready() -> void:
 	#allow_rmb_select = true
 	allow_reselect = true
 	
-	#var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-	#sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
-	#add_theme_stylebox_override("panel", sb)
+	if ALibEditor.Utils.UEditorTheme.get_current_theme_style() == "Modern" and ALibEditor.Utils.UEditorTheme.get_custom_theme_path() == "":
+		var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+		add_theme_stylebox_override("panel", sb)
 	
 	multi_selected.connect(_on_item_selected)
 	item_clicked.connect(_on_item_clicked)
@@ -160,6 +161,7 @@ func create_items():
 		_create_items_not_res()
 
 func _create_items_res():
+	print("REBUI")
 	var folder_thumb = EditorInterface.get_editor_theme().get_icon("FolderBigThumb", "EditorIcons")
 	var file_thumb = EditorInterface.get_editor_theme().get_icon("FileBigThumb", "EditorIcons")
 	if display_as_list:

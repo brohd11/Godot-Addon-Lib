@@ -30,7 +30,7 @@ func display_on_control(options:Options, control:Control, offset:=Vector2.ZERO):
 	var pos = get_centered_control_position(control)
 	if offset != Vector2.ZERO:
 		pos += Vector2i(offset)
-	display_popup(options, true, pos)
+	return display_popup(options, true, pos)
 
 func display_popup(options, center_popup:=false, position_overide=null):
 	if options is Options:

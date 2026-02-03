@@ -39,3 +39,9 @@ static func get_size_of_control_type(type):
 	ins.hide()
 	ins.queue_free()
 	return new_size
+
+static func get_current_theme_style():
+	return EditorInterface.get_editor_settings().get_setting("interface/theme/style")
+
+static func get_custom_theme_path():
+	return EditorInterface.get_editor_settings().get_setting("interface/theme/custom_theme")

@@ -52,9 +52,10 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
-	#var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-	#sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
-	#add_theme_stylebox_override("panel", sb)
+	if ALibEditor.Utils.UEditorTheme.get_current_theme_style() == "Modern" and ALibEditor.Utils.UEditorTheme.get_custom_theme_path() == "":
+		var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
+		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+		add_theme_stylebox_override("panel", sb)
 	
 	custom_minimum_size = _MIN_SIZE
 	
@@ -387,6 +388,7 @@ func _rename_popup():
 func _get_drag_data(_at_position):
 	var files = tree_helper.selected_item_paths.duplicate()
 	files.erase(FileSystemTab.FAVORITES_META)
+	files.erase("res://")
 	if files.is_empty():
 		return null
 	set_drag_preview(FileSystemSingleton.get_drag_preview(files))
