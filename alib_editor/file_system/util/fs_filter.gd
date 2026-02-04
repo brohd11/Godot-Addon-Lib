@@ -1,9 +1,5 @@
 
-const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
 const Filter = ALibRuntime.Utils.UString.Filter
-
-
-
 
 enum FilterMode {
 	AUTO,
@@ -22,20 +18,17 @@ static func create_callable_data(match_callable:Callable, sort_callable=null) ->
 	return Filter.get_search_callable_dict(match_callable, sort_callable)
 
 
+
 static func filter_subseq(to_filter:PackedStringArray, filter_text_array:PackedStringArray, file_name:=false) -> PackedStringArray:
-	print("SUB")
 	return Filter.subsequence(to_filter, filter_text_array, file_name)
 
 static func filter_subseq_sorted(to_filter:PackedStringArray, filter_text_array:PackedStringArray, file_name:=false) -> PackedStringArray:
-	print("SUB SORT")
 	return Filter.subsequence_sorted(to_filter, filter_text_array, file_name)
 
 static func filter_exact_match(to_filter:PackedStringArray, filter_text_array:PackedStringArray, file_name:=false) -> PackedStringArray:
-	print("EX")
 	return Filter.exact(to_filter, filter_text_array, file_name)
 
 static func filter_exact_match_sorted(to_filter:PackedStringArray, filter_text_array:PackedStringArray, file_name:=false) -> PackedStringArray:
-	print("EX SORT")
 	return Filter.exact_sorted(to_filter, filter_text_array, file_name)
 
 
@@ -46,10 +39,10 @@ static func filter_with_prefixes(to_filter:PackedStringArray, filter_text_array:
 	return to_filter
 
 
-
 static func filter_type(to_filter:PackedStringArray, filter_text_array:PackedStringArray) -> PackedStringArray:
 	var callable_data = Filter.get_search_callable_dict(_type_match)
 	return Filter.filter_array(to_filter, filter_text_array, callable_data)
+
 
 
 static func _type_match(to_filter:PackedStringArray, filter_text_array:PackedStringArray):

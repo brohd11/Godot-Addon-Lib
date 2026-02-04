@@ -142,9 +142,9 @@ func _on_filesystem_changed():
 	
 	_file_paths_dict.clear()
 	_file_and_dir_paths_dict.clear()
-	#cache.file_data.clear()
-	#_file_scan()
-	ALibRuntime.Utils.UProfile.TimeFunction.time_func(_file_scan, "FS SCAN")
+	
+	_file_scan()
+	#ALibRuntime.Utils.UProfile.TimeFunction.time_func(_file_scan, "FS SCAN")
 	
 	file_paths = PackedStringArray(_file_paths_dict.keys())
 	file_and_dir_paths = PackedStringArray(_file_and_dir_paths_dict.keys())
@@ -207,7 +207,7 @@ func _singleton_recursive_scan_tree_for_paths(item: TreeItem):
 		return
 	var file_path = item.get_metadata(0)
 	if file_path == null:
-		print("NO TREE META", item.get_text(0))
+		printerr("NO TREE META", item.get_text(0))
 		return
 	file_system_dock_item_dict[file_path] = item
 	if not file_path.ends_with("/"):
@@ -242,7 +242,7 @@ func _singleton_recursive_build_fs_item_dict(item: TreeItem):
 		return
 	var file_path = item.get_metadata(0)
 	if file_path == null:
-		print("NO TREE META", item.get_text(0))
+		printerr("NO TREE META", item.get_text(0))
 		return
 	file_system_dock_item_dict[file_path] = item
 	var child: TreeItem = item.get_first_child()

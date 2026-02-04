@@ -175,14 +175,12 @@ func _exit_tree() -> void:
 
 func get_split_options() -> RightClickHandler.Options:
 	var options = RightClickHandler.Options.new()
-	var msg_text = "Show Tool Bar"
-	var icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityVisible", "EditorIcons")
-	var val = true
-	if tool_bar_hbox.visible:
-		msg_text = "Hide Tool Bar"
-		icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityHidden", "EditorIcons")
-		val = false
+	
+	var msg_text = "Hide Tool Bar" if tool_bar_hbox.visible else "Show Tool Bar"
+	var icon = ALibEditor.Singletons.EditorIcons.get_visibility_icon(tool_bar_hbox.visible)
+	var val = not tool_bar_hbox.visible
 	options.add_option(msg_text, _toggle_element.bind(tool_bar_hbox, val), [icon])
+	
 	return options
 
 func set_dock_data(data:Dictionary):
@@ -481,7 +479,9 @@ func _get_filter_text_array():
 
 func _get_filtered_paths(include_dirs:=false, use_file_name:=true, filter_mode:=_current_filter_mode):
 	var paths:PackedStringArray
-	if _current_search_dir == "res://":
+	if _current_search_dir == FAVORITES_META:
+		paths = FileSystemSingleton.get_filesystem_favorites()
+	elif _current_search_dir == "res://":
 		if include_dirs:
 			paths = filesystem_singleton.file_and_dir_paths.duplicate()
 		else:
@@ -511,8 +511,6 @@ func _get_filtered_paths(include_dirs:=false, use_file_name:=true, filter_mode:=
 	var string_filters = filter_text_array.get("filter", [])
 	var prefix_filters = filter_text_array.get("prefix", [])
 	
-	var t = ALibRuntime.Utils.UProfile.TimeFunction.new("Search")
-	
 	if has_prefix_filter:
 		if _last_prefix_filters != prefix_filters:
 			_last_prefix_filters = prefix_filters
@@ -528,7 +526,6 @@ func _get_filtered_paths(include_dirs:=false, use_file_name:=true, filter_mode:=
 	elif filter_mode == FilterMode.SUBSEQUENCE_SORT:
 		_filtered_paths = FSFilter.filter_subseq_sorted(paths, string_filters, use_file_name)
 	
-	t.stop()
 	return _filtered_paths
 
 
@@ -563,11 +560,13 @@ func _set_path_in_res(path_in_res:=_path_in_res):
 	miller.path_in_res = path_in_res
 	path_bar.path_in_res = path_in_res
 
+
 func navigate_to_path(path:String):
 	_set_current_path(self, path, true, true)
 
 func refresh_current_path(_refresh:=true):
 	_set_current_path(self, current_path, _refresh)
+
 
 ## Path coming must be file or dir with trailing slash. If dir doesn't have slash, will treat as file.
 func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:=false):
@@ -578,10 +577,11 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	#if dir == current_dir: #^ this will stop repeats, but does this need a force flag? for refresh
 		#return
 	#print(dir)
+	if _who_is_node(who, [tree, item_list, miller]):
+		_emit_global_signals(path)
 	
-	var navigation_selection = who != self and (who == path_bar or who == places or who == _navigate_up_button)
+	var navigation_selection = who != self and _who_is_node(who, [path_bar, places, _navigate_up_button, _history_back_button, _history_forward_button])
 	if _current_view_mode == ViewMode.TREE:
-	#if _current_browser_state == BrowserState.SEARCH and _current_view_mode == ViewMode.TREE:
 		if not navigation_selection and who == item_list:
 			navigation_selection = true
 	if force_navigate:
@@ -598,6 +598,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	if not visible: # all will be inactive
 		return
 	if current_path == FAVORITES_META:
+		current_dir = FAVORITES_META
 		if item_list.active:
 			item_list.set_current_dir(FAVORITES_META, true)
 		_path_in_res = true
@@ -608,7 +609,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	_set_path_in_res()
 	
 	miller.current_path = current_path
-	var item_list_refresh = _current_browser_state == BrowserState.BROWSE
+	var item_list_refresh = _current_browser_state == BrowserState.BROWSE and not _who_is_node(who, [self, item_list])
 	item_list.set_current_dir(current_dir, item_list_refresh) #^ limit refresh
 	path_bar.set_current_dir(current_dir)
 	
@@ -616,10 +617,22 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 		_select_current_paths_in_fs()
 		#^r this may need some more coordination
 	
+	var add_to_history = who != self and not _who_is_node(who, [_history_back_button, _history_forward_button])
 	if _current_browser_state == BrowserState.SEARCH:
 		_set_current_path_search_mode(who, dir, navigation_selection)
+		if add_to_history:
+			_add_to_history(current_path)
 		return
+	else:
+		_set_current_path_browse_mode(who, navigation_selection)
+		if add_to_history:
+			_add_to_history(current_path)
 	
+	if _refresh:
+		refresh()
+
+
+func _set_current_path_browse_mode(who, navigation_selection:bool):
 	if _current_view_mode == ViewMode.TREE:
 		var in_tree_root =  UFile.is_dir_in_or_equal_to_dir(current_dir, tree.root_dir)
 		if in_tree_root and navigation_selection:
@@ -633,11 +646,13 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 			miller.multi_select_dir = current_dir
 		
 		miller.set_current_dir(current_dir)
-		if who == path_bar or who == places:
+		#if _who_is_node(who, [path_bar, places]):
+		if navigation_selection:
 			miller.set_current_column_with_path(current_dir)
 			miller.show_current_column()
 	
-	if  who == _history_back_button or who == _history_forward_button:
+	
+	if _who_is_node(who, [_history_back_button, _history_forward_button]):
 		if _current_view_mode == ViewMode.TREE:
 			if UFile.is_dir_in_or_equal_to_dir(current_path, tree.root_dir):
 				tree.select_paths([current_path], false, true)
@@ -649,27 +664,20 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 		elif _current_view_mode == ViewMode.MILLER:
 			miller.current_path = current_path
 			miller.select_path_items(current_path)
-	
-	if who != self and who != _history_back_button and who != _history_forward_button:
-		_add_to_history(current_path)
-	
-	if _refresh:
-		refresh()
-	
-	#if _current_browser_state == BrowserState.SEARCH: #^r think this can go
-		#_set_filter_texts()
+
 
 func _set_current_path_search_mode(who, dir:String, navigation_selection:bool):
 	if _current_view_mode == ViewMode.MILLER and who == miller:
 		miller.set_current_dir_search(dir)
 		
-	elif _tree_view_with_split_mode() and _search_tree_list_dir:
+	elif _tree_view_dir_search():
 		if who != tree and UFile.is_dir_in_or_equal_to_dir(dir, tree.root_dir):
 			tree.select_paths([dir], false, navigation_selection)
 		var dir_paths = item_list.get_paths_at_dir(dir)
 		item_list.set_filtered_paths(dir_paths)
-		item_list.queue_force_refresh()
+		#item_list.queue_force_refresh()
 		item_list.refresh()
+
 
 func _select_current_paths_in_fs():
 	#filesystem_singleton.select_items_in_fs(current_selected_paths) #^ on start the fs item dict is empty and this fails, below forces rebuild
@@ -681,6 +689,16 @@ func _select_current_paths_in_fs():
 	if not selected:
 		printerr("Could not select paths, ensure Editor FileSystem is not in split mode.")
 		printerr(valid_paths)
+
+func _emit_global_signals(path):
+	if FileSystemSingleton.get_file_type_static(path) == "PackedScene":
+		EditorGlobalSignals.signal_emitv(&"send_to_scene_tools", [path])
+
+func _who_is_node(who:Node, checks:Array):
+	for c in checks:
+		if c == who:
+			return true
+	return false
 
 func _on_path_bar_path_selected(path:String):
 	_set_current_path(path_bar, path)
@@ -698,15 +716,17 @@ func _on_tree_item_selected(path:String, selected_paths:Array):
 
 func _on_item_list_item_selected(path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
-	if _current_browser_state == BrowserState.SEARCH:
-		if _tree_view_dir_search() and path.ends_with("/"):
+	if _current_browser_state == BrowserState.BROWSE:
+		_add_to_history(path)
+		_select_current_paths_in_fs()
+		_emit_global_signals(path)
+	elif _current_browser_state == BrowserState.SEARCH:
+		if path.ends_with("/") and _tree_view_dir_search():
 			var dir = UFile.get_dir(path)
 			_set_current_path(item_list, dir) #^ stops dirs from 1 click navigating in search, but also sets the current dir
 		else:
 			_set_current_path(item_list, path) #^ any other situation or for files just set the path
-	else:
-		_add_to_history(path)
-		_select_current_paths_in_fs()
+	
 
 func _select_paths_in_fs():
 	return FileSystemSingleton.ensure_items_selected(current_selected_paths)
@@ -746,7 +766,6 @@ func _add_to_history(new_path:String):
 	_update_history_buttons()
 
 func _history_back():
-	#print("BACK", _history)
 	if _history_index > 0:
 		_history_index -= 1
 		_set_current_path(_history_back_button, _history[_history_index])
@@ -785,6 +804,8 @@ func _on_item_list_double_clicked(path):
 	_set_current_path(item_list, path)
 
 func _on_double_clicked(selected_path:String):
+	if selected_path == FAVORITES_META:
+		return
 	current_selected_paths = [selected_path]
 	if FSUtil.is_path_valid_res(selected_path):
 		if not _select_paths_in_fs():

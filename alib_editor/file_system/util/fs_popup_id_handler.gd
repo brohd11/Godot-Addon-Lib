@@ -11,7 +11,8 @@ const PopupID = ALibEditor.Nodes.FileSystem.PopupID
 const ITEM_LIST_EMPTY_HIDE = ["Rename..."]
 
 var _fs_id_need_rescan = []
-var _fs_id_need_handle = []
+var _fs_id_need_handle_file = []
+var _fs_id_need_handle_folder = []
 
 const NEW_WINDOW = "New/Window"
 const CREATE_NEW_TAB = "New/Tab"
@@ -43,7 +44,8 @@ func _init() -> void:
 	filesystem_singleton = FileSystemSingleton.get_instance()
 	
 	_fs_id_need_rescan = [PopupID.add_to_favorites(), PopupID.remove_from_favorites()]
-	_fs_id_need_handle = [PopupID.rename(), PopupID.expand_folder(), PopupID.expand_hierarchy(), PopupID.collapse_hierarchy()]
+	_fs_id_need_handle_folder = [PopupID.rename(), PopupID.expand_folder(), PopupID.expand_hierarchy(), PopupID.collapse_hierarchy()]
+	_fs_id_need_handle_file = [PopupID.rename()]
 
 
 func right_clicked_empty_item_list(clicked_node:Node, selected_item_path:String):
@@ -104,7 +106,7 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	if fs_popup == null:
 		_handle_non_fs(id, popup)
 		return
-	
+	print(id)
 	var queue_rescan = false
 	var is_folder_popup = fs_popup.get_item_text(0) == "Default (Reset)"
 	var is_create_popup = fs_popup == EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)
@@ -116,21 +118,23 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	elif is_create_popup:
 		pass
 	else:
+		var is_dir = _selected_path.ends_with("/")
 		if id in _fs_id_need_rescan:
 			queue_rescan = true
-		if id in _fs_id_need_handle:
+		if id == PopupID.rename():
+			_clicked_node.start_edit()
+			return
+		if is_dir and id in _fs_id_need_handle_folder:
 			if _clicked_node is FileSystemTree:
 				if id == PopupID.expand_folder():
 					_clicked_node.rc_expand_folder()
 				if id == PopupID.expand_hierarchy():
 					_clicked_node.rc_hierarchy(true)
-				elif id == PopupID.collapse_hierarchy():
+				if id == PopupID.collapse_hierarchy():
 					_clicked_node.rc_hierarchy(false)
-				elif id == PopupID.rename():
-					_clicked_node.start_edit()
+					
 			elif _clicked_node is FileSystemItemList:
-				if id == PopupID.rename():
-					_clicked_node.start_edit()
+				pass
 			if queue_rescan:
 				filesystem_singleton.rebuild_files()
 			return

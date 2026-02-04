@@ -26,8 +26,8 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 		panel_sb = panel.get_theme_stylebox("panel").duplicate() # as StyleBoxFlat
 	elif minor == 6:
 		panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
-		panel_sb.content_margin_top += 4 * EditorInterface.get_editor_scale()
-		panel_sb.content_margin_bottom += 4 * EditorInterface.get_editor_scale()
+		panel_sb.content_margin_top += 2 * EditorInterface.get_editor_scale()
+		panel_sb.content_margin_bottom += 2 * EditorInterface.get_editor_scale()
 	
 	panel_sb.draw_center = true
 	panel_sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE)

@@ -7,8 +7,8 @@ var item_dict:= {}
 var data_dict:= {}
 var parent_item = null
 
-var selected_items:= []
-var selected_item_paths:= []
+#var selected_items:= []
+#var selected_item_paths:= []
 
 var filtered_item_paths:= []
 
@@ -59,8 +59,29 @@ func get_tree_item(path:String):
 		if item_dict.has(check):
 			return item_dict.get(check)
 
+func get_selected_paths():
+	return _get_selected(false)
+
 func get_selected_tree_items(): # possibly use get_selected and get_next_selected to get items instead of caching
-	return selected_items
+	return _get_selected()
+	#return selected_items
+
+func _get_selected(items:=true):
+	var _selected_items = []
+	var _selected_paths = []
+	var sel = tree_node.get_selected()
+	
+	while is_instance_valid(sel):
+		var sel_path = get_path_from_item(sel)
+		if not sel_path in _selected_paths:
+			_selected_items.append(sel)
+			_selected_paths.append(sel_path)
+		sel = tree_node.get_next_selected(sel)
+	
+	if items:
+		return _selected_items
+	else:
+		return _selected_paths
 
 func get_filtered_paths():
 	return filtered_item_paths
@@ -77,18 +98,19 @@ func connect_mouse_signals():
 
 func clear_items_keep_paths():
 	item_dict.clear()
-	selected_items.clear()
+	#selected_items.clear()
 	tree_node.clear()
 
 func clear_items():
 	item_dict.clear()
-	selected_items.clear()
-	selected_item_paths.clear()
+	#selected_items.clear()
+	#selected_item_paths.clear()
 	tree_node.clear()
 
 func clear_selection():
-	selected_items.clear()
-	selected_item_paths.clear()
+	tree_node.deselect_all()
+	#selected_items.clear()
+	#selected_item_paths.clear()
 
 func new_file_path(file_path, root_dir="", file_data=null):
 	var local_path:String = file_path.get_slice(root_dir,1)
@@ -209,7 +231,7 @@ func _on_item_collapsed(item: TreeItem) -> void:
 
 func uncollapse_items(items=null, item_collapse_callable=null):
 	if items == null:
-		items = selected_items
+		items = get_selected_tree_items()
 	if item_collapse_callable != null:
 		UTree.uncollapse_items(items, item_collapse_callable)
 	else:
@@ -232,47 +254,37 @@ func show_tree_item(item:TreeItem):
 
 
 func _on_item_activated():
-	var selected_item = tree_node.get_selected()
-	var data = selected_item.get_metadata(0)
-	if data == null:
-		return
-	var path:String = data.get(Keys.METADATA_PATH, "")
-	
+	#var selected_item = tree_node.get_selected()
+	#var data = selected_item.get_metadata(0)
+	#if data == null:
+		#return
 	_mouse_double_clicked()
 
-func _on_item_mouse_selected(mouse_position: Vector2, mouse_button_index: int) -> void:
-	if "HelperInst" in tree_node:
+func _on_item_mouse_selected(_mouse_position: Vector2, mouse_button_index: int) -> void:
+	if "HelperInst" in tree_node: #^ will be deleted
 		tree_node.HelperInst.ABInstSignals.file_tree_selected.emit(self)
 	
-	if selected_items.is_empty():
-		return
+	#var _selected_items = get_selected_tree_items()
+	#if _selected_items.is_empty():
+		#return
+	
 	if mouse_button_index == 1:
 		await tree_node.get_tree().process_frame
 		_mouse_left_clicked()
-	
 	if mouse_button_index != 2:
 		return
-	var selected_item = selected_items[0]
-	#if selected_item == tree_node.get_root():
+	
+	#var selected_item = _selected_items[0]
+	#var data = selected_item.get_metadata(0)
+	#if not data:
 		#return
+	#_mouse_right_clicked(data)
 	
-	var data = selected_item.get_metadata(0)
-	if not data:
-		return
-	
-	_mouse_right_clicked(data)
+	_mouse_right_clicked({})
 
 
 
-func _on_multi_selected(item: TreeItem, column: int, selected: bool) -> void:
-	if selected:
-		_add_item_to_selected(item, column)
-	else:
-		_remove_item_from_selected(item, column)
-	
-	for sel_item in selected_items:
-		if not sel_item.visible:
-			_remove_item_from_selected(sel_item, 0)
+func _on_multi_selected(_item: TreeItem, _column: int, _selected: bool) -> void:
 	if multi_selected_flag:
 		return
 	else:
@@ -280,36 +292,17 @@ func _on_multi_selected(item: TreeItem, column: int, selected: bool) -> void:
 		await tree_node.get_tree().process_frame
 		multi_selected_flag = false
 	
-	if not selected_items.size() > 0:
-		return
-	var selected_item = selected_items[0]
-	var meta = selected_item.get_metadata(0)
-	if meta == null:
-		return
+	#var _selected_items = get_selected_tree_items()
+	#if not _selected_items.size() > 0:
+		#return
+	#var selected_item = _selected_items[0]
+	#var meta = selected_item.get_metadata(0)
+	#if meta == null:
+		#return
+	
 	multi_item_selected.emit()
 	
 
-func _add_item_to_selected(item, column):
-	var item_meta = item.get_metadata(column)
-	if not item_meta:
-		return
-	var item_path = item_meta.get(Keys.METADATA_PATH)
-	if not item_path:
-		return
-	if not item_path in selected_item_paths:
-		selected_item_paths.append(item_path)
-		selected_items.append(item)
-
-func _remove_item_from_selected(item, column):
-	var item_meta = item.get_metadata(column)
-	if not item_meta:
-		return
-	var item_path = item_meta.get(Keys.METADATA_PATH)
-	if not item_path:
-		return
-	if item_path in selected_item_paths:
-		selected_item_paths.erase(item_path)
-		selected_items.erase(item)
 
 
 #overide
@@ -320,18 +313,18 @@ func _set_folder_icon_img():
 	#ab_lib.ABTree.get_folder_icon_and_color()
 	pass
 
-func _set_folder_icon(file_path, slice_item):
+func _set_folder_icon(_file_path, slice_item):
 	slice_item.set_icon(0, folder_icon)
 	slice_item.set_icon_modulate(0, folder_color)
 
 
-func _set_item_icon(last_item, file_data):
+func _set_item_icon(_last_item, _file_data):
 	pass
 
 func _mouse_left_clicked():
 	mouse_left_clicked.emit()
 
-func _mouse_right_clicked(data):
+func _mouse_right_clicked(_data):
 	mouse_right_clicked.emit()
 	if popup_on_right_click:
 		pass

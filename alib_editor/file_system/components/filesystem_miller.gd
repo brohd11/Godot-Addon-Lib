@@ -14,8 +14,8 @@ const ClickState = ClickHandlers.ClickState
 const MIN_COL_SIZE = 300
 
 var scroll_container:ScrollContainer
-var scroll_hbox:HBoxContainer
-var scroll_spacer:Control
+var column_hbox:HBoxContainer
+var column_spacer:Control
 
 var current_browser_state:FileSystemTab.BrowserState = FileSystemTab.BrowserState.BROWSE
 var active:= true
@@ -58,26 +58,24 @@ func _ready() -> void:
 	_scroll_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_scroll_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	scroll_hbox = HBoxContainer.new() #^ TODO RENAME TO COLUMN HBOX
-	scroll_hbox.add_theme_constant_override("separation", 0)
-	_scroll_hbox.add_child(scroll_hbox)
-	scroll_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column_hbox = HBoxContainer.new() #^ TODO RENAME TO COLUMN HBOX
+	column_hbox.add_theme_constant_override("separation", 0)
+	_scroll_hbox.add_child(column_hbox)
+	column_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	scroll_spacer = Control.new()
-	_scroll_hbox.add_child(scroll_spacer)
+	column_spacer = Control.new()
+	_scroll_hbox.add_child(column_spacer)
 	_scroll_hbox.add_theme_constant_override("separation", 0)
-	scroll_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll_spacer.custom_minimum_size = Vector2(MIN_COL_SIZE, 0) * 2
+	column_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column_spacer.custom_minimum_size = Vector2(MIN_COL_SIZE, 0) * 2
 	
-	scroll_container.resized.connect(func(): scroll_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, MIN_COL_SIZE))
+	scroll_container.resized.connect(func(): column_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, MIN_COL_SIZE))
 
 func set_active(active_state:bool):
 	active = active_state
 	if active_state:
 		refresh()
-		#if current_browser_state == FileSystemTab.BrowserState.SEARCH:
-			#start_search()
 		scroll_container.scroll_horizontal = int(_current_scroll_amount)
 	else:
 		_current_scroll_amount = scroll_container.scroll_horizontal
@@ -106,11 +104,7 @@ func refresh():
 func set_current_dir(path:String):
 	if path == "FAVORITES":
 		return
-	#if path == _current_dir and not force_build:
-		#return
-	
 	_current_dir = path
-
 
 
 func _build_columns(force_show_current:=false):
@@ -195,6 +189,7 @@ func set_filtered_paths(path_array:Array):
 
 func update_filter():
 	start_search()
+	scroll_container.scroll_horizontal = 0
 
 func start_search():
 	_clear_columns("", true)
@@ -204,11 +199,9 @@ func start_search():
 func set_current_dir_search(path:String):
 	_search(path)
 
-
 func _search(current_search_path:String):
 	_build_search_column()
 	_build_columns_search(current_search_path)
-
 
 func _build_columns_search(search_path:String):
 	var selected_search_item_path = _get_search_column_selected_path()
@@ -236,13 +229,8 @@ func _build_columns_search(search_path:String):
 	if not current_dir.ends_with("/"):
 		current_dir = UFile.get_dir(current_dir)
 	
-	#print("SEARCH HISTORY PATH: ", _search_history_path)
-	#print("SEARCH PATH: ", search_path)
-	#print("CURRENT DIR: ", _current_dir)
-	#print("SEARCH ROOT ITEM ", selected_search_item_path)
-	#print("PATH TO DISPLAY: ", path_to_display)
-	#print("TAIL: ", path_tail)
-	#print("FORCE: ", force_column_rebuild)
+	if multi_select_dir != "":
+		current_dir = multi_select_dir
 	
 	_clear_columns(path_to_display, force_column_rebuild)
 	
@@ -329,7 +317,7 @@ func _get_or_build_column(working_path:String):
 
 func _new_column(path:String="%SEARCH") -> FileColumn:
 	var column = FileColumn.new()
-	scroll_hbox.add_child(column)
+	column_hbox.add_child(column)
 	
 	column.left_clicked.connect(_on_column_left_clicked)
 	column.right_clicked.connect(_on_column_right_clicked)
@@ -340,7 +328,7 @@ func _new_column(path:String="%SEARCH") -> FileColumn:
 	
 	if path == "%SEARCH":
 		_search_column = column
-		scroll_hbox.move_child(_search_column, 0)
+		column_hbox.move_child(_search_column, 0)
 	else:
 		_columns[path] = column
 		column.set_path_in_res(path_in_res)
@@ -384,10 +372,10 @@ func _set_current_column(current:FileColumn):
 		col.redraw()
 
 func get_columns():
-	return scroll_hbox.get_children()
+	return column_hbox.get_children()
 
 func show_current_column():
-	for col in scroll_hbox.get_children():
+	for col in column_hbox.get_children():
 		if col.is_current:
 			scroll_container.ensure_control_visible(col.item_list)
 
@@ -395,7 +383,7 @@ func clear_columns():
 	_clear_columns("", true)
 
 func _clear_columns(path_to_display:String, clear_all:=false):
-	for column:FileColumn in scroll_hbox.get_children():
+	for column:FileColumn in column_hbox.get_children():
 		if column == _search_column:
 			continue
 		
@@ -408,7 +396,7 @@ func _clear_columns(path_to_display:String, clear_all:=false):
 
 func _free_search_column():
 	if is_instance_valid(_search_column):
-		scroll_hbox.remove_child(_search_column)
+		column_hbox.remove_child(_search_column)
 		_search_column.queue_free()
 
 
@@ -480,7 +468,7 @@ class FileColumn extends HBoxContainer:
 		#item_list.left_clicked.connect(func(path, paths):left_clicked.emit(path, paths))
 		item_list.double_clicked.connect(func(path):double_clicked.emit(path))
 		#^ right click pass FileColumn as arg to redraw columns
-		item_list.right_clicked.connect(func(s, p, arr):right_clicked.emit(self, p, arr))
+		item_list.right_clicked.connect(func(_s, p, arr):right_clicked.emit(self, p, arr))
 		
 		item_list.draw.connect(_item_draw)
 		item_list.gui_input.connect(_on_item_list_gui_input)

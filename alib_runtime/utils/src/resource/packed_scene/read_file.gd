@@ -6,6 +6,7 @@ static func check_root(file_path:String, valid_types:Array) -> bool:
 	return root in valid_types
 	
 
+## Recursive param will search instantiated scene in case of inherited scene.
 static func get_root_type(file_path:String, recursive:=false):
 	var root_line = get_root_line(file_path)
 	if root_line:

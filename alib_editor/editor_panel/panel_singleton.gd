@@ -19,13 +19,14 @@ static func instance_valid() -> bool:
 static func call_on_ready(callable, print_err:bool=true):
 	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
 
-static func register_panel(_name:String, path:String) -> void:
-	register_panel_data(create_registry_data(_name, path))
+static func register_panel(_name:String, path:String, params:Dictionary={}) -> void:
+	register_panel_data(create_registry_data(_name, path, params))
 
-static func create_registry_data(_name:String, path:String) -> Dictionary:
+static func create_registry_data(_name:String, path:String, params:Dictionary={}) -> Dictionary:
 	return {
 		"name": _name,
-		"path": path
+		"path": path,
+		"params": params
 	}
 
 static func register_panel_data(data:Dictionary) -> void:
@@ -43,13 +44,19 @@ static func unregister_panel(path:String):
 		return
 	print("Path not registered in EditorPanelSingleton Panels: %s" % path)
 
-static func get_registered_panels():
+static func get_registered_panels(show_hidden:=false):
 	var instance = get_instance()
+	var current_control_instances = instance.get_instanced_panels_and_tabs()
 	var data = instance._panel_data
 	var formatted_data = {}
 	for path in data.keys():
 		var panel_data = data.get(path)
 		var _name = panel_data.get("name")
+		var params = panel_data.get("params", {})
+		if not show_hidden:
+			var unique = params.get(Params.UNIQUE, false)
+			if unique and path in current_control_instances:
+				continue
 		_name = _get_unique_name(_name, formatted_data.keys())
 		formatted_data[_name] = {
 			"path":path
@@ -57,8 +64,8 @@ static func get_registered_panels():
 	
 	return formatted_data
 
-static func register_tab(_name:String, path:String) -> void:
-	register_tab_data(create_registry_data(_name, path))
+static func register_tab(_name:String, path:String, params:Dictionary={}) -> void:
+	register_tab_data(create_registry_data(_name, path, params))
 
 static func register_tab_data(data:Dictionary) -> void:
 	var instance = get_instance()
@@ -75,13 +82,19 @@ static func unregister_tab(path:String):
 		return
 	print("Path not registered in EditorPanelSingleton Tabs: %s" % path)
 
-static func get_registered_tabs():
+static func get_registered_tabs(show_hidden:=false):
 	var instance = get_instance()
+	var current_control_instances = instance.get_instanced_panels_and_tabs()
 	var data = instance._tab_data
 	var formatted_data = {}
 	for path in data.keys():
 		var panel_data = data.get(path)
 		var _name = panel_data.get("name")
+		var params = panel_data.get("params", {})
+		if not show_hidden:
+			var unique = params.get(Params.UNIQUE, false)
+			if unique and path in current_control_instances:
+				continue
 		_name = _get_unique_name(_name, formatted_data.keys())
 		formatted_data[_name] = {
 			"path":path
@@ -152,9 +165,23 @@ func clean_split_panel_instances():
 			valid.append(ins)
 	_split_panel_instances = valid
 
+func get_instanced_panels_and_tabs():
+	var instances = []
+	for inst:PluginSplitPanel in _split_panel_instances:
+		for panel:PluginSplitPanel.MoveablePanel in inst.get_panels():
+			var content = panel.get_control()
+			instances.append(ALibRuntime.Utils.UResource.get_object_file_path(content))
+			if content is PluginTabContainer:
+				for tab in content.get_all_tab_controls():
+					instances.append(ALibRuntime.Utils.UResource.get_object_file_path(tab))
+	return instances
+
+
+@warning_ignore_start("unused_private_class_variable")
 var _layout_data:= {}
 var _panel_data:= {}
 var _tab_data:= {}
+@warning_ignore_restore("unused_private_class_variable")
 var _split_panel_instances:= []
 
 
@@ -166,3 +193,7 @@ func _register_panels():
 
 func _get_ready_bool() -> bool:
 	return is_node_ready()
+
+
+class Params:
+	const UNIQUE = &"UNIQUE"

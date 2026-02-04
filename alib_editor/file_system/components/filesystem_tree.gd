@@ -147,7 +147,7 @@ func _build_tree():
 	
 	tree_helper.show_files = show_files
 	
-	var selected_paths = tree_helper.selected_item_paths.duplicate()
+	var selected_paths = tree_helper.get_selected_paths().duplicate()
 	
 	#var folder_icon = filesystem_singleton.get_folder_icon()
 	#var folder_color = filesystem_singleton.get_folder_color()
@@ -236,11 +236,9 @@ func _select_selected_paths(selected_paths):
 		var item = tree_helper.item_dict.get(path) as TreeItem
 		if item:
 			item.select(0)
-			tree_helper.selected_items.append(item)
-			tree_helper.selected_item_paths.append(path)
 
 func get_selected_paths():
-	return tree_helper.selected_item_paths
+	return tree_helper.get_selected_paths()
 
 func _scroll_to_selected_and_emit():
 	var selected_paths = get_selected_paths()
@@ -255,8 +253,9 @@ func set_filtered_paths(path_array:Array):
 
 func update_filter():
 	_update_tree_items()
-	if tree_helper.selected_item_paths.size() > 0:
-		sel_item_path = tree_helper.selected_item_paths[0]
+	var selected_paths = tree_helper.get_selected_paths()
+	if selected_paths.size() > 0:
+		sel_item_path = selected_paths[0]
 
 func _update_tree_items():
 	var filter_callable = null #^ not used in this version, set the paths above
@@ -311,12 +310,10 @@ func _on_tree_helper_mouse_right_clicked():
 	var data = selected_item.get_metadata(0)
 	if not data:
 		return
-	
 	var path = tree_helper.get_path_from_item(selected_item)
 	if path == FileSystemTab.FAVORITES_META:
 		return
-	
-	right_clicked.emit(self, path, tree_helper.selected_item_paths)
+	right_clicked.emit(self, path, tree_helper.get_selected_paths())
 
 
 
@@ -386,7 +383,7 @@ func _rename_popup():
 
 
 func _get_drag_data(_at_position):
-	var files = tree_helper.selected_item_paths.duplicate()
+	var files = tree_helper.get_selected_paths().duplicate()
 	files.erase(FileSystemTab.FAVORITES_META)
 	files.erase("res://")
 	if files.is_empty():

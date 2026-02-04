@@ -27,10 +27,10 @@ func _set_item_icon(last_item, file_data):
 func _mouse_left_clicked():
 	mouse_left_clicked.emit()
 
-func _mouse_right_clicked(data):
+func _mouse_right_clicked(_data):
 	mouse_right_clicked.emit()
 	if popup_on_right_click:
-		print("RIGHT CLICK IN TREE HELPER - IS THIS USED")
+		printerr("RIGHT CLICK IN TREE HELPER - IS THIS USED")
 		#ab_lib.ABRightClick.move_and_show(tree_node, data)
 
 func _mouse_double_clicked():
@@ -46,12 +46,12 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 	if not file_path:
 		file_path = file_data.get(Keys.METADATA_PATH)
 	var file_icon:Texture2D
-	var preview_data = filesystem_singleton.get_preview(file_path)
+	var preview_data = FileSystemSingleton.get_preview(file_path)
 	if preview_data != null:
 		file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
 		if show_preview and file_icon == null:
 			file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
-			item.set_icon_max_width(0, thumbnail_size)
+			item.set_icon_max_width(0, int(thumbnail_size))
 	
 	if file_icon == null:
 		file_icon = filesystem_singleton.get_type_icon(file_path)
@@ -63,7 +63,7 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 		item.set_icon_modulate(0, file_color)
 
 
-func update_tree_items(filtering, filter_callable, root_dir="res://"): # why return bool?
+func update_tree_items(filtering, _filter_callable, root_dir="res://"): # why return bool?
 	if not filtering:
 		filtered_item_paths.clear()
 		for path in item_dict.keys():
@@ -80,17 +80,17 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"): # why ret
 			item.visible = true
 			item.collapsed = runtime_data.get(Keys.METADATA_COLLAPSED)
 		
-		var root_item = tree_node.get_root()
-		if not is_instance_valid(root_item):
+		var _root_item = tree_node.get_root()
+		if not is_instance_valid(_root_item):
 			return false
 		if tree_node.hide_root:
-			var root_children = root_item.get_children()
+			var root_children = _root_item.get_children()
 			for c in root_children:
 				c.visible = true
 		
-		var favorites_item = get_favorites_item()
-		if is_instance_valid(favorites_item):
-			var favorites = favorites_item.get_children()
+		var _favorites_item = get_favorites_item()
+		if is_instance_valid(_favorites_item):
+			var favorites = _favorites_item.get_children()
 			for f in favorites:
 				f.visible = true
 		
@@ -172,20 +172,20 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"): # why ret
 func get_favorites_item():
 	var root_children = tree_node.get_root().get_children()
 	for c in root_children:
-		if c.get_text(0) == filesystem_singleton.get_favorites_text():
+		if c.get_text(0) == FileSystemSingleton.get_favorites_text():
 			return c
 
 func is_favorited_item_selected():
-	for item in selected_items:
+	for item in get_selected_tree_items():
 		var par = item.get_parent()
-		if par and par.get_text(0) == filesystem_singleton.get_favorites_text():
+		if par and par.get_text(0) == FileSystemSingleton.get_favorites_text():
 			return true
 	return false
 
 func is_item_in_favorites(item:TreeItem):
 	var par = item.get_parent()
 	if par:
-		if par.get_text(0) == filesystem_singleton.get_favorites_text():
+		if par.get_text(0) == FileSystemSingleton.get_favorites_text():
 			return true
 	return false
 

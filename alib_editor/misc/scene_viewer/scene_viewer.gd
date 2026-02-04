@@ -528,6 +528,7 @@ func _build_nodes():
 	model_rotate_slider.label_text = "Active Model Rotate"
 	model_rotate_slider.use_label = false
 	center_panel.add_child(model_rotate_slider)
+	model_rotate_slider.hide()
 	
 	
 	camera = Camera3D.new()

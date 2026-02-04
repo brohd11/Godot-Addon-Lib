@@ -73,13 +73,10 @@ func get_split_options() -> RightClickHandler.Options:
 	else:
 		options = RightClickHandler.Options.new()
 	
-	var msg_text = "Show Tab Bar"
-	var icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityVisible", "EditorIcons")
-	var val = true
-	if tab_v.visible:
-		msg_text = "Hide Tab Bar"
-		icon = EditorInterface.get_editor_theme().get_icon("GuiVisibilityHidden", "EditorIcons")
-		val = false
+	var msg_text = "Hide Tab Bar" if tab_v.visible else "Show Tab Bar"
+	var icon = ALibEditor.Singletons.EditorIcons.get_visibility_icon(tab_v.visible)
+	var val = not tab_v.visible
+	
 	options.add_option(msg_text, _toggle_tab_bar.bind(val), [icon])
 	return options
 

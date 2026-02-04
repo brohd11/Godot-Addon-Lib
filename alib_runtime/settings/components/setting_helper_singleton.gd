@@ -39,7 +39,6 @@ var _settings_helpers:= {}
 
 func get_or_create_helper(file_path:String, file_type:=FileType.AUTO):
 	if _settings_helpers.has(file_path):
-		print("GET CACHED")
 		return _settings_helpers[file_path]
 	
 	var ext = file_path.get_extension()
@@ -57,13 +56,9 @@ func get_or_create_helper(file_path:String, file_type:=FileType.AUTO):
 		printerr("IMPLEMENT CONFIG HELPER")
 		return
 	
-	print("NEW HELPER")
 	helper.set_file_path(file_path)
-	#helper.connect_trigger_signal(FileSystemSingleton.get_instance().filesystem_changed)
-	
 	_settings_helpers[file_path] = helper
 	return helper
 
 func _clear_helper(file_path:String):
 	_settings_helpers.erase(file_path)
-	

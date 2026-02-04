@@ -83,6 +83,7 @@ func queue_force_refresh():
 func refresh():
 	if not active:
 		return
+	#if current_browser_state == FileSystemTab.BrowserState.BROWSE:
 	check_current_dir_contents()
 	if filesystem_dirty or _force_refresh_queued:
 		_force_refresh_queued = false
@@ -161,7 +162,6 @@ func create_items():
 		_create_items_not_res()
 
 func _create_items_res():
-	print("REBUI")
 	var folder_thumb = EditorInterface.get_editor_theme().get_icon("FolderBigThumb", "EditorIcons")
 	var file_thumb = EditorInterface.get_editor_theme().get_icon("FileBigThumb", "EditorIcons")
 	if display_as_list:
@@ -416,9 +416,10 @@ func start_edit():
 	
 	var window_pos = ALibRuntime.Utils.UWindow.get_window_global_position(get_window())
 	item_rect.position += window_pos + get_global_rect().position
-	item_rect.position.y +=  item_rect.size.y * 0.6
-	item_rect.size.y *= 0.4
-	
+	item_rect.position.y -= get_v_scroll_bar().value
+	if not display_as_list:
+		item_rect.position.y +=  item_rect.size.y * 0.6
+		item_rect.size.y *= 0.4
 	
 	var line = ALibRuntime.Dialog.LineSubmitHandler.new(self, item_rect)
 	line.set_text(old_name, ALibRuntime.Dialog.LineSubmitHandler.SelectMode.BASENAME)

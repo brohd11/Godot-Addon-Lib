@@ -66,7 +66,7 @@ class Match:
 			if file_name:
 				check_string = check_string.get_file()
 			
-			if Check.contains(check_string, filter_text_array):
+			if Check.contains_n(check_string, filter_text_array):
 				dict[path] = true
 		return dict
 	
@@ -77,7 +77,7 @@ class Match:
 			if file_name:
 				check_string = check_string.get_file()
 			
-			if Check.contains(check_string, filter_text_array):
+			if Check.contains_n(check_string, filter_text_array):
 				dict[path] = Check.similarity(path, filter_text_array)
 		return dict
 
