@@ -324,6 +324,7 @@ func _start_filter_debounce():
 
 func _restart_search():
 	_last_browser_state = BrowserState.BROWSE
+	_last_prefix_filters.clear()
 	_set_filter_texts()
 
 func _set_filter_texts():
@@ -692,7 +693,7 @@ func _select_current_paths_in_fs():
 
 func _emit_global_signals(path):
 	if FileSystemSingleton.get_file_type_static(path) == "PackedScene":
-		EditorGlobalSignals.signal_emitv(&"send_to_scene_tools", [path])
+		EditorGlobalSignals.signal_emitv(&"ssp_send_asset", [path])
 
 func _who_is_node(who:Node, checks:Array):
 	for c in checks:

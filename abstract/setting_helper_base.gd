@@ -99,11 +99,25 @@ func _process_dict(object:Object, dict:Dictionary, settings_obj):
 				if default == null:
 					printerr("Attempted setting '%s' with no default provided." % [setting_string])
 					continue
-			settings_obj.set_setting(setting_string, default)
+			_set_setting(setting_string, settings_obj, default)
 		
 		if not property in object:
 			printerr("Property not in object: %s -> %s" % [property, object])
-		object.set(property, settings_obj.get_setting(setting_string))
+		object.set(property, _get_setting(setting_string, settings_obj))
+
+
+func set_setting(setting_string, val):
+	_set_setting(setting_string, _get_settings_object(), val)
+
+func _set_setting(setting_string, settings_obj, val):
+	settings_obj.set_setting(setting_string, val)
+	
+
+func get_setting(setting_string):
+	return _get_setting(setting_string, _get_settings_object())
+
+func _get_setting(setting_string, settings_obj):
+	return settings_obj.get_setting(setting_string)
 
 
 

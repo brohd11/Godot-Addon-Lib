@@ -64,6 +64,9 @@ func _ready() -> void:
 		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
 		add_theme_stylebox_override("panel", sb)
 	
+	if ALibRuntime.Utils.UVersion.get_minor_version() > 5:
+		scroll_hint_mode = ItemList.SCROLL_HINT_MODE_BOTH
+	
 	multi_selected.connect(_on_item_selected)
 	item_clicked.connect(_on_item_clicked)
 	item_activated.connect(_on_double_clicked)

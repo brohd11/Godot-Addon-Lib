@@ -302,7 +302,7 @@ func reload_control():
 	await plugin.get_tree().process_frame
 	
 	add_to_tree()
-	#show_in_editor()
+	show_in_editor()
 
 func free_instance():
 	clean_up()
@@ -607,6 +607,8 @@ func _show_in_tab_container():
 	var control_to_show = plugin_control
 	if _engine_minor_version >= 6:
 		control_to_show = editor_dock
+	control_to_show.show()
+	return
 	var i = dock_control.get_tab_idx_from_control(control_to_show)
 	dock_control.current_tab = i
 

@@ -6,6 +6,8 @@ var _last_modified_time:int = -1
 
 var _settings:= {}
 
+var _save_to_file_on_change:=true
+
 func _populate_dict():
 	return
 
@@ -41,5 +43,13 @@ func get_setting(setting_name:String):
 
 func set_setting(setting_name:String, value:Variant):
 	_settings[setting_name] = value
-	_save_to_file()
-	check_file()
+	_update_file()
+
+
+func _update_file():
+	if _save_to_file_on_change:
+		_save_to_file()
+		_last_modified_time = FileAccess.get_modified_time(_file_path)
+		_populate_dict()
+	settings_changed.emit()
+	

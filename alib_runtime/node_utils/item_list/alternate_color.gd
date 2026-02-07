@@ -38,6 +38,6 @@ static func draw_lines(item_list: ItemList, color = null):
 		if current_row_index % 2 == 0: # == start on 0, != start on 1
 			var rect = Rect2(0, current_y, list_width, row_height)
 			item_list.draw_rect(rect, color)
-
+		
 		current_y += row_height
 		current_row_index += 1

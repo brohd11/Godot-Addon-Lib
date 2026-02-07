@@ -52,10 +52,15 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
+	
+	
 	if ALibEditor.Utils.UEditorTheme.get_current_theme_style() == "Modern" and ALibEditor.Utils.UEditorTheme.get_custom_theme_path() == "":
 		var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
 		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
 		add_theme_stylebox_override("panel", sb)
+	
+	if ALibRuntime.Utils.UVersion.get_minor_version() > 5:
+		scroll_hint_mode = Tree.SCROLL_HINT_MODE_BOTH
 	
 	custom_minimum_size = _MIN_SIZE
 	
