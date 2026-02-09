@@ -107,7 +107,7 @@ func _exit_tree() -> void:
 func _connect_viewports():
 	for i in range(4):
 		var viewport = EditorInterface.get_editor_viewport_3d(i)
-		var viewport_control = viewport.get_parent().get_parent().get_child(1)
+		var viewport_control = get_viewport_control(i)
 		
 		var intercept = Intercept3D.new()
 		_intercepts[viewport] = intercept
@@ -122,8 +122,7 @@ func _connect_viewports():
 
 func _disconnect_viewports():
 	for i in range(4):
-		var viewport = EditorInterface.get_editor_viewport_3d(i)
-		var viewport_control = viewport.get_parent().get_parent().get_child(1)
+		var viewport_control = get_viewport_control(i)
 		for c in viewport_control.get_children():
 			if c is Intercept3D:
 				c.queue_free()
@@ -187,6 +186,10 @@ func _get_raycast(viewport):
 		raycast_result[Keys.VIEWPORT] = viewport
 	return raycast_result
 
+## idx is the desired Editor 3D viewport.
+static func get_viewport_control(idx:int):
+	var viewport = EditorInterface.get_editor_viewport_3d(idx)
+	return viewport.get_parent().get_parent().get_child(1)
 
 class Keys:
 	const VIEWPORT = &"viewport"
