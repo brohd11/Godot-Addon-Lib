@@ -39,9 +39,12 @@ func get_raycast_collision(viewport: Viewport) -> Variant:
 		var raycast_position:Variant = ALibRuntime.NodeUtils.NUViewport.Raycast.raycast_plane(viewport, plane, raycast_distance)
 		if raycast_position != null:
 			raycast_position = raycast_position as Vector3
+			var normal = plane.normal
+			if viewport.get_camera_3d().position.direction_to(raycast_position).dot(plane.normal) > 0:
+				normal = -plane.normal
 			return {
 				POSITION: raycast_position,
-				NORMAL: plane.normal,
+				NORMAL: normal,
 			}
 	if raycast_mode == RaycastMode.TERRAIN_3D: #^ must be "if" so if allow all col fails it can come here
 		if not is_instance_valid(terrain_3D):

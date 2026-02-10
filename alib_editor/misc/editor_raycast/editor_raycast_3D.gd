@@ -147,7 +147,7 @@ func _on_mouse_exited_viewport():
 	last_raycast_result = null
 	last_raycast_transform = null
 	if is_instance_valid(current_tool):
-		current_tool.remove_preview()
+		current_tool.remove_cursor()
 
 
 func _on_intercept_unhandled_input(event:InputEvent, viewport:Viewport):
@@ -160,7 +160,7 @@ func _on_intercept_unhandled_input(event:InputEvent, viewport:Viewport):
 	#var raycast_result = raycast.get_raycast_collision(viewport)
 	#raycast_result["viewport"] = viewport
 	last_raycast_result = _get_raycast(viewport)
-	current_tool.draw_preview()
+	current_tool.draw_cursor()
 
 
 func _on_intercept_handled_event(event_type:Intercept3D.EventType, event:InputEvent, viewport:Viewport):

@@ -169,6 +169,8 @@ func _ready() -> void:
 	visibility_changed.connect(_on_visibilty_changed, 1)
 	
 	_set_current_path(self, current_path)
+	
+	#_check_toolbar_elements() #^ this doesn't set the search label?
 
 func _exit_tree() -> void:
 	FileSystemSingleton.reset_dialogs(self)

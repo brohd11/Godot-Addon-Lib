@@ -42,8 +42,8 @@ func set_as_current_tool():
 func enable(state:bool):
 	EditorRaycast3D.set_enabled(state)
 
-func draw_preview():
+func draw_cursor():
 	pass
 
-func remove_preview():
+func remove_cursor():
 	pass
