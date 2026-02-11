@@ -263,6 +263,10 @@ static func path_to_uid(path:String):
 		uid = path
 	return uid
 
+
+static func uid_invalid(uid:String):
+	return uid == _UID_INVALID
+
 static func file_exists(path_or_uid:String, current_script:Script=null, print_err:=false):
 	if not path_or_uid.is_absolute_path():
 		if is_instance_valid(current_script):

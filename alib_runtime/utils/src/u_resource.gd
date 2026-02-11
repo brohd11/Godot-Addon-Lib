@@ -63,6 +63,16 @@ static func get_modulated_icon(texture:Texture2D, color:=Color(1,1,1)) -> Textur
 	
 	return ImageTexture.create_from_image(img)
 
+static func load_or_get_icon(name_or_path:String):
+	if FileAccess.file_exists(name_or_path):
+		return load(name_or_path)
+	var editor_interface = Engine.get_singleton(&"EditorInterface")
+	if is_instance_valid(editor_interface):
+		var theme = editor_interface.get_editor_theme()
+		if theme.has_icon(name_or_path, &"EditorIcons"):
+			return theme.get_icon(name_or_path, &"EditorIcons")
+	printerr("Could not find icon: %s" % name_or_path)
+
 
 static func instance_scene_or_script(path:String):
 	if not FileAccess.file_exists(path):

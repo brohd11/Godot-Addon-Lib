@@ -4,7 +4,7 @@ const PRINT_ERR = false
 
 var _settings_dict:Dictionary
 var _default_dict:Dictionary
-var _no_default:=false
+#var _no_default:=false
 var _subscribed:Dictionary = {}
 
 var _initialize_queued:bool = false
@@ -13,13 +13,10 @@ func _get_settings_object():
 	return
 
 
-
-
 func initialize():
-	print("QUE ", _initialize_queued)
-	if _no_default:
-		printerr("Provide default settings in dictionary 'DEFAULTS'.")
-		return
+	#if _no_default:
+		#printerr("Provide default settings in dictionary 'DEFAULTS'.")
+		#return
 	if _initialize_queued:
 		return
 	_initialize_queued = true
@@ -27,7 +24,7 @@ func initialize():
 	await Engine.get_main_loop().root.get_tree().process_frame
 	var settings = _get_settings_object()
 	_on_settings_changed(settings)
-	_connect_changed()
+	connect_settings_object_signal()
 	
 	_initialize_queued = false
 
@@ -38,9 +35,10 @@ func object_initialize(object:Object):
 		return
 	var subscribed = _subscribed[object].get(Keys.SUBSCRIBED, {})
 	_process_dict(object, subscribed, _get_settings_object())
-	_connect_changed()
+	connect_settings_object_signal()
 
-func _connect_changed():
+
+func connect_settings_object_signal():
 	var settings = _get_settings_object()
 	if not settings.settings_changed.is_connected(_on_settings_changed):
 		settings.settings_changed.connect(_on_settings_changed.bind(settings))
@@ -105,6 +103,10 @@ func _process_dict(object:Object, dict:Dictionary, settings_obj):
 			printerr("Property not in object: %s -> %s" % [property, object])
 		object.set(property, _get_setting(setting_string, settings_obj))
 
+func set_default(setting_string, default_val):
+	var settings_obj = _get_settings_object()
+	if not settings_obj.has_setting(setting_string):
+		settings_obj.set_setting(setting_string, default_val)
 
 func set_setting(setting_string, val):
 	_set_setting(setting_string, _get_settings_object(), val)
