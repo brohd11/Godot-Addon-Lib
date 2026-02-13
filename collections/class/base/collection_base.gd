@@ -22,6 +22,9 @@ func get_data():
 func clear():
 	_collection_data.clear()
 
+func get_collection_size():
+	return _collection_data.size()
+
 func new_file(file_path:String, metadata:Dictionary={}):
 	var file_data = _get_file_data(file_path)
 	var path = file_data.get(Keys.PATH)

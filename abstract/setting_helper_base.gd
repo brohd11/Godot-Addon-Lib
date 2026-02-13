@@ -54,10 +54,12 @@ func _subscribe_object(object:Object):
 func subscribe_property(object:Object, property_name:StringName, setting_path:StringName, default_value=null):
 	if not _default_dict.has(setting_path):
 		if default_value == null:
-			print("Setting has no default and none provided.")
-			return
-		else:
-			_default_dict[setting_path] = default_value
+			default_value = object.get(property_name)
+			if default_value == null:
+				print("Setting '%s' has no default and none provided." % property_name)
+				return
+		
+		_default_dict[setting_path] = default_value
 	
 	if not _subscribed.has(object):
 		_subscribe_object(object)

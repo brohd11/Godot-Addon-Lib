@@ -25,15 +25,14 @@ func _ready() -> void:
 	_title_button.pressed.connect(_on_title_button_pressed)
 	main_vbox.add_child(_title_button)
 	main_vbox.add_child(_sub_vbox)
-	#_sub_vbox.add_child(HSeparator.new())
 	main_vbox.add_theme_constant_override("separation", 0)
 	_sub_vbox.add_theme_constant_override("separation", 0)
 	_sub_vbox.add_child(_content_margin)
 	_content_margin.add_child(content_vbox)
 	set_content_margin(margin)
 	
-	#_sub_vbox.add_child(HSeparator.new())
 	content_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
 
 func set_content_margin(new_val:int):
 	ALibRuntime.NodeUtils.NUMarginContainer.set_margins(_content_margin, new_val)
@@ -43,9 +42,17 @@ func _on_title_button_pressed():
 
 func set_title(new_title:String):
 	_title_button.text = new_title
+	
+
 
 func get_title():
 	return _title_button.text
+
+func set_icon(icon):
+	if icon == null:
+		return
+	_title_button.icon = icon
+	_title_button.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 
 func add_content(content:Control):
 	content_vbox.add_child(content)

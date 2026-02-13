@@ -79,10 +79,12 @@ func _new_popup():
 	popup = PopupMenu.new()
 	popup.wrap_controls = true
 	popup.submenu_popup_delay = 0
-	_set_popup_parent()
+	#_set_popup_parent()
 	mouse_helper = MouseHelper.new(popup, _on_mouse_helper_timeout)
 	
 	popup.popup_hide.connect(_on_popup_hide)
+	
+	_return_popup()
 
 
 func set_custom_id_pressed_callable(callable):
@@ -103,14 +105,16 @@ func _on_mouse_helper_timeout():
 	if hide_popup_with_timer:
 		_hide_popup()
 
+func _on_popup_hide():
+	_hide_popup()
+
 func _hide_popup():
 	popup_hidden.emit()
 	popup.hide()
-	_remove_popup_from_tree()
+	_return_popup()
 
 
-func _on_popup_hide():
-	_hide_popup()
+
 
 
 func _get_popup_offset():
@@ -128,10 +132,16 @@ func _set_popup_parent():
 
 
 
-func _remove_popup_from_tree():
+func _return_popup():
 	if is_instance_valid(popup.get_parent()):
-		popup.get_parent().remove_child(popup)
+		popup.reparent(self)
+		#popup.get_parent().remove_child(popup)
+	else:
+		add_child(popup)
 
+#func _remove_popup_from_tree():
+	#if is_instance_valid(popup.get_parent()):
+		#popup.get_parent().remove_child(popup)
 
 func _process(delta: float) -> void:
 	if _click_debounce_timer != 0:

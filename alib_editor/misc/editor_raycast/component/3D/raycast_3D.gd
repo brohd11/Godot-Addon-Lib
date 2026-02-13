@@ -114,11 +114,12 @@ func get_final_transform(raycast_result:Dictionary, apply_randomize:=false):
 	
 	var raycast_mode = settings.get(Settings.RAYCAST_MODE)
 	var align_to_normal = settings.get(Settings.ALIGN_TO_NORMAL, false)
-	var snapping_enabled = settings.get(Settings.SNAPPING_ENABLED, false)
-	var snapping_value = settings.get(Settings.SNAPPING_VALUE, 1)
+	var snapping_enabled = settings.get(Settings.GRID_SNAP, false)
+	var snapping_value = float(settings.get(Settings.GRID_SIZE, 1))
+	
 	var rotation = settings.get(Settings.TRANSFORM_ROTATION, Vector3.ZERO)
 	var scale = settings.get(Settings.TRANSFORM_SCALE, Vector3(1,1,1))
-	var terrain_3D_snap_height = settings.get(Settings.TERRAIN_SNAP_TO)
+	var terrain_3D_snap_height = settings.get(Settings.TERRAIN_SNAP_TO, true)
 	
 	rotation = _deg_to_rad(rotation)
 	
@@ -261,24 +262,26 @@ func get_setting(setting_name:StringName, default=null):
 	return settings.get(setting_name, default)
 
 class Settings:
-	const RAYCAST_MODE = &"RAYCAST_MODE"
-	const RAYCAST_DISTANCE = &"RAYCAST_DISTANCE"
-	const ALIGN_TO_NORMAL = &"ALIGN_TO_NORMAL"
-	const SNAPPING_ENABLED = &"SNAPPING_ENABLED"
-	const SNAPPING_VALUE = &"SNAPPING_VALUE"
+	const RAYCAST_MODE = &"raycast_3d.settings.raycast_mode"
+	const RAYCAST_DISTANCE = &"raycast_3d.settings.raycast_distance"
+	const ALIGN_TO_NORMAL = &"raycast_3d.settings.align_to_normal"
 	
-	const PLANE_DIRECTION = &"PLANE_DIRECTION"
-	const PLANE_OFFSET = &"PLANE_OFFSET"
+	const GRID_SIZE = &"raycast_3d.settings.grid_size"
+	const GRID_SNAP = &"raycast_3d.settings.grid_snap"
 	
-	const TERRAIN_SNAP_TO = &"TERRAIN_SNAP_TO"
-	const TERRAIN_USE_ALL_COL = &"TERRAIN_USE_ALL_COL"
+	const PLANE_DIRECTION = &"raycast_3d.settings.plane_direction"
+	const PLANE_OFFSET = &"raycast_3d.settings.plane_offset"
+	const PLANE_OFFSET_STEP = &"raycast_3d.settings.plane_offset_step"
+	
+	const TERRAIN_SNAP_TO = &"raycast_3d.settings.terrain_snap_to"
+	const TERRAIN_USE_ALL_COL = &"raycast_3d.settings.terrain_use_all_col"
 	
 	
-	const TRANSFORM_ROTATION = &"TRANSFORM_ROTATION"
-	const TRANSFORM_SCALE = &"TRANSFORM_SCALE"
+	const TRANSFORM_ROTATION = &"raycast_3d.settings.transform_rotation"
+	const TRANSFORM_SCALE = &"raycast_3d.settings.transform_scale"
 	
-	const RANDOMIZE_ROTATION_ENABLE = &"RANDOMIZE_ROTATION_ENABLE"
-	const RANDOMIZE_ROTATION = &"RANDOMIZE_ROTATION"
-	const RANDOMIZE_SCALE_ENABLE = &"RANDOMIZE_SCALE_ENABLE"
-	const RANDOMIZE_SCALE = &"RANDOMIZE_SCALE"
-	const RANDOMIZE_POSITION = &"RANDOMIZE_POSITION"
+	const RANDOMIZE_ROTATION_ENABLE = &"raycast_3d.settings.randomize_rotation_enable"
+	const RANDOMIZE_ROTATION = &"raycast_3d.settings.randomize_rotation"
+	const RANDOMIZE_SCALE_ENABLE = &"raycast_3d.settings.randomize_scale_enable"
+	const RANDOMIZE_SCALE = &"raycast_3d.settings.randomize_scale"
+	const RANDOMIZE_POSITION = &"raycast_3d.settings.randomize_position"

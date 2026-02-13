@@ -31,18 +31,18 @@ static func create_registry_data(_name:String, path:String, params:Dictionary={}
 
 static func register_panel_data(data:Dictionary) -> void:
 	var instance = get_instance()
-	var path = data.get("path")
-	if instance._panel_data.has(path):
-		print("Path already registered in EditorPanelSingleton Panels: %s" % path)
+	var _name = data.get("name")
+	if instance._panel_data.has(_name):
+		print("Path already registered in EditorPanelSingleton Panels: %s" % _name)
 		return
-	instance._panel_data[path] = data
+	instance._panel_data[_name] = data
 
-static func unregister_panel(path:String):
+static func unregister_panel(_name:String):
 	var instance = get_instance()
-	if instance._panel_data.has(path):
-		instance._panel_data.erase(path)
+	if instance._panel_data.has(_name):
+		instance._panel_data.erase(_name)
 		return
-	print("Path not registered in EditorPanelSingleton Panels: %s" % path)
+	print("Path not registered in EditorPanelSingleton Panels: %s" % _name)
 
 static func get_registered_panels(show_hidden:=false):
 	var instance = get_instance()
@@ -69,18 +69,18 @@ static func register_tab(_name:String, path:String, params:Dictionary={}) -> voi
 
 static func register_tab_data(data:Dictionary) -> void:
 	var instance = get_instance()
-	var path = data.get("path")
-	if instance._tab_data.has(path):
-		print("Path already registered in EditorPanelSingleton Tabs: %s" % path)
+	var _name = data.get("name")
+	if instance._tab_data.has(_name):
+		print("Path already registered in EditorPanelSingleton Tabs: %s" % _name)
 		return
-	instance._tab_data[path] = data
+	instance._tab_data[_name] = data
 
-static func unregister_tab(path:String):
+static func unregister_tab(_name:String):
 	var instance = get_instance()
-	if instance._tab_data.has(path):
-		instance._tab_data.erase(path)
+	if instance._tab_data.has(_name):
+		instance._tab_data.erase(_name)
 		return
-	print("Path not registered in EditorPanelSingleton Tabs: %s" % path)
+	print("Path not registered in EditorPanelSingleton Tabs: %s" % _name)
 
 static func get_registered_tabs(show_hidden:=false):
 	var instance = get_instance()
