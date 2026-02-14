@@ -24,9 +24,11 @@ func _clean_up():
 func _get_viewport_manager():
 	return EditorRaycast3D.get_instance()
 
+## Returns dictionary with "position" and "normal" or null if not valid raycast
 func _get_last_raycast_result():
 	return EditorRaycast3D.get_last_raycast_result()
 
+## Returns Transform3D or null if not valid raycast
 func _get_raycast_transform(apply_randomize:=false):
 	return EditorRaycast3D.get_transformed_raycast_result(apply_randomize)
 

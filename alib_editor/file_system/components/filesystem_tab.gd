@@ -694,8 +694,9 @@ func _select_current_paths_in_fs():
 		printerr(valid_paths)
 
 func _emit_global_signals(path):
-	if FileSystemSingleton.get_file_type_static(path) == "PackedScene":
-		EditorGlobalSignals.signal_emitv(&"rt_send_asset", [path])
+	#if FileSystemSingleton.get_file_type_static(path) == "PackedScene":
+	print("EMIT ", current_selected_paths)
+	EditorGlobalSignals.signal_emitv(&"rt_send_asset", [current_selected_paths])
 
 func _who_is_node(who:Node, checks:Array):
 	for c in checks:

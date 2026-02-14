@@ -29,4 +29,4 @@ static func raycast_terrain_3d(viewport: Viewport, terrain3D_node) -> Vector3:
 	var mousepos:Vector2= viewport.get_mouse_position()
 	var origin:Vector3 = camera.project_ray_origin(mousepos)
 	var direction:Vector3 = camera.project_ray_normal(mousepos)
-	return terrain3D_node.get_intersection(origin, direction)
+	return terrain3D_node.get_intersection(origin, direction, true)

@@ -125,6 +125,8 @@ func get_final_transform(raycast_result:Dictionary, apply_randomize:=false):
 	
 	
 	if raycast_mode == RaycastMode.TERRAIN_3D:
+		#terrain_3D = terrain_3D as Terrain3D
+		#terrain_3D.data.get_height()
 		var height = terrain_3D.data.get_height(position)
 		if terrain_3D_snap_height and position.y < height:
 			position.y = height

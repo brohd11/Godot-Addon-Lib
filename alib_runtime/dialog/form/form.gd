@@ -1,7 +1,7 @@
 @tool
 extends "res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/handler_base.gd"
 
-#! namespace ALibRuntime.Dialog
+# ! namespace ALibRuntime.Dialog
 
 const Fields = preload("res://addons/addon_lib/brohd/alib_runtime/ui/fields/fields.gd")
 enum FieldType {
