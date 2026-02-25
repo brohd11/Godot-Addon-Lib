@@ -67,7 +67,7 @@ func save_all_collections():
 
 func erase_collection(collection:CollectionBase):
 	var collection_name = collection.get_collection_name()
-	var conf = ALibRuntime.Dialog.ConfirmationDialogHandler.new("Delete collection: %s" % collection_name)
+	var conf = ALibRuntime.Dialog.Handlers.Confirmation.new("Delete collection: %s" % collection_name)
 	var handled = await conf.handled
 	if not handled:
 		return

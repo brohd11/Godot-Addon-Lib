@@ -218,7 +218,7 @@ func _rename_tab(tab:int):
 	var old_name = tab_bar.get_tab_title(tab)
 	var rect = tab_bar.get_tab_rect(tab)
 	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(tab_bar)
-	var line = ALibRuntime.Dialog.LineSubmitHandler.new(self, rect, false)
+	var line = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, rect, false)
 	
 	var new = await line.line_submitted
 	if new == old_name or new == "":

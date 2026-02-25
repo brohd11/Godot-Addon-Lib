@@ -1,0 +1,125 @@
+@tool
+extends "res://addons/addon_lib/brohd/alib_runtime/dialog/base/handler_base.gd"
+
+const SUCCESS_STRING = &"SUCCESS_STRING"
+
+enum TargetSection{
+	HEADER,
+	BODY,
+	FOOTER,
+}
+
+var _title:String=""
+var default_size = Vector2(600, 400)
+
+func _init(_root_node=null) -> void:
+	_set_root_node(_root_node)
+
+func set_title(title:String):
+	_title = title
+	if is_instance_valid(dialog):
+		dialog.title = _title
+
+
+func show_dialog():
+	_build_dialog()
+	dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
+	root_node.add_child(dialog)
+	return await handled
+
+func _build_dialog():
+	if is_instance_valid(dialog):
+		return
+	
+	dialog = DialogStructure.new()
+	
+	dialog.title = _title
+	dialog.size = default_size
+	
+	#dialog.reset_size.call_deferred()
+	
+	#root_node.add_child(dialog)
+	
+	#dialog.popup()
+	
+	dialog.close_requested.connect(_on_canceled)
+	dialog.cancel_button.pressed.connect(_on_canceled)
+	dialog.confirm_button.pressed.connect(_on_confirmed)
+	dialog.always_on_top = true
+
+
+
+
+
+func _on_confirmed():
+	#self.handled.emit(get_data())
+	handled.emit(SUCCESS_STRING)
+	dialog.queue_free()
+	
+func _on_canceled():
+	handled.emit(CANCEL_STRING)
+	dialog.queue_free()
+
+
+func add_content(control:Control, target_section:TargetSection=TargetSection.BODY):
+	_build_dialog() # ensure this has been setup
+	match target_section:
+		TargetSection.HEADER: dialog.header.add_child(control)
+		TargetSection.BODY: dialog.body.add_child(control)
+		TargetSection.FOOTER: dialog.footer.add_child(control)
+	
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+
+
+class DialogStructure extends Window:
+	
+	var header:= VBoxContainer.new()
+	var body:= VBoxContainer.new()
+	var footer:= VBoxContainer.new()
+	
+	var cancel_button:= Button.new()
+	var confirm_button:= Button.new()
+	
+	func _init() -> void:
+		var bg = Panel.new()
+		add_child(bg)
+		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var editor_interface = Engine.get_singleton("EditorInterface")
+		if is_instance_valid(editor_interface): # this gives a not super dark bg
+			var bg_sb = bg.get_theme_stylebox("panel").duplicate()
+			bg_sb.set_corner_radius_all(0)
+			bg.add_theme_stylebox_override("panel", bg_sb)
+		
+		var main_vbox := VBoxContainer.new()
+		bg.add_child(main_vbox)
+		main_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		
+		main_vbox.add_child(header)
+		main_vbox.add_child(body)
+		main_vbox.add_child(footer)
+		
+		var button_hbox = HBoxContainer.new()
+		button_hbox.add_spacer(false)
+		button_hbox.add_child(cancel_button)
+		cancel_button.text = "Cancel"
+		cancel_button.custom_minimum_size = Vector2(75, 0)
+		button_hbox.add_spacer(false)
+		button_hbox.add_child(confirm_button)
+		confirm_button.text = "Confirm"
+		confirm_button.custom_minimum_size = Vector2(75, 0)
+		button_hbox.add_spacer(false)
+		
+		footer.add_child(button_hbox)
+	
+	
+	func add_to_header(control:Control):
+		header.add_child(control)
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	func add_to_body(control:Control):
+		body.add_child(control)
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	
+	func add_to_footer(control:Control):
+		footer.add_child(control)
+		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -125,9 +125,9 @@ func set_item_title(index:int, new_name:String):
 func rename_item(index:int):
 	var item_rect = item_list.get_item_rect(index)
 	item_rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(item_list)
-	var line_edit = ALibRuntime.Dialog.LineSubmitHandler.new(self, item_rect, false)
+	var line_edit = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, item_rect, false)
 	var current_name = get_item_title(index)
-	line_edit.set_text(current_name, ALibRuntime.Dialog.LineSubmitHandler.SelectMode.ALL)
+	line_edit.set_text(current_name, ALibRuntime.Dialog.Handlers.LineSubmit.SelectMode.ALL)
 	var text = await line_edit.line_submitted
 	if text == current_name or text == "":
 		return
@@ -152,7 +152,7 @@ func set_title(new_name:String):
 func rename_title():
 	var rect = title_button.get_rect()
 	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(title_button)
-	var line = ALibRuntime.Dialog.LineSubmitHandler.new(self, rect, false)
+	var line = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, rect, false)
 	var submit = await line.line_submitted
 	if submit == "" or submit == get_title():
 		return

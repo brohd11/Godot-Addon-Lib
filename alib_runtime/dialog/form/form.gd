@@ -1,7 +1,5 @@
 @tool
-extends "res://addons/addon_lib/brohd/alib_runtime/utils/src/dialog/handler_base.gd"
-
-# ! namespace ALibRuntime.Dialog
+extends "res://addons/addon_lib/brohd/alib_runtime/dialog/general/general_dialog.gd"
 
 const Fields = preload("res://addons/addon_lib/brohd/alib_runtime/ui/fields/fields.gd")
 enum FieldType {
@@ -10,29 +8,23 @@ enum FieldType {
 	OPTION
 }
 
-enum TargetSection{
-	HEADER,
-	BODY,
-	FOOTER,
-}
 
 var _form_build_data = {}
 var constructed_data = {}
-var _title:String=""
-var default_size = Vector2(600, 400)
 
 
 func _init(form_build_data:Dictionary, _root_node=null) -> void:
 	_set_root_node(_root_node)
 	_form_build_data = form_build_data
+	
+	_title = _form_build_data.get(Keys.TITLE, _title)
+	default_size = _form_build_data.get(Keys.SIZE, default_size)
 
-func set_title(title:String):
-	_title = title
 
 func add_bool(_name, icon=null, default:=false, target:TargetSection=TargetSection.BODY):
 	_form_build_data[_name] = {
-		Keys.TYPE:"bool",
-		Keys.ICON:icon,
+		Keys.TYPE: "bool",
+		Keys.ICON: icon,
 		Keys.DEFAULT: default,
 		Keys.TARGET: target
 	}
@@ -40,35 +32,28 @@ func add_bool(_name, icon=null, default:=false, target:TargetSection=TargetSecti
 
 
 func show_dialog():
-	dialog = DialogStructure.new()
-	
-	dialog.title = _form_build_data.get(Keys.TITLE, _title)
-	dialog.size = _form_build_data.get(Keys.SIZE, default_size)
-	
+	_build_dialog()
+	_build_fields()
+	dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
+	Engine.get_main_loop().root.add_child(dialog)
+	return await handled
+
+
+func _build_fields():
 	for _name in _form_build_data.keys():
 		var data = _form_build_data.get(_name)
 		if data is not Dictionary:
 			continue
 		_add_field(_name, data)
-	
-	
-	#dialog.reset_size.call_deferred()
-	dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
-	
-	Engine.get_main_loop().root.add_child(dialog)
-	#root_node.add_child(dialog)
-	
-	#dialog.popup()
-	
-	dialog.close_requested.connect(_on_canceled)
-	dialog.cancel_button.pressed.connect(_on_canceled)
-	dialog.confirm_button.pressed.connect(_on_confirmed)
-	dialog.always_on_top = true
-	
-	#var _handle_var = await handled
-	return await handled
 
 
+func _on_confirmed():
+	self.handled.emit(get_data())
+	dialog.queue_free()
+	
+func _on_canceled():
+	self.handled.emit(CANCEL_STRING)
+	dialog.queue_free()
 
 
 func get_data():
@@ -80,7 +65,9 @@ func get_data():
 			continue
 		var type = build_data.get(Keys.TYPE)
 		var val
-		if type == "bool":
+		if type == null:
+			val = control
+		elif type == "bool":
 			val = control.button_pressed
 		elif type == "LineEdit":
 			val = control.get_text()
@@ -88,14 +75,16 @@ func get_data():
 	
 	return data
 
-func _on_confirmed():
-	self.handled.emit(get_data())
-	dialog.queue_free()
-	
-func _on_canceled():
-	self.handled.emit(CANCEL_STRING)
-	dialog.queue_free()
 
+func add_custom_field(_name, control:Control, target_section:TargetSection=TargetSection.BODY):
+	_build_dialog() # ensure this has been setup
+	constructed_data[_name] = control
+	match target_section:
+		TargetSection.HEADER: dialog.header.add_child(control)
+		TargetSection.BODY: dialog.body.add_child(control)
+		TargetSection.FOOTER: dialog.footer.add_child(control)
+	
+	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _add_field(_name, data):
 	var type = data.get(Keys.TYPE)
@@ -116,53 +105,6 @@ func _add_field(_name, data):
 	constructed_data[_name] = control
 	return control
 
-class DialogStructure extends Window:
-	
-	var header:= VBoxContainer.new()
-	var body:= VBoxContainer.new()
-	var footer:= VBoxContainer.new()
-	
-	var cancel_button:= Button.new()
-	var confirm_button:= Button.new()
-	
-	func _init() -> void:
-		var bg = Panel.new()
-		add_child(bg)
-		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		
-		var main_vbox := VBoxContainer.new()
-		bg.add_child(main_vbox)
-		main_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		
-		main_vbox.add_child(header)
-		main_vbox.add_child(body)
-		main_vbox.add_child(footer)
-		
-		var button_hbox = HBoxContainer.new()
-		button_hbox.add_spacer(false)
-		button_hbox.add_child(cancel_button)
-		cancel_button.text = "Cancel"
-		cancel_button.custom_minimum_size = Vector2(75, 0)
-		button_hbox.add_spacer(false)
-		button_hbox.add_child(confirm_button)
-		confirm_button.text = "Confirm"
-		confirm_button.custom_minimum_size = Vector2(75, 0)
-		button_hbox.add_spacer(false)
-		
-		footer.add_child(button_hbox)
-	
-	
-	func add_to_header(control:Control):
-		header.add_child(control)
-		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	
-	func add_to_body(control:Control):
-		body.add_child(control)
-		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	
-	func add_to_footer(control:Control):
-		footer.add_child(control)
-		control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 class Keys:
 	const TITLE = &"title"

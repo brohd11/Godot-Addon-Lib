@@ -424,8 +424,8 @@ func start_edit():
 		item_rect.position.y +=  item_rect.size.y * 0.6
 		item_rect.size.y *= 0.4
 	
-	var line = ALibRuntime.Dialog.LineSubmitHandler.new(self, item_rect)
-	line.set_text(old_name, ALibRuntime.Dialog.LineSubmitHandler.SelectMode.BASENAME)
+	var line = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, item_rect)
+	line.set_text(old_name, ALibRuntime.Dialog.Handlers.LineSubmit.SelectMode.BASENAME)
 	var new_name = await line.line_submitted
 	
 	if not FileSystemSingleton.is_new_name_valid(old_name, new_name):

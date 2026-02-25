@@ -9,6 +9,8 @@ const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handle
 const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 
+const Form = preload("res://addons/addon_lib/brohd/alib_runtime/dialog/form/form.gd")
+
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
 const FileSystemTab = FSClasses.FileSystemTab
 const FileSystemPathBar = FSClasses.FileSystemPathBar
@@ -128,6 +130,8 @@ var _alt_list_color:=false #^ setting - dd
 var _current_view_mode:ViewMode = ViewMode.TREE #^ setting - dd
 var _current_split_mode:SplitMode = SplitMode.NONE #^ setting - dd
 
+var _signal_busses:Array[StringName] = [&"rt_send_asset"] # default for ray tool
+
 var _view_data:Dictionary = {}
 
 
@@ -205,6 +209,8 @@ func set_dock_data(data:Dictionary):
 	_current_search_view = _dock_data.get(DataKeys.SEARCH_VIEW, SearchView.AUTO)
 	_alt_list_color = _dock_data.get(DataKeys.LIST_ALT_COLOR, false)
 	
+	_set_signal_busses(_dock_data.get(DataKeys.SIGNAL_BUSSES, PackedStringArray()))
+	
 	_search_tree_list_dir = _dock_data.get(DataKeys.TREE_SEARCH_LIST_DIR, false)
 
 func _set_data_on_ready():
@@ -262,6 +268,8 @@ func get_dock_data() -> Dictionary:
 	data[DataKeys.PLACES_TOGGLED_FOLLOW] = _places_follow_view_mode
 	data[DataKeys.FILTER_MODE] = _current_filter_mode
 	data[DataKeys.FILTER_MODE_FOLLOW] = _filter_mode_follow_view_mode
+	
+	data[DataKeys.SIGNAL_BUSSES] = _signal_busses
 	
 	data[DataKeys.VIEW_MODE] = _current_view_mode
 	data[DataKeys.VIEW_DATA] = _view_data
@@ -694,9 +702,8 @@ func _select_current_paths_in_fs():
 		printerr(valid_paths)
 
 func _emit_global_signals(path):
-	#if FileSystemSingleton.get_file_type_static(path) == "PackedScene":
-	print("EMIT ", current_selected_paths)
-	EditorGlobalSignals.signal_emitv(&"rt_send_asset", [current_selected_paths])
+	for bus_name in _signal_busses:
+		EditorGlobalSignals.signal_emitv(bus_name, [current_selected_paths])
 
 func _who_is_node(who:Node, checks:Array):
 	for c in checks:
@@ -910,6 +917,9 @@ func _on_options_button_pressed():
 	
 	#^ settings
 	var settings_icon = EditorInterface.get_editor_theme().get_icon("Tools", "EditorIcons")
+	
+	options.add_option("Settings/Signals", _show_signal_dialog, [settings_icon, _get_modulated_icon("Signal")])
+	
 	options.add_option("Settings/Alt Line Colors (%s)" % _alt_list_color, _set_draw_list_lines.bind(not _alt_list_color), [settings_icon, "FileList"])
 	
 	var sb_callable = func(): _places_follow_view_mode = not _places_follow_view_mode
@@ -945,6 +955,36 @@ func _on_options_button_pressed():
 		for path in _recent_files:
 			recents.add_item(path)
 		recents.add_item("Clear Recent Files")
+
+func _show_signal_dialog():
+	var signal_form = Form.new({"size":Vector2(500, 300)})
+	
+	var file_list = ALibRuntime.UICustom.LineEditList.new()
+	file_list.set_title("Editor Signals")
+	var signals_button = Button.new()
+	signals_button.icon = _get_modulated_icon("Signal")
+	var signal_callable = func():
+		var options = RightClickHandler.Options.new()
+		for signal_name in EditorGlobalSignals.get_signal_bus().get_signal_names():
+			options.add_option(signal_name, file_list.new_entry.bind(signal_name))
+		right_click_handler.display_on_control(options, signals_button)
+	
+	signals_button.pressed.connect(signal_callable)
+	file_list.title_hbox.add_child(signals_button)
+	
+	file_list.show_add_entry_button()
+	file_list.set_entries(_signal_busses)
+	signal_form.add_custom_field("Signals", file_list)
+	var result = await signal_form.show_dialog()
+	if result is String and result == Form.CANCEL_STRING:
+		return
+	var entries = file_list.get_entries()
+	_set_signal_busses(entries)
+
+func _set_signal_busses(new_busses:PackedStringArray):
+	_signal_busses.clear()
+	for bus_name in new_busses:
+		_signal_busses.append(StringName(bus_name))
 
 
 func _change_split_mode():
@@ -1603,6 +1643,7 @@ class DataKeys:
 	const FILTER_MODE_FOLLOW = &"FILTER_MODE_FOLLOW"
 	const LIST_ALT_COLOR = &"LIST_ALT_COLOR"
 	
+	const SIGNAL_BUSSES = &"filesystem_tab.data_keys.signal_busses"
 	
 	const VIEW_MODE = &"VIEW_MODE"
 	const VIEW_DATA = &"VIEW_DATA"

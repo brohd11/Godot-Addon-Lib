@@ -152,7 +152,7 @@ func get_place_data():
 	return data
 
 func add_place_list(place_list:PlaceList):
-	var line = ALibRuntime.Dialog.LineSubmitHandler.on_control(place_list.title_button, false)
+	var line = ALibRuntime.Dialog.Handlers.LineSubmit.on_control(place_list.title_button, false)
 	var text = await line.line_submitted
 	if text == "":
 		return
@@ -162,10 +162,13 @@ func add_place_list(place_list:PlaceList):
 
 func remove_place_list(place_list:PlaceList):
 	if place_list.get_item_count() > 0:
-		var conf = ALibRuntime.Dialog.ConfirmationDialogHandler.new("Delete non empty list?", self)
-		var handled = await conf.handled
-		if not handled:
+		var confirmed = await ALibRuntime.Dialog.confirm("Delete non empty list?", self)
+		if not confirmed:
 			return
+		#var conf = ALibRuntime.Dialog.Handlers.Confirmation.new("Delete non empty list?", self)
+		#var handled = await conf.handled
+		#if not handled:
+			#return
 	var target_idx = -1
 	for idx in places.keys():
 		if places[idx] == place_list:

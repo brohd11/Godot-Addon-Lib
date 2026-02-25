@@ -106,7 +106,8 @@ func _on_wrapper_clicked(id:int, popup:PopupMenu, fs_popup:PopupMenu=null):
 	if fs_popup == null:
 		_handle_non_fs(id, popup)
 		return
-	print(id)
+	
+	#print(id)
 	var queue_rescan = false
 	var is_folder_popup = fs_popup.get_item_text(0) == "Default (Reset)"
 	var is_create_popup = fs_popup == EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_CREATE_POPUP)

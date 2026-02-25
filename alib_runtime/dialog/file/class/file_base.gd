@@ -1,6 +1,6 @@
 extends "res://addons/addon_lib/brohd/alib_runtime/dialog/base/handler_base.gd"
 
-var file_mode:EditorFileDialog.FileMode
+var file_mode:FileDialog.FileMode
 
 func _init(_root_node=null, current_path="") -> void:
 	_set_root_node(_root_node)
@@ -8,39 +8,37 @@ func _init(_root_node=null, current_path="") -> void:
 	_create_dialog(current_path)
 
 func _set_file_mode():
-	file_mode = EditorFileDialog.FILE_MODE_OPEN_FILE
-
-func _set_root_node(_root_node):
-	if _root_node == null:
-		_root_node = EditorInterface.get_base_control()
-	root_node = _root_node
+	file_mode = FileDialog.FILE_MODE_OPEN_FILE
 
 func _create_dialog(current_path):
-
-	dialog = EditorFileDialog.new()
-	dialog.access = EditorFileDialog.ACCESS_FILESYSTEM
+	
+	dialog = FileDialog.new()
+	dialog.access = FileDialog.ACCESS_FILESYSTEM
 	
 	if current_path != "":
 		dialog.current_path = ProjectSettings.globalize_path(current_path)
 	dialog.file_mode = file_mode
 	
-	if dialog.file_mode == EditorFileDialog.FILE_MODE_OPEN_FILE:
+	if dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILE:
 		dialog.file_selected.connect(_on_file_selected)
-	if dialog.file_mode == EditorFileDialog.FILE_MODE_OPEN_FILES:
+	if dialog.file_mode == FileDialog.FILE_MODE_OPEN_FILES:
 		dialog.file_selected.connect(_on_file_selected)
 		dialog.files_selected.connect(_on_files_selected)
-	elif dialog.file_mode == EditorFileDialog.FILE_MODE_OPEN_DIR:
+	elif dialog.file_mode == FileDialog.FILE_MODE_OPEN_DIR:
 		dialog.dir_selected.connect(_on_dir_selected)
-	elif dialog.file_mode == EditorFileDialog.FILE_MODE_OPEN_ANY:
+	elif dialog.file_mode == FileDialog.FILE_MODE_OPEN_ANY:
 		dialog.dir_selected.connect(_on_dir_selected)
 		dialog.file_selected.connect(_on_file_selected)
-	elif dialog.file_mode == EditorFileDialog.FILE_MODE_SAVE_FILE:
+	elif dialog.file_mode == FileDialog.FILE_MODE_SAVE_FILE:
 		dialog.file_selected.connect(_on_file_selected)
 	
 	dialog.canceled.connect(_on_canceled)
 	
+	dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
+	dialog.size = Vector2i(1000,800)
+	
 	root_node.add_child(dialog)
-	dialog.popup_file_dialog()
+	dialog.show()
 	
 	var cancel_button = dialog.get_cancel_button()
 	cancel_button.focus_mode = Control.FOCUS_NONE
