@@ -1,6 +1,6 @@
 extends "res://addons/addon_lib/brohd/alib_runtime/settings/components/settings_object_base.gd"
 
-const UFile = ALibRuntime.Utils.UFile
+const UFile = preload("uid://gs632l1nhxaf") # u_file.gd
 
 func _ensure_file_exists():
 	if not FileAccess.file_exists(_file_path):

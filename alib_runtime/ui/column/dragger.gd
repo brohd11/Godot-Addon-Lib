@@ -1,5 +1,7 @@
 extends Control
 
+const ClickState = preload("uid://bp4nmev3f3fcc") # click_state.gd
+
 var dragging: bool = false
 var target_control: Control
 var mouse_in_dragger:= false
@@ -48,9 +50,9 @@ func _draw():
 			draw_texture(grabber_icon, pos)
 
 func _gui_input(event):
-	var click_state = ClickHandlers.ClickState.get_click_state(event) as ClickHandlers.ClickState.State
+	var click_state = ClickState.get_click_state(event) as ClickState.State
 	if event is InputEventMouseButton:
-		if click_state == ClickHandlers.ClickState.State.RMB_PRESSED:
+		if click_state == ClickState.State.RMB_PRESSED:
 			target_control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			target_control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			target_control.custom_minimum_size = Vector2()

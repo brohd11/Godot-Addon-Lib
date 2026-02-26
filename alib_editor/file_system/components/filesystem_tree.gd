@@ -5,14 +5,18 @@ const _MIN_SIZE = Vector2(100,0)
 
 #! import-p FileData,
 
-const FileSystemTab = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tab.gd")
-const FileSystemTree = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tree.gd")
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FileSystemTab = FSClasses.FileSystemTab
+const FileSystemTree = FSClasses.FileSystemTree
+const FSTreeHelper = FSClasses.FSTreeHelper
+const FSPopupHelper = FSClasses.FSPopupHelper
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
-const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
-const FSTreeHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tree_helper.gd")
-
-const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_popup_helper.gd")
+const FSUtil = FSClasses.FSUtil
+const UFile = FSUtil.UFile
+const UTree = FSUtil.UTree
+const UEditorTheme = FSUtil.UEditorTheme
+const NUTree = FSUtil.NUTree
+const UVersion = FSUtil.UVersion
 
 const FileData = FileSystemSingleton.FileData
 
@@ -52,14 +56,12 @@ func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
 	
-	
-	
-	if ALibEditor.Utils.UEditorTheme.get_current_theme_style() == "Modern" and ALibEditor.Utils.UEditorTheme.get_custom_theme_path() == "":
+	if UEditorTheme.get_current_theme_style() == "Modern" and UEditorTheme.get_custom_theme_path() == "":
 		var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+		sb.bg_color = UEditorTheme.ThemeColor.get_theme_color(UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
 		add_theme_stylebox_override("panel", sb)
 	
-	if ALibRuntime.Utils.UVersion.get_minor_version() > 5:
+	if UVersion.get_minor_version() > 5:
 		scroll_hint_mode = Tree.SCROLL_HINT_MODE_BOTH
 	
 	custom_minimum_size = _MIN_SIZE
@@ -78,7 +80,7 @@ func _ready() -> void:
 
 func _draw() -> void:
 	if draw_alternate_line_colors:
-		ALibRuntime.NodeUtils.NUTree.AltColor.draw_lines(self)
+		NUTree.AltColor.draw_lines(self)
 
 
 func set_dir(target_dir:String, build:=false):
@@ -345,7 +347,7 @@ func start_edit():
 	
 	original_file_name = item.get_text(0)
 	edit_selected(true)
-	var line_edit = ALibRuntime.NodeUtils.NUTree.get_line_edit(self) as LineEdit
+	var line_edit = NUTree.get_line_edit(self) as LineEdit
 	var ext_idx = line_edit.text.find(".")
 	if ext_idx > -1:
 		line_edit.select(0, ext_idx)

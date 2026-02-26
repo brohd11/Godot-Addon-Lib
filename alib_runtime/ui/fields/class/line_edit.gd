@@ -1,5 +1,7 @@
 extends HBoxContainer
 
+const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
+
 var line_edit:=LineEdit.new()
 
 func get_text():
@@ -18,5 +20,5 @@ func _init(label:="", placeholder:="", icon=null):
 	line_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line_edit.placeholder_text = placeholder
 	if icon is String:
-		icon = ALibRuntime.Utils.UResource.load_or_get_icon(icon)
+		icon = UResource.load_or_get_icon(icon)
 	line_edit.right_icon = icon

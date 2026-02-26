@@ -2,10 +2,10 @@
 extends Control
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
-
 const FSUtil = FSClasses.FSUtil
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const UFile = FSUtil.UFile
+const UVersion = FSUtil.UVersion
 
 signal path_selected(path:String)
 signal right_clicked(path:String)
@@ -161,7 +161,7 @@ func set_view_mode(mode:int):
 
 
 func _set_style_boxes(_tab_bar:TabBar):
-	var version = ALibRuntime.Utils.UVersion.get_minor_version()
+	var version = UVersion.get_minor_version()
 	var sbs = ["tab_selected", "tab_unselected", "tab_hovered", "tab_focus", "tab_disabled"]
 	for _name in sbs:
 		var sb

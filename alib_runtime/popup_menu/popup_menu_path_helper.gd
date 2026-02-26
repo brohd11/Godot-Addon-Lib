@@ -3,7 +3,7 @@ extends PopupMenu
 
 const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/button_helper.gd")
 
-const UResource = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_resource.gd")
+const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
 
 const ICON_DEFAULT_SIZE = Vector2(16,16)
 

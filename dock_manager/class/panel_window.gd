@@ -1,5 +1,7 @@
 extends Window
 
+const UWindow = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_window.gd")
+
 func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window_pos=null) -> void:
 	
 	
@@ -48,3 +50,6 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 	control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	control.show()
 	
+	
+	if window_pos == null:
+		position = UWindow.get_window_global_position(self, false)

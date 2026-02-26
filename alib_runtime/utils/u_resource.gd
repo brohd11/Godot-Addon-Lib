@@ -1,12 +1,12 @@
 extends RefCounted
 #! namespace ALibRuntime.Utils class UResource
 
-const UFile = ALibRuntime.Utils.UFile
+const UFile = preload("uid://gs632l1nhxaf") # u_file.gd
 
-const Audio = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/audio.gd")
-const ImageSize = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/image_size.gd")
-const GDScriptFileAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/gdscript.gd")
-const UPackedScene = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/resource/packed_scene.gd")
+const Audio = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/audio.gd")
+const ImageSize = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/image_size.gd")
+const GDScriptFileAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript.gd")
+const UPackedScene = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/packed_scene.gd")
 
 static func save_resource_to_path(res:Resource,path:String, name_overide:String="") -> void:
 	if name_overide == "":

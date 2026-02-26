@@ -1,12 +1,13 @@
 
-const UFile = ALibRuntime.Utils.UFile
-const UResource = ALibRuntime.Utils.UResource
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FSUtil = FSClasses.FSUtil
+
+const UFile = FSUtil.UFile
+const UResource = FSUtil.UResource
+const UPackedScene = UResource.UPackedScene
 const ImageSize = UResource.ImageSize
 const Audio = UResource.Audio
 
-const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
-
-const FSUtil = FSClasses.FSUtil
 
 static func get_custom_tooltip(path: String) -> Object:
 	var container = HBoxContainer.new()
@@ -88,27 +89,27 @@ static func _get_file_specific_details(path:String):
 			label_text += "\nScript Class: %s" % custom_type
 		
 	elif ext == "tscn":
-		var root = UResource.UPackedScene.ReadFile.get_root_type(path)
+		var root = UPackedScene.ReadFile.get_root_type(path)
 		if root:
 			var inh = root.begins_with("res://")
 			var inh_text = ""
 			if inh:
 				inh_text = "\nInherits: %s" % root
-				root = UResource.UPackedScene.ReadFile.get_root_type(path, true)
+				root = UPackedScene.ReadFile.get_root_type(path, true)
 			label_text += "\nScene Root: %s" % root
 			label_text += inh_text
 		
 	elif ext == "gd":
-		var _class = ALibRuntime.Utils.UResource.GDScriptFileAccess.get_class_name(path)
+		var _class = UResource.GDScriptFileAccess.get_class_name(path)
 		if _class:
 			label_text += "\nClass Name: %s" % _class
 		
-		var _extends = ALibRuntime.Utils.UResource.GDScriptFileAccess.get_extends(path)
+		var _extends = UResource.GDScriptFileAccess.get_extends(path)
 		if not _extends:
 			_extends = "RefCounted"
 		label_text += "\nExtends: %s" % _extends
 		
-		if ALibRuntime.Utils.UResource.GDScriptFileAccess.get_is_tool(path):
+		if UResource.GDScriptFileAccess.get_is_tool(path):
 			label_text += "\nTool Script"
 		
 	

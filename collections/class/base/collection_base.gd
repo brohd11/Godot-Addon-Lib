@@ -1,7 +1,7 @@
 @tool
 extends Resource
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const UFile = ALibRuntime.Utils.UFile
 
 @export var _collection_name:String="untitled"
 @export var _collection_data:= {}

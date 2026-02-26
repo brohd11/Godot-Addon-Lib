@@ -4,7 +4,7 @@ extends Node
 const BACKPORTED = 100
 
 const ThemeColor = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_color.gd")
-const UNode = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_node.gd")
+const UNode = ALibRuntime.Utils.UNode
 
 const style_box_types = ["panel", "normal"]
 

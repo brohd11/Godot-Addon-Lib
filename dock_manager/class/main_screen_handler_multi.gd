@@ -1,7 +1,7 @@
 @tool
 extends Node
 
-const UName = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_name.gd")
+const UName = ALibRuntime.Utils.UName
 const MainScreen = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/main_screen.gd")
 
 var editor_plugin:EditorPlugin

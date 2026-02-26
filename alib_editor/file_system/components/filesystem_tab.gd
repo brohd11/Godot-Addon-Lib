@@ -5,11 +5,10 @@ extends VBoxContainer
 
 const ATTEMPT_RENAME = true
 
-const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
-const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
-
-const Form = preload("res://addons/addon_lib/brohd/alib_runtime/dialog/form/form.gd")
+const RightClickHandler = FSUtil.RightClickHandler
+const UFile = FSUtil.UFile
+const EditorIcons = FSUtil.EditorIcons
+const CacheHelper = FSUtil.CacheHelper
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
 const FileSystemTab = FSClasses.FileSystemTab
@@ -183,7 +182,7 @@ func get_split_options() -> RightClickHandler.Options:
 	var options = RightClickHandler.Options.new()
 	
 	var msg_text = "Hide Tool Bar" if tool_bar_hbox.visible else "Show Tool Bar"
-	var icon = ALibEditor.Singletons.EditorIcons.get_visibility_icon(tool_bar_hbox.visible)
+	var icon = EditorIcons.get_visibility_icon(tool_bar_hbox.visible)
 	var val = not tool_bar_hbox.visible
 	options.add_option(msg_text, _toggle_element.bind(tool_bar_hbox, val), [icon])
 	
@@ -957,29 +956,10 @@ func _on_options_button_pressed():
 		recents.add_item("Clear Recent Files")
 
 func _show_signal_dialog():
-	var signal_form = Form.new({"size":Vector2(500, 300)})
-	
-	var file_list = ALibRuntime.UICustom.LineEditList.new()
-	file_list.set_title("Editor Signals")
-	var signals_button = Button.new()
-	signals_button.icon = _get_modulated_icon("Signal")
-	var signal_callable = func():
-		var options = RightClickHandler.Options.new()
-		for signal_name in EditorGlobalSignals.get_signal_bus().get_signal_names():
-			options.add_option(signal_name, file_list.new_entry.bind(signal_name))
-		right_click_handler.display_on_control(options, signals_button)
-	
-	signals_button.pressed.connect(signal_callable)
-	file_list.title_hbox.add_child(signals_button)
-	
-	file_list.show_add_entry_button()
-	file_list.set_entries(_signal_busses)
-	signal_form.add_custom_field("Signals", file_list)
-	var result = await signal_form.show_dialog()
-	if result is String and result == Form.CANCEL_STRING:
+	var new_signals = await EditorGlobalSignals.pick_signals_dialog(_signal_busses)
+	if new_signals == null:
 		return
-	var entries = file_list.get_entries()
-	_set_signal_busses(entries)
+	_set_signal_busses(new_signals)
 
 func _set_signal_busses(new_busses:PackedStringArray):
 	_signal_busses.clear()
@@ -1586,7 +1566,7 @@ func _miller_icon():
 
 
 func _get_modulated_icon(text: String, brightness:=0.8) -> Texture2D:
-	return ALibEditor.Singletons.EditorIcons.get_icon_white(text, brightness)
+	return EditorIcons.get_icon_white(text, brightness)
 
 class EditorSet:
 	const _DEFAULT_SETTINGS = &"plugin/filesystem_instances/defaults/"

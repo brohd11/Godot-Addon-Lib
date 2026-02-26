@@ -1,5 +1,6 @@
-
-const Filter = ALibRuntime.Utils.UString.Filter
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FSUtil = FSClasses.FSUtil
+const Filter = FSUtil.UString.Filter
 
 enum FilterMode {
 	AUTO,

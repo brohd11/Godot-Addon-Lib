@@ -1,4 +1,4 @@
-const UFile = ALibRuntime.Utils.UFile
+const UFile = preload("uid://gs632l1nhxaf") # u_file.gd
 
 
 static func check_root(file_path:String, valid_types:Array) -> bool:

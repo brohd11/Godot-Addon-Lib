@@ -1,6 +1,7 @@
 #! namespace ALibRuntime.UICustom class FoldContainer
-
 extends PanelContainer
+
+const NUMarginContainer = preload("uid://t8ajrsqdbrva") # nu_margin.gd
 
 var main_vbox = VBoxContainer.new()
 var _title_button:= Button.new()
@@ -35,7 +36,7 @@ func _ready() -> void:
 
 
 func set_content_margin(new_val:int):
-	ALibRuntime.NodeUtils.NUMarginContainer.set_margins(_content_margin, new_val)
+	NUMarginContainer.set_margins(_content_margin, new_val)
 
 func _on_title_button_pressed():
 	_sub_vbox.visible = not _sub_vbox.visible

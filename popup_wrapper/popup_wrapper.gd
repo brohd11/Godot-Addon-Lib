@@ -2,7 +2,7 @@ class_name PopupWrapper
 extends RefCounted
 
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
-const USort = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_sort.gd")
+const USort = ALibRuntime.Utils.USort
 
 class ItemParams extends PopupHelper.ParamKeys:
 	const POSITION = "POSITION"

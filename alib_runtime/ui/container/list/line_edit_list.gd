@@ -1,6 +1,9 @@
 #! namespace ALibRuntime.UICustom class LineEditList
 extends PanelContainer
 
+const NUMarginContainer = preload("uid://t8ajrsqdbrva") # nu_margin.gd
+const UNode = preload("uid://dsywt12xnn7oh") # u_node.gd
+
 var _title_background:PanelContainer
 var title_hbox:HBoxContainer
 var _title_label:Label
@@ -11,6 +14,7 @@ var entries_target:VBoxContainer
 var _new_entry_default_text = ""
 
 var show_folder_button:=false
+var _flat_buttons:=false
 
 var entry_folder_icon
 var entry_clear_icon
@@ -28,7 +32,7 @@ func _set_icons():
 
 func _build_list():
 	var main_marg = MarginContainer.new()
-	ALibRuntime.NodeUtils.NUMarginContainer.set_margins(main_marg, 4)
+	NUMarginContainer.set_margins(main_marg, 4)
 	add_child(main_marg)
 	main_marg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
@@ -80,6 +84,9 @@ func set_add_entry_icon(icon):
 func set_title_background(stylebox:StyleBox):
 	_title_background.add_theme_stylebox_override("panel", stylebox)
 
+func set_background(stylebox:StyleBox):
+	add_theme_stylebox_override("panel", stylebox)
+
 func set_title(new_title:String):
 	title_hbox.show()
 	_title_label.text = new_title
@@ -94,11 +101,18 @@ func set_minimum_size(new_minimum_size:=Vector2(400, 200)):
 func set_new_entry_default_text(text):
 	_new_entry_default_text = text
 
+func set_button_flat():
+	_flat_buttons = true
+	var buttons = UNode.get_all_nodes_of_type(self, Button)
+	for b:Button in buttons:
+		Util.set_button_flat(b)
 
 func new_entry(text=_new_entry_default_text):
 	var _new_entry = EntryLine.new(text)
 	_new_entry.set_clear_icon(entry_clear_icon)
 	_new_entry.set_folder_icon(entry_folder_icon)
+	if _flat_buttons:
+		_new_entry.set_button_flat()
 	
 	if show_folder_button:
 		_new_entry.show_folder_button()
@@ -115,13 +129,13 @@ func set_entries(entries:PackedStringArray):
 	for entry in entries:
 		new_entry(entry)
 
-func get_entries(include_empty:=false):
+func get_entries(include_empty:=false, include_duplicates:=false):
 	var entries = []
 	for entry:EntryLine in entries_target.get_children():
 		var text = entry.get_text()
-		if text != "" or include_empty:
-			entries.append(text)
-	
+		if include_empty or text != "":
+			if include_duplicates or not text in entries:
+				entries.append(text)
 	return entries
 
 
@@ -170,6 +184,10 @@ class EntryLine extends HBoxContainer:
 	func set_folder_icon(icon):
 		Util.set_button_icon(folder_button, icon, "File")
 	
+	func set_button_flat():
+		Util.set_button_flat(_clear_button)
+		Util.set_button_flat(folder_button)
+	
 	func get_text():
 		return _entry_line.text
 
@@ -192,3 +210,7 @@ class Util:
 				button.text = fallback_text
 			else:
 				button.text = ""
+	
+	static func set_button_flat(button:Button):
+		button.flat = true
+		button.theme_type_variation = &"FlatButton"

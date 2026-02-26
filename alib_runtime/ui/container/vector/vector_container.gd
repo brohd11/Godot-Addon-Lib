@@ -1,7 +1,7 @@
 #! namespace ALibRuntime.UICustom class VectorContainer
 extends PanelContainer
 
-const LineSlider = ALibRuntime.UICustom.LineSlider
+const LineSlider = preload("uid://dgkq7atn21a7j") # line_slider.gd
 
 enum Mode{
 	ROTATION,

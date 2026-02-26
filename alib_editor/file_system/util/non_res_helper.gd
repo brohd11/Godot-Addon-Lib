@@ -1,8 +1,10 @@
 
-const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FileSystemPlaces = FSClasses.FileSystemPlaces
 
-const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
-const Options = ALibRuntime.Popups.Options
+const FSUtil = FSClasses.FSUtil
+const RightClickHandler = FSUtil.RightClickHandler
+const Options = FSUtil.Options
 
 var places:FileSystemPlaces
 

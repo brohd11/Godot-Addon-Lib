@@ -1,6 +1,7 @@
 
 static var _token_regex: RegEx
-const pattern = "\"[^\"]*\"|'[^']*'|(\\[(?:[^\\[\\]]|(?1))*\\])|(\\{(?:[^{}]|(?2))*\\})|(\\((?:[^()]|(?3))*\\))|\\S+"
+#const pattern = "\"[^\"]*\"|'[^']*'|(\\[(?:[^\\[\\]]|(?1))*\\])|(\\{(?:[^{}]|(?2))*\\})|(\\((?:[^()]|(?3))*\\))|\\S+" # old version
+const _TOKEN_PATTERN = "\".*?\"|'.*?'|#.*|[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*)*|\n|[^\\w\\s]"
 
 static func strip_symbols(text):
 	var separators = " \t\n\r:,.()[]{}<>=+-*/!\"'@"
@@ -13,10 +14,10 @@ static func strip_symbols(text):
 	
 	return words
 
-static func tokenize_string(text: String) -> Dictionary:
+static func tokenize_string(text: String, include_strings:=true, include_comments:=false, include_new_lines:=false) -> Dictionary:
 	if _token_regex == null:
 		_token_regex = RegEx.new()
-		_token_regex.compile(pattern)
+		_token_regex.compile(_TOKEN_PATTERN)
 	
 	var tokens = PackedStringArray()
 	if text.is_empty():
@@ -25,11 +26,13 @@ static func tokenize_string(text: String) -> Dictionary:
 	var matches = _token_regex.search_all(text)
 	for _match in matches:
 		var token = _match.get_string()
-		# Check for and remove the surrounding quotes from the captured token
-		if (token.begins_with("\"") and token.ends_with("\"")) or \
-			(token.begins_with("'") and token.ends_with("'")):
-			# This removes the first and last character (the quote)
-			token = token.substr(1, token.length() - 2)
+		
+		if not include_strings and ((token.begins_with("\"") and token.ends_with("\"")) or (token.begins_with("'") and token.ends_with("'"))):
+			continue
+		if not include_comments and token.begins_with("#"):
+			continue
+		if not include_new_lines and token == "\n":
+			continue
 		
 		tokens.push_back(token)
 	

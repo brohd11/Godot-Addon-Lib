@@ -1,4 +1,4 @@
-const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_string.gd")
+const UString = preload("uid://cwootkivqiwq1") # u_string.gd
 
 const BRACKETS = { "(": ")", "[": "]", "{": "}" }
 enum Mode {

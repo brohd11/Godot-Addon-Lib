@@ -1,4 +1,6 @@
 
+const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
+
 const LineEditField = preload("res://addons/addon_lib/brohd/alib_runtime/ui/fields/class/line_edit.gd")
 
 static func get_bool(name="", icon=null):
@@ -8,7 +10,7 @@ static func get_bool(name="", icon=null):
 	check_box.text = name
 	#check_box.icon_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	if icon is String:
-		icon = ALibRuntime.Utils.UResource.load_or_get_icon(icon)
+		icon = UResource.load_or_get_icon(icon)
 	check_box.icon = icon
 	check_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return check_box

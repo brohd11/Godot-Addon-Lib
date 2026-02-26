@@ -1,13 +1,15 @@
 @tool
 extends VBoxContainer
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
-const ColumnDragger = preload("res://addons/addon_lib/brohd/alib_runtime/ui/column/dragger.gd")
-
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FSUtil = FSClasses.FSUtil
+
+const UFile = FSUtil.UFile
+const ThemeColor = FSUtil.ThemeColor
+const ColumnDragger = FSUtil.ColumnDragger
+
 const FileSystemTab = FSClasses.FileSystemTab
 const FileSystemItemList = FSClasses.FileSystemItemList
-const FSUtil = FSClasses.FSUtil
 
 const ClickState = ClickHandlers.ClickState
 
@@ -529,7 +531,7 @@ class FileColumn extends HBoxContainer:
 	
 	func _item_draw() -> void:
 		if is_current:
-			var accent_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)
+			var accent_color = ThemeColor.get_theme_color(ThemeColor.Type.ACCENT)
 			var rect = item_list.get_rect()
 			item_list.draw_rect(rect, accent_color, false, 4)
 	

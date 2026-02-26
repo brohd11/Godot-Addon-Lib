@@ -49,9 +49,10 @@ static func get_registered_panels(show_hidden:=false):
 	var current_control_instances = instance.get_instanced_panels_and_tabs()
 	var data = instance._panel_data
 	var formatted_data = {}
-	for path in data.keys():
-		var panel_data = data.get(path)
+	for panel_name in data.keys():
+		var panel_data = data.get(panel_name)
 		var _name = panel_data.get("name")
+		var path = panel_data.get("path")
 		var params = panel_data.get("params", {})
 		if not show_hidden:
 			var unique = params.get(Params.UNIQUE, false)
@@ -87,9 +88,10 @@ static func get_registered_tabs(show_hidden:=false):
 	var current_control_instances = instance.get_instanced_panels_and_tabs()
 	var data = instance._tab_data
 	var formatted_data = {}
-	for path in data.keys():
-		var panel_data = data.get(path)
+	for panel_name in data.keys():
+		var panel_data = data.get(panel_name)
 		var _name = panel_data.get("name")
+		var path = panel_data.get("path")
 		var params = panel_data.get("params", {})
 		if not show_hidden:
 			var unique = params.get(Params.UNIQUE, false)

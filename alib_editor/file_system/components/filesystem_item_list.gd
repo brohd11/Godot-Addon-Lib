@@ -2,15 +2,18 @@
 extends ItemList
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
-
-const FileSystemTab = FSClasses.FileSystemTab
-
-const FileSystemTree = FSClasses.FileSystemTree
-
-const FSFilter = FSClasses.FSFilter
 const FSUtil = FSClasses.FSUtil
 
-const UFile = ALibRuntime.Utils.UFile
+const UWindow = FSUtil.UWindow
+const LineSubmit = FSUtil.LineSubmit
+const UEditorTheme = FSUtil.UEditorTheme
+const UVersion = FSUtil.UVersion
+const NUItemList = FSUtil.NUItemList
+const UFile = FSUtil.UFile
+
+const FileSystemTab = FSClasses.FileSystemTab
+const FileSystemTree = FSClasses.FileSystemTree
+const FSFilter = FSClasses.FSFilter
 
 var filesystem_singleton:FileSystemSingleton
 
@@ -59,12 +62,12 @@ func _ready() -> void:
 	#allow_rmb_select = true
 	allow_reselect = true
 	
-	if ALibEditor.Utils.UEditorTheme.get_current_theme_style() == "Modern" and ALibEditor.Utils.UEditorTheme.get_custom_theme_path() == "":
+	if UEditorTheme.get_current_theme_style() == "Modern" and UEditorTheme.get_custom_theme_path() == "":
 		var sb = EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList").duplicate()
-		sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
+		sb.bg_color = UEditorTheme.ThemeColor.get_theme_color(UEditorTheme.ThemeColor.Type.BASE).darkened(0.2)
 		add_theme_stylebox_override("panel", sb)
 	
-	if ALibRuntime.Utils.UVersion.get_minor_version() > 5:
+	if UVersion.get_minor_version() > 5:
 		scroll_hint_mode = ItemList.SCROLL_HINT_MODE_BOTH
 	
 	multi_selected.connect(_on_item_selected)
@@ -293,7 +296,7 @@ func _draw() -> void:
 	var scroll_bar_offset = Vector2(get_h_scroll_bar().value, get_v_scroll_bar().value)
 	if display_as_list:
 		if draw_alternate_line_colors:
-			ALibRuntime.NodeUtils.NUItemList.AltColor.draw_lines(self)
+			NUItemList.AltColor.draw_lines(self)
 		if not draw_folder_tris:
 			return
 		var folder_texture = EditorInterface.get_editor_theme().get_icon("TransitionImmediate", "EditorIcons")
@@ -417,15 +420,15 @@ func start_edit():
 	
 	var item_rect = get_item_rect(selected, false)
 	
-	var window_pos = ALibRuntime.Utils.UWindow.get_window_global_position(get_window())
+	var window_pos = UWindow.get_window_global_position(get_window())
 	item_rect.position += window_pos + get_global_rect().position
 	item_rect.position.y -= get_v_scroll_bar().value
 	if not display_as_list:
 		item_rect.position.y +=  item_rect.size.y * 0.6
 		item_rect.size.y *= 0.4
 	
-	var line = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, item_rect)
-	line.set_text(old_name, ALibRuntime.Dialog.Handlers.LineSubmit.SelectMode.BASENAME)
+	var line = LineSubmit.new(self, item_rect)
+	line.set_text(old_name, LineSubmit.SelectMode.BASENAME)
 	var new_name = await line.line_submitted
 	
 	if not FileSystemSingleton.is_new_name_valid(old_name, new_name):

@@ -4,7 +4,7 @@ extends Control
 #! import-p Keys,
 
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const UFile = ALibRuntime.Utils.UFile
 
 static func get_scene_path():
 	return "uid://2dvub2jcbmvm" #! ensure-path

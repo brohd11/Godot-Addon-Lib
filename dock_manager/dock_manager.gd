@@ -5,8 +5,8 @@ extends Node
 #! import-p Keys,
 #! import-show-global DockManager,
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
-const UName = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_name.gd")
+const UFile = ALibRuntime.Utils.UFile
+const UName = ALibRuntime.Utils.UName
 const DockPopupHandler = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup_handler.gd")
 const Docks = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/docks.gd")
 const BottomPanel = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/bottom_panel.gd")

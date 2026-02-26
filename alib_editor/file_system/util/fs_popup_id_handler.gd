@@ -1,12 +1,17 @@
 
-const FileSystemTab = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tab.gd")
-const FileSystemTree = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_tree.gd")
-const FileSystemItemList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_item_list.gd")
-const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FileSystemTab = FSClasses.FileSystemTab
+const FileSystemTree = FSClasses.FileSystemTree
 
-const FSPopupHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_popup_helper.gd")
+const FileSystemItemList = FSClasses.FileSystemItemList
+const FileSystemPlaces = FSClasses.FileSystemPlaces
 
-const PopupID = ALibEditor.Nodes.FileSystem.PopupID
+const FSPopupHelper = FSClasses.FSPopupHelper
+
+const FSUtil = FSClasses.FSUtil
+const EditorIcons = FSUtil.EditorIcons
+
+const PopupID = FSUtil.PopupID
 
 const ITEM_LIST_EMPTY_HIDE = ["Rename..."]
 
@@ -82,8 +87,8 @@ func _right_click_menu(clicked_node:Node, selected_item_path:String, selected_pa
 			}
 	if selected_is_dir and selected_paths.size() == 1:# and not tree_helper.is_item_in_favorites(selected_item):
 		items["pre"][NEW_WINDOW] = {PopupWrapper.ItemParams.ICON:["New", "Window"]}
-		items["pre"][CREATE_NEW_TAB] = {PopupWrapper.ItemParams.ICON:["New", ALibEditor.Singletons.EditorIcons.get_icon_white("TabContainer")]}
-		var split_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("SplitContainer", 1)
+		items["pre"][CREATE_NEW_TAB] = {PopupWrapper.ItemParams.ICON:["New", EditorIcons.get_icon_white("TabContainer")]}
+		var split_icon = EditorIcons.get_icon_white("SplitContainer", 1)
 		for direction in [NEW_SPLIT_LEFT, NEW_SPLIT_RIGHT, NEW_SPLIT_UP, NEW_SPLIT_DOWN]:
 			items["pre"][direction] = {PopupWrapper.ItemParams.ICON:["New", split_icon, null]}
 		

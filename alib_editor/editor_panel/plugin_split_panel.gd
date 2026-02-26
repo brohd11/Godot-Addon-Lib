@@ -4,7 +4,7 @@ extends Control
 const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const ClickState = preload("res://addons/addon_lib/brohd/gui_click_handler/click_state.gd")
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const UFile = ALibRuntime.Utils.UFile
 #const ButtonDetector = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/button_detector.gd")
 
 const DogEarButton = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dog_ear/dog_ear_button.gd")

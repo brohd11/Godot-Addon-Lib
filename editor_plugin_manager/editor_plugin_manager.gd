@@ -4,7 +4,7 @@ extends RefCounted
 
 const PLUGIN_EXPORTED = false
 
-const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_file.gd")
+const UFile = ALibRuntime.Utils.UFile
 
 var plugin:EditorPlugin
 

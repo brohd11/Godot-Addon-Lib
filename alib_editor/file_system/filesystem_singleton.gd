@@ -4,16 +4,18 @@ extends SingletonRefCount
 const SingletonRefCount = Singleton.RefCount
 
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
-const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_tree.gd")
+const UTree = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_tree.gd")
+const UNode = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_node.gd")
+const UVersion = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_version.gd")
+const UClassDetail = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/u_class_detail.gd")
+const FileSystem = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/filesystem.gd")
 const ScenePreview = preload("res://addons/addon_lib/brohd/preview_gen/scene_preview/scene_preview.gd")
 
 const FileTypes = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/file_types.gd")
-const FSTooltop = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tooltip.gd")
+const FSTooltip = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tooltip.gd")
 const FSRename = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename.gd")
 
-
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/file_system/filesystem_singleton.gd")
-
 
 static func get_singleton_name() -> String:
 	return "FileSystemSingleton"
@@ -64,15 +66,21 @@ func _init(_node):
 	cache = Cache.new()
 
 func _ready() -> void:
-	
-	editor_node_ref = EditorNodeRef.get_instance()
-	EditorNodeRef.call_on_ready(_register_dialogs)
+	#editor_node_ref = EditorNodeRef.get_instance()
+	#EditorNodeRef.call_on_ready(_register_dialogs)
 	editor_fs = EditorInterface.get_resource_filesystem()
 	while editor_fs.is_scanning():
 		await get_tree().process_frame
 	
+	editor_node_ref = EditorNodeRef.get_instance()
+	EditorNodeRef.call_on_ready(_on_editor_node_ref_ready)
+
+
+func _on_editor_node_ref_ready():
 	editor_fs.filesystem_changed.connect(_on_filesystem_changed, 1)
 	EditorInterface.get_resource_previewer().preview_invalidated.connect(func(path):queue_preview(path))
+	
+	_register_dialogs()
 	
 	_scene_preview = ScenePreview.new()
 	add_child(_scene_preview)
@@ -86,7 +94,6 @@ func _ready() -> void:
 	rebuild_files()
 	
 	_generate_previews() # init set in here so all previews generated at start
-	
 
 
 
@@ -648,6 +655,10 @@ static func _on_dialog_visibility_changed(dialog_changed:Window):
 static func reset_dialogs(parent=null, _mouse=null):
 	var dialog_nodes = EditorNodeRef.get_registered(Keys.FS_DIALOGS)
 	var first_dialog = dialog_nodes[0]
+	if not is_instance_valid(first_dialog):
+		printerr("FileSystem Dialogs have been freed likely by FileSystem Instances plugin. Save your work and restart the editor.")
+		printerr("Apologies, this is a bug that should not happen.")
+		return
 	if first_dialog.get_parent() == EditorInterface.get_file_system_dock():
 		return
 	if is_instance_valid(parent) and parent is Node:
@@ -748,13 +759,13 @@ static func _free_move_dialog_file_list(move_dialog:Window, control:Control):
 
 
 static func populate_filesystem_popup(calling_node:Node):
-	ALibEditor.Nodes.FileSystem.populate_popup(calling_node)
+	FileSystem.populate_popup(calling_node)
 
 static func popuplate_filesystem_bottom_popup(calling_node:Node):
-	ALibEditor.Nodes.FileSystem.populate_bottom_popup(calling_node)
+	FileSystem.populate_bottom_popup(calling_node)
 
 static func get_filesystem_tree() -> Tree:
-	return ALibEditor.Nodes.FileSystem.get_tree()
+	return FileSystem.get_tree()
 
 static func show_filesystem():
 	_toggle_fs_bottom_panel_button_vis(true)
@@ -766,7 +777,7 @@ static func hide_filesystem():
 	
 	var fs = EditorInterface.get_file_system_dock()
 	var split_button = fs.get_child(0).get_child(0).get_child(3)
-	var split_callable = ALibRuntime.Utils.UNode.get_signal_callable(split_button, 
+	var split_callable = UNode.get_signal_callable(split_button,
 		"pressed", "FileSystemDock::_change_split_mode")
 	if not split_callable:
 		print("Could not get split mode button.")
@@ -782,7 +793,7 @@ static func hide_filesystem():
 	
 
 static func _toggle_fs_bottom_panel_button_vis(toggled:bool):
-	var minor = ALibRuntime.Utils.UVersion.get_minor_version()
+	var minor = UVersion.get_minor_version()
 	if minor < 6:
 		var bottom_panel_buttons = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.BOTTOM_PANEL_BUTTONS)
 		for b in bottom_panel_buttons.get_children():
@@ -797,7 +808,7 @@ static func get_fs_dock_split_mode():
 	if not tree:
 		return -1
 	var search_node = tree
-	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	var minor_version = UVersion.get_minor_version()
 	if minor_version == 6:
 		search_node = search_node.get_parent()
 	var item_list = search_node.get_parent().get_child(1)
@@ -810,7 +821,7 @@ static func get_fs_dock_split_mode():
 
 static func fs_dock_in_bottom_panel() -> bool:
 	var fs_dock = EditorInterface.get_file_system_dock()
-	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	var minor_version = UVersion.get_minor_version()
 	if minor_version <= 5: # versions will need testing
 		var dock_par = fs_dock.get_parent()
 		if dock_par is TabContainer:
@@ -841,7 +852,7 @@ static func navigate_to_path(path:String, calling_node:Node):
 	sibling_filesystem.navigate_to_path(path)
 
 static func get_sibling_filesystem(calling_node:Node):
-	var editor_panel_singleton = ALibEditor.Utils.UClassDetail.get_global_class_script("EditorPanelSingleton")
+	var editor_panel_singleton = UClassDetail.get_global_class_script("EditorPanelSingleton")
 	if not is_instance_valid(editor_panel_singleton):
 		return
 	var split_panel = editor_panel_singleton.get_split_panel_ancestor(calling_node)
@@ -856,7 +867,7 @@ static func get_sibling_filesystem(calling_node:Node):
 					return tab
 
 static func get_custom_tooltip(path:String):
-	return FSTooltop.get_custom_tooltip(path)
+	return FSTooltip.get_custom_tooltip(path)
 
 static func get_thumbnail_size():
 	return Vector2(64, 64) * EditorInterface.get_editor_scale()

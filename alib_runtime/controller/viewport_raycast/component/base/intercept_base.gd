@@ -1,5 +1,7 @@
 extends Control
 
+const ClickState = preload("uid://bp4nmev3f3fcc") # click_state.gd
+
 enum EventType{
 	NONE,
 	LMB_PRESSED,
@@ -89,17 +91,17 @@ class DefaultHandle:
 		if not event is InputEventMouseButton:
 			return EventType.NONE
 		
-		var click_state = ClickHandlers.ClickState.get_click_state(event) as ClickHandlers.ClickState.State
-		var modifier = ClickHandlers.ClickState.get_click_modifier(event) as ClickHandlers.ClickState.Modifier
-		if click_state == ClickHandlers.ClickState.State.LMB_PRESSED:
-			if modifier == ClickHandlers.ClickState.Modifier.CTRL:
+		var click_state = ClickState.get_click_state(event) as ClickState.State
+		var modifier = ClickState.get_click_modifier(event) as ClickState.Modifier
+		if click_state == ClickState.State.LMB_PRESSED:
+			if modifier == ClickState.Modifier.CTRL:
 				return EventType.LMB_PRESSED_CTRL
 			return EventType.LMB_PRESSED
-		elif click_state == ClickHandlers.ClickState.State.LMB_RELEASED:
-			if modifier == ClickHandlers.ClickState.Modifier.CTRL:
+		elif click_state == ClickState.State.LMB_RELEASED:
+			if modifier == ClickState.Modifier.CTRL:
 				return EventType.LMB_RELEASED_CTRL
 			return EventType.LMB_RELEASED
-		elif click_state == ClickHandlers.ClickState.State.LMB_DOUBLE_CLICK:
+		elif click_state == ClickState.State.LMB_DOUBLE_CLICK:
 			return EventType.DISCARD
 		
 		
@@ -117,14 +119,14 @@ class DefaultHandle:
 		if not event is InputEventMouseButton:
 			return EventType.NONE
 		
-		var click_state = ClickHandlers.ClickState.get_click_state(event) as ClickHandlers.ClickState.State
-		var modifier = ClickHandlers.ClickState.get_click_modifier(event) as ClickHandlers.ClickState.Modifier
-		if click_state == ClickHandlers.ClickState.State.WHEEL_UP:
-			if modifier == ClickHandlers.ClickState.Modifier.CTRL:
+		var click_state = ClickState.get_click_state(event) as ClickState.State
+		var modifier = ClickState.get_click_modifier(event) as ClickState.Modifier
+		if click_state == ClickState.State.WHEEL_UP:
+			if modifier == ClickState.Modifier.CTRL:
 				return EventType.WHEEL_UP_CTRL
 			
-		elif click_state == ClickHandlers.ClickState.State.WHEEL_DOWN:
-			if modifier == ClickHandlers.ClickState.Modifier.CTRL:
+		elif click_state == ClickState.State.WHEEL_DOWN:
+			if modifier == ClickState.Modifier.CTRL:
 				return EventType.WHEEL_DOWN_CTRL
 		
 		return EventType.NONE

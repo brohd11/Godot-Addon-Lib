@@ -4,6 +4,7 @@ extends "res://addons/addon_lib/brohd/alib_runtime/dialog/base/handler_base.gd"
 const SUCCESS_STRING = &"SUCCESS_STRING"
 
 enum TargetSection{
+	ROOT,
 	HEADER,
 	BODY,
 	FOOTER,
@@ -61,14 +62,16 @@ func _on_canceled():
 	dialog.queue_free()
 
 
-func add_content(control:Control, target_section:TargetSection=TargetSection.BODY):
+func add_content(node:Node, target_section:TargetSection=TargetSection.BODY):
 	_build_dialog() # ensure this has been setup
 	match target_section:
-		TargetSection.HEADER: dialog.header.add_child(control)
-		TargetSection.BODY: dialog.body.add_child(control)
-		TargetSection.FOOTER: dialog.footer.add_child(control)
+		TargetSection.ROOT: dialog.add_child(node)
+		TargetSection.HEADER: dialog.header.add_child(node)
+		TargetSection.BODY: dialog.body.add_child(node)
+		TargetSection.FOOTER: dialog.footer.add_child(node)
 	
-	control.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if node is Control:
+		node.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 
 class DialogStructure extends Window:
@@ -81,13 +84,14 @@ class DialogStructure extends Window:
 	var confirm_button:= Button.new()
 	
 	func _init() -> void:
-		var bg = Panel.new()
+		var bg = PanelContainer.new()
 		add_child(bg)
 		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		var editor_interface = Engine.get_singleton("EditorInterface")
 		if is_instance_valid(editor_interface): # this gives a not super dark bg
 			var bg_sb = bg.get_theme_stylebox("panel").duplicate()
 			bg_sb.set_corner_radius_all(0)
+			bg_sb.set_content_margin_all(4)
 			bg.add_theme_stylebox_override("panel", bg_sb)
 		
 		var main_vbox := VBoxContainer.new()

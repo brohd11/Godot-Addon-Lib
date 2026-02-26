@@ -1,6 +1,8 @@
 #! namespace ALibRuntime.Settings class SettingHelperSingleton
 extends Singleton.Base
 
+const SettingHelperJson = preload("uid://byo18jbf0wwbt") # setting_helper_json.gd
+
 ## Implement in extended classes
 
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
@@ -51,7 +53,7 @@ func get_or_create_helper(file_path:String, file_type:=FileType.AUTO):
 	
 	var helper
 	if target_file_type == FileType.JSON:
-		helper = ALibRuntime.Settings.SettingHelperJson.new()
+		helper = SettingHelperJson.new()
 	elif target_file_type == FileType.CONFIG:
 		printerr("IMPLEMENT CONFIG HELPER")
 		return

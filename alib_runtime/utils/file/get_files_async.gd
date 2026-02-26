@@ -1,6 +1,6 @@
 
-const SELF = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/file/get_files_async.gd")
-const UFile = ALibRuntime.Utils.UFile
+const SELF = preload("uid://ctsugodrtg3rc") # get_files_async.gd
+const UFile = preload("uid://gs632l1nhxaf") # u_file.gd
 
 var _found_files:= PackedStringArray()
 

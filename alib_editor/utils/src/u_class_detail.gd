@@ -1,7 +1,7 @@
 extends RefCounted
 #! namespace ALibEditor.Utils class UClassDetail
 
-const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/u_string.gd")
+const UString = ALibRuntime.Utils.UString
 
 enum IncludeInheritance{
 	NONE,

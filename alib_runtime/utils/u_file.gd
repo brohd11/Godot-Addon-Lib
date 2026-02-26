@@ -1,7 +1,9 @@
 extends RefCounted
 #! namespace ALibRuntime.Utils class UFile
 
-const GetFilesAsync = preload("res://addons/addon_lib/brohd/alib_runtime/utils/src/file/get_files_async.gd")
+const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
+
+const GetFilesAsync = preload("res://addons/addon_lib/brohd/alib_runtime/utils/file/get_files_async.gd")
 
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 
@@ -312,7 +314,7 @@ static func replace_text_in_file(file_path, replace, with):
 
 ## DEPRECATED move to UResource
 static func check_scene_root(file_path:String, valid_types:Array) -> bool:
-	return ALibRuntime.Utils.UResource.check_scene_root(file_path, valid_types)
+	return UResource.check_scene_root(file_path, valid_types)
 
 static func get_relative_path(from_path: String, to_path: String) -> String:
 	var from_dir = from_path.get_base_dir()

@@ -1,5 +1,7 @@
 #! namespace ALibRuntime.Utils class UTree
 
+const UString = preload("uid://cwootkivqiwq1") # u_string.gd
+
 static func get_all_children_items(tree_item:TreeItem) -> Array[TreeItem]:
 	return _get_all_children_items(tree_item)
 static func get_all_visible_children_items(tree_item:TreeItem) -> Array[TreeItem]:
@@ -25,22 +27,22 @@ static func _get_all_children_items(tree_item:TreeItem, limit_to_visible:=false)
 static func check_filter(text:String, filter_text:String) -> bool:
 	if filter_text == "":
 		return true # true == don't hide
-	return ALibRuntime.Utils.UString.Filter.Check.contains_n(text, [filter_text])
-	text = text.to_lower()
-	if text.find(filter_text) > -1:
-		return true
-	return false
+	return UString.Filter.Check.contains_n(text, [filter_text])
+	#text = text.to_lower()
+	#if text.find(filter_text) > -1:
+		#return true
+	#return false
 
 static func check_filter_split(text:String, filter_text:String) -> bool:
 	if filter_text == "":
 		return true # true == don't hide
 	#text = text.to_lower()
 	var f_split := filter_text.split(" ", false)
-	return ALibRuntime.Utils.UString.Filter.Check.contains_n(text, f_split)
-	for s in f_split:
-		if text.find(s) == -1:
-			return false
-	return true
+	return UString.Filter.Check.contains_n(text, f_split)
+	#for s in f_split:
+		#if text.find(s) == -1:
+			#return false
+	#return true
 
 static func uncollapse_items(items:Array, item_collapsed_callable:Callable):
 	for item in items:

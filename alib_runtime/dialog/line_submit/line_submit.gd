@@ -1,5 +1,6 @@
 
-const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
+const UWindow = preload("uid://q2lbynew21er") # u_window.gd
+const PopupHelper = preload("uid://bb13ihrvdkjdj") # popup_menu_path_helper.gd
 
 enum SelectMode {
 	NONE,
@@ -17,7 +18,7 @@ var selected_node
 
 static func on_control(control:Control, auto_hide:=true):
 	var rect = Rect2(Vector2.ZERO, control.size)
-	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(control)
+	rect.position += UWindow.get_control_absolute_position(control)
 	var new = new(control, rect, auto_hide)
 	return new
 

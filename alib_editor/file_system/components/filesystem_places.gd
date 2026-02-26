@@ -1,11 +1,19 @@
 @tool
 extends VBoxContainer
 
-const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const PlaceList = FSClasses.FileSystemPlaceList
 
-const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
-const UFile = ALibRuntime.Utils.UFile
-const Options = ALibRuntime.Popups.Options
+const FSUtil = FSClasses.FSUtil
+
+const CacheHelper = FSUtil.CacheHelper
+const UFile = FSUtil.UFile
+const UOs = FSUtil.UOs
+const Options = FSUtil.Options
+const SettingHelperSingleton = FSUtil.SettingHelperSingleton
+const SettingHelperJson = FSUtil.SettingHelperJson
+const LineSubmit = FSUtil.LineSubmit
+const Dialog = FSUtil.Dialog
 
 const ADD_TO_PLACES_STRING = "Add to Places"
 const _MIN_SIZE = Vector2(100,0)
@@ -15,7 +23,7 @@ signal path_selected(path:String)
 signal right_clicked(index, place_list)
 signal title_right_clicked(place_list)
 
-var setting_helper:ALibRuntime.Settings.SettingHelperJson
+var setting_helper:SettingHelperJson
 
 var active:bool=true
 var _initial_build_flag:bool = false
@@ -29,7 +37,7 @@ func _ready() -> void:
 	custom_minimum_size = _MIN_SIZE
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	setting_helper = ALibRuntime.Settings.SettingHelperSingleton.get_file_helper(PROJECT_PLACES_FILE)
+	setting_helper = SettingHelperSingleton.get_file_helper(PROJECT_PLACES_FILE)
 	setting_helper.subscribe_property(self, &"_places_cache", &"place_data", Data.get_default_data())
 	setting_helper.object_initialize(self)
 	setting_helper.settings_changed.connect(refresh, 1)
@@ -152,7 +160,7 @@ func get_place_data():
 	return data
 
 func add_place_list(place_list:PlaceList):
-	var line = ALibRuntime.Dialog.Handlers.LineSubmit.on_control(place_list.title_button, false)
+	var line = Dialog.Handlers.LineSubmit.on_control(place_list.title_button, false)
 	var text = await line.line_submitted
 	if text == "":
 		return
@@ -162,13 +170,10 @@ func add_place_list(place_list:PlaceList):
 
 func remove_place_list(place_list:PlaceList):
 	if place_list.get_item_count() > 0:
-		var confirmed = await ALibRuntime.Dialog.confirm("Delete non empty list?", self)
+		var confirmed = await Dialog.confirm("Delete non empty list?", self)
 		if not confirmed:
 			return
-		#var conf = ALibRuntime.Dialog.Handlers.Confirmation.new("Delete non empty list?", self)
-		#var handled = await conf.handled
-		#if not handled:
-			#return
+	
 	var target_idx = -1
 	for idx in places.keys():
 		if places[idx] == place_list:
@@ -281,7 +286,7 @@ class Data:
 		return data
 	
 	static func get_other_places_data():
-		var home = ALibRuntime.Utils.UOs.get_home_dir()
+		var home = UOs.get_home_dir()
 		var editor_paths = EditorInterface.get_editor_paths()
 		var other = {
 			"title": "Other",

@@ -1,6 +1,14 @@
 @tool
 extends SplitContainer
 
+const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+const FSUtil = FSClasses.FSUtil
+
+const UWindow = FSUtil.UWindow
+const LineSubmit = FSUtil.LineSubmit
+const ThemeColor = FSUtil.ThemeColor
+const NUItemList = FSUtil.NUItemList
+
 const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
 const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
 
@@ -124,10 +132,10 @@ func set_item_title(index:int, new_name:String):
 
 func rename_item(index:int):
 	var item_rect = item_list.get_item_rect(index)
-	item_rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(item_list)
-	var line_edit = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, item_rect, false)
+	item_rect.position += UWindow.get_control_absolute_position(item_list)
+	var line_edit = LineSubmit.new(self, item_rect, false)
 	var current_name = get_item_title(index)
-	line_edit.set_text(current_name, ALibRuntime.Dialog.Handlers.LineSubmit.SelectMode.ALL)
+	line_edit.set_text(current_name, LineSubmit.SelectMode.ALL)
 	var text = await line_edit.line_submitted
 	if text == current_name or text == "":
 		return
@@ -151,8 +159,8 @@ func set_title(new_name:String):
 
 func rename_title():
 	var rect = title_button.get_rect()
-	rect.position += ALibRuntime.Utils.UWindow.get_control_absolute_position(title_button)
-	var line = ALibRuntime.Dialog.Handlers.LineSubmit.new(self, rect, false)
+	rect.position += UWindow.get_control_absolute_position(title_button)
+	var line = LineSubmit.new(self, rect, false)
 	var submit = await line.line_submitted
 	if submit == "" or submit == get_title():
 		return
@@ -236,10 +244,10 @@ func _item_list_drop_data(at_position: Vector2, data: Variant) -> void:
 				new_item(f.trim_suffix("/").get_file(), f)
 
 func _item_list_draw():
-	ALibRuntime.NodeUtils.NUItemList.AltColor.draw_lines(item_list)
+	NUItemList.AltColor.draw_lines(item_list)
 	
 	if _list_hovered:
-		var accent_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)
+		var accent_color = ThemeColor.get_theme_color(ThemeColor.Type.ACCENT)
 		var rect = Rect2(Vector2.ZERO, item_list.size)
 		item_list.draw_rect(rect, accent_color, false, 2)
 	
@@ -283,7 +291,7 @@ func _highlight_title(state:bool=true):
 func _title_draw():
 	var lab_rect = Rect2(Vector2.ZERO, title_button.size)
 	if _hovered_title:
-		var accent_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)
+		var accent_color = ThemeColor.get_theme_color(ThemeColor.Type.ACCENT)
 		title_button.draw_rect(lab_rect, accent_color, false)
 
 func toggle_list():

@@ -1,5 +1,5 @@
 
-const StringMap = ALibRuntime.Utils.UString.StringMap
+const StringMap = preload("uid://mhebqdb72dqn") # string_map.gd
 
 var begin_line:int
 var end_line:int
@@ -30,7 +30,7 @@ func get_line_data():
 
 func get_strings():
 	if not is_instance_valid(string_map):
-		string_map = StringMap.new(selected_text, ALibRuntime.Utils.UString.StringMap.Mode.STRING)
+		string_map = StringMap.new(selected_text, StringMap.Mode.STRING)
 	return string_map.get_strings()
 
 
