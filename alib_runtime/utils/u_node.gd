@@ -73,7 +73,7 @@ static func make_scene_local(node:Node):
 	recursive_set_owner(node, node, edited_scene_root)
 
 
-static func has_static_method_compat(method:String, script:Script) -> bool:
+static func has_static_method_compat(method:String, script:Object) -> bool:
 	if BACKPORTED >= 4:
 		return method in script
 	

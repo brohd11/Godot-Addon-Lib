@@ -19,15 +19,26 @@ static func _register_node(script:Script, node):
 	instance.instance_refs.append(node)
 	return instance
 
+static func _unregister_node(script:Script, node):
+	var ins = _get_instance(script, false)
+	if not is_instance_valid(ins):
+		printerr("Singleton: '%s' has not been instanced yet." % script._get_singleton_name())
+		return
+	
+	ins.instance_refs.erase(node)
+	if ins.instance_refs.is_empty():
+		ins._all_unregistered_callback()
+		ins.queue_free()
+
 ## Instance members
 
 var instance_refs = []
 
-func unregister_node(node):
-	instance_refs.erase(node)
-	if instance_refs.is_empty():
-		_all_unregistered_callback()
-		queue_free()
+#func unregister_node(node):
+	#instance_refs.erase(node)
+	#if instance_refs.is_empty():
+		#_all_unregistered_callback()
+		#queue_free()
 
 func _all_unregistered_callback():
 	pass

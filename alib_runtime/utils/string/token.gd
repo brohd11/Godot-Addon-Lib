@@ -1,7 +1,7 @@
 
 static var _token_regex: RegEx
 #const pattern = "\"[^\"]*\"|'[^']*'|(\\[(?:[^\\[\\]]|(?1))*\\])|(\\{(?:[^{}]|(?2))*\\})|(\\((?:[^()]|(?3))*\\))|\\S+" # old version
-const _TOKEN_PATTERN = "\".*?\"|'.*?'|#.*|[a-zA-Z_]\\w*(?:\\.[a-zA-Z_]\\w*)*|\n|[^\\w\\s]"
+const _TOKEN_PATTERN = "\".*?\"|'.*?'|#.*|[a-zA-Z_0-9]\\w*(?:\\.[a-zA-Z_0-9]\\w*)*|\n|[^\\w\\s]"
 
 static func strip_symbols(text):
 	var separators = " \t\n\r:,.()[]{}<>=+-*/!\"'@"

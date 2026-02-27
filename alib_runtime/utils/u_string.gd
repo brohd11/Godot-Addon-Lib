@@ -6,6 +6,7 @@ const NUMBERS = "0123456789"
 const Token = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/token.gd")
 const Filter = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/filter.gd")
 const StringMap = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/string_map.gd")
+const PrintRich = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/print_rich_helper.gd")
 
 static func hash_string(text:String, hash_type:=HashingContext.HASH_SHA256, chars:int=-1):
 	
@@ -315,6 +316,9 @@ static func unescape(text: String) -> String:
 			output.append(char)
 			i += 1
 	return "".join(output)
+
+static func unquote(text:String):
+	return text.trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
 
 
 static func get_string_map(text:String, _mode:StringMap.Mode=StringMap.Mode.FULL, print_err:=false) -> StringMap:

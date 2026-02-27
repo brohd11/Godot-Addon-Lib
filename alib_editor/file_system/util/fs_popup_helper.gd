@@ -3,7 +3,7 @@ extends RefCounted
 const PopupHelper = PopupWrapper.PopupHelper
 
 static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Array=[], other_items:Dictionary={}):
-	ZyxPopupWrapper.Enable.filesystem(false, false)
+	ZyxPopupWrapperSingleton.Enable.filesystem(false, false)
 	var fs_popup:PopupMenu = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 	#if not fs_popup.visible: #^ not sure about this, was needed now it seems not?
 		#fs_popup = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.FILESYSTEM_BOTTOM_POPUP)
@@ -34,7 +34,7 @@ static func recreate_popup(new_popup:PopupMenu, callable:Callable, hide_names:Ar
 		PopupHelper.parse_dict_static(other_post_items, new_popup, callable, null, other_items_post_id)
 
 static func _on_popup_hide():
-	ZyxPopupWrapper.Enable.filesystem(true, false)
+	ZyxPopupWrapperSingleton.Enable.filesystem(true, false)
 
 
 class MenuItems:

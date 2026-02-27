@@ -29,6 +29,9 @@ static func instance_valid() -> bool:
 static func register_node(node:Node):
 	return _register_node(PE_STRIP_CAST_SCRIPT, node)
 
+static func unregister_node(node):
+	_unregister_node(PE_STRIP_CAST_SCRIPT, node)
+
 static func call_on_ready(callable, print_err:bool=true):
 	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
 
