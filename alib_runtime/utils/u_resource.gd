@@ -63,6 +63,14 @@ static func get_modulated_icon(texture:Texture2D, color:=Color(1,1,1)) -> Textur
 	
 	return ImageTexture.create_from_image(img)
 
+static func create_rect_texture(color:Color=Color.WHITE, size_x:int=1, size_y:int=1):
+	var img = Image.create_empty(size_x, size_y, false, Image.FORMAT_BPTC_RGBA)
+	img.decompress()
+	for x in range(size_x):
+		for y in range(size_y):
+			img.set_pixel(x, y, color)
+	return ImageTexture.create_from_image(img)
+
 static func load_or_get_icon(name_or_path:String):
 	if FileAccess.file_exists(name_or_path):
 		return load(name_or_path)

@@ -5,6 +5,8 @@ const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_me
 
 const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
 
+const SEPERATOR_STRING = "#sep"
+
 const ICON_DEFAULT_SIZE = Vector2(16,16)
 
 const BACKPORTED = 100
@@ -130,13 +132,17 @@ static func _parse_popup_menu_path(params:PopupMenuPathParams, current_id, extra
 		var slice = popup_menu_path.get_slice("/", i)
 		working_menu_path = working_menu_path.path_join(slice)
 		if  i == slice_count - 1: # THIS IS THE CLICKABLE
-			if working_menu_path.begins_with("%sep"):
-				var sep_string = ""
-				if working_menu_path.find("--") > -1:
-					sep_string = working_menu_path.get_slice("--", 1)
+			var sep_string = ParamKeys.get_seperator(working_menu_path)
+			if sep_string != null:
 				parent_popup.add_separator(sep_string)
-				#print("ADDING: ", working_menu_path)
 				break
+			#if working_menu_path.begins_with(SEPERATOR_STRING):
+				#var sep_string = ""
+				#if working_menu_path.find("--") > -1:
+					#sep_string = working_menu_path.get_slice("--", 1)
+				#parent_popup.add_separator(sep_string)
+				#print("ADDING: ", working_menu_path)
+				#break
 			
 			_create_popup_item(parent_popup, params, slice, tool_tip, icon, icon_color, current_id)
 			var popup_index = parent_popup.item_count - 1
@@ -233,13 +239,21 @@ class ParamKeys:
 	const RADIO = &"RADIO"
 	const RADIO_IS_CHECKED = &"RADIO_IS_CHECKED"
 	
+	const _SEP_DELIM = "-&|-"
+	
 	static func add_separator(dict:Dictionary, label:=""):
-		var string = "%sep--" + label
+		var string = SEPERATOR_STRING + _SEP_DELIM + label
 		var count = 0
 		while dict.has(string):
-			string = "%sep" + str(count) + "--" + label
+			string = SEPERATOR_STRING + str(count) + _SEP_DELIM + label
 			count += 1
 		dict[string] = {}
+	
+	static func get_seperator(text:String):
+		if text.begins_with(SEPERATOR_STRING):
+			if text.find(_SEP_DELIM) > -1:
+				return text.get_slice(_SEP_DELIM, 1)
+			return ""
 
 class PopupMenuPathParams:
 	var popup_menu_path:String
