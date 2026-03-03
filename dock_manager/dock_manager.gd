@@ -444,6 +444,7 @@ func dock_instance(target_dock:int):
 				editor_dock = ClassDB.instantiate("EditorDock")
 				editor_dock.title = get_docked_name()
 				editor_dock.dock_icon = _get_plugin_icon()
+				editor_dock.available_layouts = editor_dock.DOCK_LAYOUT_ALL
 			var dock_slot = target_dock
 			if target_dock == -2:
 				dock_slot = 8 # EditorDock.DockSlot.DOCK_SLOT_BOTTOM

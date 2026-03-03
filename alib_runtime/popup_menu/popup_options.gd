@@ -39,8 +39,8 @@ func add_option_data(menu_path:String, icon_color=null, metadata:={}):
 	if icon_color:
 		data[Params.ICON_COLOR] = icon_color
 
-func add_separator(text:=""):
-	Params.add_separator(_dict, text)
+func add_separator(text:="", path=""):
+	Params.add_separator(_dict, text, path)
 
 func merge(options:SELF, overwrite:=false):
 	_dict.merge(options.get_options(), overwrite)

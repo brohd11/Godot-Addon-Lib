@@ -29,7 +29,7 @@ var _mouse_in_control:=false
 signal handled_event(event_type, input_event)
 
 func _ready() -> void:
-	gui_input.connect(_on_gui_input)
+	#gui_input.connect(_on_gui_input)
 	set_anchors_and_offsets_preset(PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mouse_force_pass_scroll_events = false
@@ -49,13 +49,13 @@ func set_enabled(state:bool):
 	else:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-func _on_gui_input(event:InputEvent):
+func _gui_input(event:InputEvent): # this was _on_gui_input connected above, should be able to just overide it
 	if not (enabled and _mouse_in_control):
 		return
 	var filtered_event = _check_event(CALLABLE_MOUSE_BUTTON, event)
 	if filtered_event == EventType.NONE:
 		return
-
+	
 	handled_event.emit(filtered_event, event)
 	accept_event()
 

@@ -2,7 +2,7 @@ class_name PopupWrapper
 extends RefCounted
 
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
-const USort = ALibRuntime.Utils.USort
+const USort = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_sort.gd")
 
 class ItemParams extends PopupHelper.ParamKeys:
 	const POSITION = "POSITION"
@@ -32,13 +32,16 @@ static func popup_wrapper(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_
 		wrapper_params.fs_popup_callable = _on_wrapper_pressed
 	if wrapper_params.custom_context_item_data.is_empty():
 		wrapper_params.custom_context_item_data = get_custom_context_items(popup_to_copy)
-		
 	
 	wrapper_params.existing_item_dict = PopupHelper.create_popup_items_dict(new_popup)
-	
 	wrapper_params.sorted_custom_item_data = sort_custom_context_items(wrapper_params.custom_context_item_data)#, top_custom_item_data, bottom_custom_item_data)
 	
 	_copy_popup(new_popup, popup_to_copy, wrapper_params)
+	
+	var menus = new_popup.find_children("*", "PopupMenu", true, false)
+	menus.append(new_popup)
+	for menu in menus:
+		popup_cleanup(menu)
 	
 	if wrapper_params.connect_callable:
 		new_popup.id_pressed.connect(wrapper_params.fs_popup_callable.bind(new_popup, popup_to_copy))
@@ -130,23 +133,32 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 	var custom_item_start_id = 2000
 	var custom_item_end_id = 3000  ## can these be different?
 	for i in range(popup_to_copy.item_count):
-		var is_sep = popup_to_copy.is_item_separator(i)
-		if is_sep:
-			continue
 		var id = popup_to_copy.get_item_id(i)
-		var text = popup_to_copy.get_item_text(i)
-		
 		var custom_id = (id >= custom_item_start_id and id < custom_item_end_id)# or id >= 5000
 		var is_custom = custom_id or custom_ancestor
+		
+		var text = popup_to_copy.get_item_text(i)
+		
+		var target_popup = popup_to_copy
+		if custom_ancestor:
+			target_popup = top_popup
+		
+		var is_sep = popup_to_copy.is_item_separator(i)
+		if is_sep:
+			if not is_custom:
+				continue
+			var sep_path = ItemParams.add_separator(custom_item_data[target_popup], text, parent_data.get("popup_path",""))
+			custom_item_data[target_popup][sep_path][ItemParams.ID] = id
+			custom_item_data[target_popup][sep_path][ItemParams.METADATA] = {}
+			continue
+		
+		
 		
 		var path = text
 		var submenu = popup_to_copy.get_item_submenu_node(i)
 		if is_instance_valid(submenu):
 			
 			if custom_id: # don't want to ignore standard submenus
-				var target_popup = popup_to_copy
-				if custom_ancestor: # ALERT
-					target_popup = top_popup
 				custom_item_data[target_popup][path] = {}
 				custom_item_data[target_popup][path]["submenu"] = true
 			var icon = popup_to_copy.get_item_icon(i)
@@ -163,24 +175,16 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				if ItemParams.ICON in parent_data:
 					submenu_data[ItemParams.ICON] = parent_data[ItemParams.ICON].duplicate()
 			
-			#submenu_data[ItemParams.ICON].append(icon)
-			
 			_scan_popup_for_custom_items(submenu, top_popup, custom_item_data, is_custom, submenu_data)
 		else:
 			if is_custom:
-				var target_popup = popup_to_copy
+				#ItemParams.create_entry_from_item({}, popup_to_copy, i) # TESTING, much slower than the old logic, 10x
+				
 				if custom_ancestor:
-					target_popup = top_popup
 					var popup_path = parent_data.get("popup_path")
 					if popup_path:
 						path = popup_path.path_join(text)
-				#else: # TESTING
-					#var popup_path = parent_data.get("popup_path")
-					#if popup_path:
-						#path = popup_path.path_join(text)
-					#print(path)
-					#print(parent_data)
-					##TESTING
+				
 				var signal_connections = popup_to_copy.get_signal_connection_list("id_pressed")
 				if signal_connections.is_empty():
 					print("--- POPUP HAS NO CONNECTIONS ---")
@@ -188,7 +192,6 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 					print("---")
 					continue
 				var callable = signal_connections.get(0).get("callable") as Callable
-				#var args = callable.get_bound_arguments()
 				var icon = popup_to_copy.get_item_icon(i)
 				var icons = []
 				if ItemParams.ICON in parent_data:
@@ -200,27 +203,36 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				if metadata != null:
 					user_metadata = metadata
 				
-				custom_item_data[target_popup][path] = {
-					"id": id,
-					PopupHelper.ParamKeys.CALLABLE: callable,
-					#"args": callable.get_bound_arguments(),
-					PopupHelper.ParamKeys.ICON: icons,
-					PopupHelper.ParamKeys.METADATA: user_metadata,
+				var popup_data = {
+					ItemParams.ID: id,
+					ItemParams.CALLABLE: callable,
+					ItemParams.ICON: icons,
+					ItemParams.METADATA: user_metadata,
 				}
-	#custom_item_data[popup_to_copy] = popup_data
+				
+				
+				var is_radio = popup_to_copy.is_item_radio_checkable(i)
+				if is_radio:
+					popup_data[ItemParams.RADIO] = is_radio
+					var is_radio_checked = popup_to_copy.is_item_checked(i)
+					popup_data[ItemParams.RADIO_IS_CHECKED] = is_radio_checked
+				
+				custom_item_data[target_popup][path] = popup_data
 
 
 static func _add_custom_item(popup, item_path, item_data, popup_item_dict):
 	var submenu = item_data.get("submenu", false)
 	if submenu:
 		return
-	var id = item_data.get("id")
-	var callable = item_data.get(ItemParams.CALLABLE) as Callable
+	var id = item_data.get(ItemParams.ID)
+	var callable = item_data.get(ItemParams.CALLABLE)# as Callable
 	item_data[ItemParams.CALLABLE] = null
-	if callable == null:
-		return
+	#if callable == null: # does this need more handling? commented to allow seperators to work
+		#return
 	var parent = PopupHelper.add_single_item(popup, item_path, item_data, popup_item_dict)
 	if id < 2000: # does this need to be changed to account for scene tags 3000
+		if callable == null:
+			return
 		if not parent.id_pressed.is_connected(callable):
 			parent.id_pressed.connect(callable)
 
@@ -242,6 +254,8 @@ static func squash_icons(popup:PopupMenu, recursive=true):
 			
 
 static func popup_cleanup(popup:PopupMenu):
+	if popup.is_item_separator(0):
+		popup.remove_item(0)
 	if popup.is_item_separator(popup.item_count - 1):
 		popup.remove_item(popup.item_count - 1)
 

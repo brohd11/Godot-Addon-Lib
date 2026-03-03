@@ -5,7 +5,7 @@ const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_me
 
 const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
 
-const SEPERATOR_STRING = "#sep"
+
 
 const ICON_DEFAULT_SIZE = Vector2(16,16)
 
@@ -132,17 +132,10 @@ static func _parse_popup_menu_path(params:PopupMenuPathParams, current_id, extra
 		var slice = popup_menu_path.get_slice("/", i)
 		working_menu_path = working_menu_path.path_join(slice)
 		if  i == slice_count - 1: # THIS IS THE CLICKABLE
-			var sep_string = ParamKeys.get_seperator(working_menu_path)
+			var sep_string = ParamKeys.get_seperator(slice)
 			if sep_string != null:
 				parent_popup.add_separator(sep_string)
 				break
-			#if working_menu_path.begins_with(SEPERATOR_STRING):
-				#var sep_string = ""
-				#if working_menu_path.find("--") > -1:
-					#sep_string = working_menu_path.get_slice("--", 1)
-				#parent_popup.add_separator(sep_string)
-				#print("ADDING: ", working_menu_path)
-				#break
 			
 			_create_popup_item(parent_popup, params, slice, tool_tip, icon, icon_color, current_id)
 			var popup_index = parent_popup.item_count - 1
@@ -238,22 +231,75 @@ class ParamKeys:
 	const METADATA = &"METADATA"
 	const RADIO = &"RADIO"
 	const RADIO_IS_CHECKED = &"RADIO_IS_CHECKED"
+	const ID = &"ID"
 	
+	const SEPARATOR_STRING = "#sep"
 	const _SEP_DELIM = "-&|-"
 	
-	static func add_separator(dict:Dictionary, label:=""):
-		var string = SEPERATOR_STRING + _SEP_DELIM + label
+	static func add_separator(dict:Dictionary, label:="", path:=""):
+		var string = SEPARATOR_STRING + _SEP_DELIM + label
+		if path != "":
+			string = path.path_join(string)
 		var count = 0
 		while dict.has(string):
-			string = SEPERATOR_STRING + str(count) + _SEP_DELIM + label
+			string = SEPARATOR_STRING + str(count) + _SEP_DELIM + label
 			count += 1
 		dict[string] = {}
+		return string
 	
 	static func get_seperator(text:String):
-		if text.begins_with(SEPERATOR_STRING):
+		if text.begins_with(SEPARATOR_STRING):
 			if text.find(_SEP_DELIM) > -1:
 				return text.get_slice(_SEP_DELIM, 1)
 			return ""
+	
+	static func create_entry_from_item(dict:Dictionary, _popup:PopupMenu, idx:int):
+		if not idx < _popup.item_count:
+			return
+		var data = {}
+		
+		var id = _popup.get_item_id(idx)
+		data[ID] = id
+		
+		if _popup.is_item_radio_checkable(idx):
+			data[RADIO] = true
+			if _popup.is_item_checked(idx):
+				data[RADIO_IS_CHECKED] = true
+		
+		var meta = _popup.get_item_metadata(idx)
+		if meta == null:
+			meta = {}
+		data[METADATA] = meta
+		
+		var _name = _popup.get_item_text(idx)
+		var icons = [_popup.get_item_icon(idx)]
+		var icon_colors = [_popup.get_item_icon_modulate(idx)]
+		
+		var menu_path = ""
+		var parent = _popup
+		while parent is PopupMenu:
+			for i in range(parent.item_count):
+				var submenu = parent.get_item_submenu_node(i)
+				if not is_instance_valid(submenu):
+					continue
+				if submenu.is_ancestor_of(_popup) or submenu == _popup:
+					menu_path = parent.get_item_text(i).path_join(menu_path)
+					icons.push_front(parent.get_item_icon(i))
+					icon_colors.push_front(parent.get_item_icon_modulate(i))
+					break
+				continue
+			parent = parent.get_parent()
+		
+		if _popup.is_item_separator(idx):
+			menu_path = add_separator({}, _name, menu_path)
+		else:
+			menu_path = menu_path.path_join(_name)
+		
+		data[ICON] = icons
+		data[ICON_COLOR] = icon_colors
+		
+		dict[menu_path] = data
+		return menu_path
 
 class PopupMenuPathParams:
 	var popup_menu_path:String
@@ -398,7 +444,7 @@ static func _create_popup_items_dict(_popup:PopupMenu, dict:Dictionary, path="")
 static func add_single_item(_popup:PopupMenu, popup_path:String, popup_data:Dictionary, popup_items_dict:Dictionary):
 	var path_count = popup_path.count("/")
 	var callable = popup_data.get(ParamKeys.CALLABLE)
-	var id = popup_data.get("id", -1)
+	var id = popup_data.get(ParamKeys.ID, -1)
 	
 	var popup_params = PopupMenuPathParams.new(popup_path, _popup, callable, popup_items_dict, popup_data)
 	return _parse_popup_menu_path(popup_params, id)

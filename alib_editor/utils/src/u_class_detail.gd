@@ -10,6 +10,12 @@ enum IncludeInheritance{
 	
 }
 
+enum PreloadSearch{
+	PRELOAD,
+	INNER_CLASS,
+	ALL,
+}
+
 const _PROP_USAGE_FLAGS = PROPERTY_USAGE_GROUP | PROPERTY_USAGE_SUBGROUP | PROPERTY_USAGE_CATEGORY | PROPERTY_USAGE_INTERNAL
 
 const _MEMBER_ARGS = ["signal", "property", "method", "enum", "const"]
@@ -686,7 +692,10 @@ static func script_get_inherited_scripts(script:GDScript) -> Array:
 ## Returns a Dictionary[name, script] of GDScript constants.
 static func script_get_preloads(script:GDScript, deep:=false, include_inner:=false):
 	if deep:
-		return _script_get_preloads_bfs(script, include_inner)
+		var search := PreloadSearch.PRELOAD 
+		if include_inner:
+			search = PreloadSearch.ALL
+		return _script_get_preloads_bfs(script, search)
 	
 	var constants = script_get_all_constants(script, IncludeInheritance.SCRIPTS_ONLY)
 	var preloads = {}
@@ -699,7 +708,7 @@ static func script_get_preloads(script:GDScript, deep:=false, include_inner:=fal
 	
 	return preloads
 
-static func _script_get_preloads_bfs(script:GDScript, include_inner:=false):
+static func _script_get_preloads_bfs(script:GDScript, preload_search:PreloadSearch):
 	var preloads = {}
 	var queue: Array = [{"script": script, "path": ""}]
 	
@@ -714,6 +723,14 @@ static func _script_get_preloads_bfs(script:GDScript, include_inner:=false):
 			var child_script = constants[const_name]
 			if child_script is GDScript and not checked.has(child_script):
 				checked[child_script] = true
+				if preload_search == PreloadSearch.ALL:
+					pass
+				elif preload_search == PreloadSearch.INNER_CLASS:
+					if child_script.resource_path != "":
+						continue
+				elif preload_search == PreloadSearch.PRELOAD:
+					if child_script.resource_path == "":
+						continue
 				
 				var next_path = const_name
 				if not current_path.is_empty():
@@ -723,3 +740,12 @@ static func _script_get_preloads_bfs(script:GDScript, include_inner:=false):
 	
 	
 	return preloads
+
+static func script_get_inner_classes(script:GDScript):
+	var classes = _script_get_preloads_bfs(script, PreloadSearch.INNER_CLASS)
+	for path in classes.keys():
+		var inner_script = classes[path]
+		if inner_script.resource_path != "":
+			classes.erase(path)
+	
+	return classes

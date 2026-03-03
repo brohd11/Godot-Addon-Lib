@@ -173,6 +173,8 @@ func _ready() -> void:
 	
 	_set_current_path(self, current_path)
 	
+	tree.scroll_to_path(current_path)
+	
 	#_check_toolbar_elements() #^ this doesn't set the search label?
 
 func _exit_tree() -> void:
@@ -218,6 +220,7 @@ func _set_data_on_ready():
 	tree.tree_helper.data_dict = _dock_data.get(DataKeys.TREE_ITEM_META, {})
 	tree.show_item_preview = _dock_data.get(DataKeys.TREE_PREVIEW_ICONS, false)
 	
+	
 	var path_bar_view_mode = _dock_data.get(DataKeys.PATH_BAR_MODE, 0)
 	path_bar.set_view_mode(path_bar_view_mode)
 	var path_bar_visible = _dock_data.get(DataKeys.PATH_BAR_TOGGLED, true)
@@ -249,6 +252,7 @@ func get_dock_data() -> Dictionary:
 			continue
 		item_meta[path] = {tree.tree_helper.Keys.METADATA_COLLAPSED:false}
 	
+	#data[DataKeys.TREE_SCROLL_OFFSET] = tree.get_scroll()
 	data[DataKeys.TREE_ITEM_META] = item_meta
 	data[DataKeys.TREE_PREVIEW_ICONS] = tree.show_item_preview
 	data[DataKeys.TREE_SEARCH_LIST_DIR] = _search_tree_list_dir
@@ -1609,6 +1613,7 @@ class DataKeys:
 	const SEARCH_WHOLE_FS = &"SEARCH_WHOLE_FS"
 	const SEARCH_VIEW = &"SEARCH_VIEW"
 	
+	#const TREE_SCROLL_OFFSET = &"filesystem_tab.data_keys.tree_scroll_offset"
 	const TREE_ITEM_META = &"TREE_ITEM_META"
 	const TREE_PREVIEW_ICONS = &"TREE_PREVIEW_ICONS"
 	const TREE_SEARCH_LIST_DIR = &"TREE_SEARCH_LIST_DIR"

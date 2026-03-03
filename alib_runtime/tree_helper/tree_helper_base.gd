@@ -70,13 +70,15 @@ func _get_selected(items:=true):
 	var _selected_items = []
 	var _selected_paths = []
 	var sel = tree_node.get_selected()
-	
-	while is_instance_valid(sel):
-		var sel_path = get_path_from_item(sel)
-		if not sel_path in _selected_paths:
-			_selected_items.append(sel)
-			_selected_paths.append(sel_path)
-		sel = tree_node.get_next_selected(sel)
+	if is_instance_valid(sel):
+		_selected_paths.append(get_path_from_item(sel))
+		sel = tree_node.get_next_selected(null) # this selects the first selected in tree to iterate over all
+		while is_instance_valid(sel):
+			var sel_path = get_path_from_item(sel)
+			if not sel_path in _selected_paths:
+				_selected_items.append(sel)
+				_selected_paths.append(sel_path)
+			sel = tree_node.get_next_selected(sel)
 	
 	if items:
 		return _selected_items

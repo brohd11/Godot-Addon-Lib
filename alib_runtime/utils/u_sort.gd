@@ -3,7 +3,14 @@
 static func sort_priority_dict(key_priority_dict:Dictionary) -> Dictionary:
 	var keys = key_priority_dict.keys()
 	# basic sort of priorities with ref to key
-	keys.sort_custom(func(a, b): return key_priority_dict[a] < key_priority_dict[b])
+	keys.sort_custom(func(a, b):
+		var pri_a = key_priority_dict[a]
+		var pri_b = key_priority_dict[b]
+		if pri_a != pri_b:
+			return pri_a < pri_b
+		else:
+			return false) # if they are the same, just keep order
+		
 	
 	var result_dict: Dictionary = {}
 	for i in range(keys.size()):

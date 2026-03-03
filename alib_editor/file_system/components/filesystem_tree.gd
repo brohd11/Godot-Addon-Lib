@@ -226,6 +226,13 @@ func _build_tree():
 	if _is_filtering():
 		_update_tree_items()
 
+func scroll_to_path(path:String):
+	var item = tree_helper.item_dict.get(path) as TreeItem
+	if item:
+		scroll_to_item(item, true)
+	
+	pass
+
 func select_paths(paths:Array, emit_selected:bool=true, navigate:=false):
 	deselect_all()
 	tree_helper.clear_selection()
