@@ -44,44 +44,44 @@ func _parse(text: String, print_err:=false):
 	var i = -1 # for easy indexing
 	while i + 1 < text_length:
 		i += 1
-		var char = text[i]
+		var _char = text[i]
 		if in_comment:
-			if char == "\n":
+			if _char == "\n":
 				in_comment = false
 			else:
 				comment_mask[i] = 1
 		elif in_string:
 			string_mask[i] = 1
-			if char == "\\":
+			if _char == "\\":
 				if i + 1 < text_length:
 					string_mask[i + 1] = 1
 				i += 1
-			elif char == quote_char:
+			elif _char == quote_char:
 				in_string = false
 				quote_map[string_start_index] = i
 				quote_map[i] = string_start_index
 				string_map[string_start_index] = current_string
 				current_string = ""
 				continue
-			current_string += char
+			current_string += _char
 		else: # not in_string
-			if char == '"' or char == "'":
+			if _char == '"' or _char == "'":
 				in_string = true
-				quote_char = char
+				quote_char = _char
 				string_start_index = i
 				string_mask[i] = 1
-			elif char == "#":
+			elif _char == "#":
 				in_comment = true
 				comment_mask[i] = 1
 			elif mode == Mode.FULL:
-				if char in BRACKETS:
+				if _char in BRACKETS:
 					bracket_stack.push_back(i)
-				elif char in bracket_values:# bracket closing
+				elif _char in bracket_values:# bracket closing
 					if bracket_stack.is_empty():
 						has_errors = true
 						break
 					var open_idx = bracket_stack.pop_back()
-					if BRACKETS[text[open_idx]] == char:
+					if BRACKETS[text[open_idx]] == _char:
 						bracket_map[open_idx] = i
 						bracket_map[i] = open_idx
 					else:
@@ -119,3 +119,28 @@ func get_line_at_index(index:int):
 
 func get_strings():
 	return string_map.values()
+
+func get_tightest_bracket_set(idx:int, bracket_type:=""):
+	var all_brackets = bracket_type == ""
+	var open_bracket_index = -1
+	var closed_bracket_index = string.length()
+	var bracket_map_keys = bracket_map.keys()
+	bracket_map_keys.sort()
+	
+	for open in bracket_map_keys:
+		if open > idx:
+			break
+		var _char = string[open]
+		if not all_brackets and _char != bracket_type:
+			continue
+		var close = bracket_map.get(open)
+		if not (open <= idx and close >= idx):
+			continue
+		
+		if close - open < closed_bracket_index - open_bracket_index:
+			open_bracket_index = open
+			closed_bracket_index = close
+	
+	return open_bracket_index
+	
+	

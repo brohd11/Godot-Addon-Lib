@@ -1,3 +1,12 @@
+
+var _cache = {}
+
+func store(key, value, file_paths:=[]):
+	store_data(key, value, _cache, file_paths)
+
+func get_cached(key):
+	return get_cached_data(key, _cache)
+
 ## Args: Key, Value, CacheDict, FilePathArray=[]
 static func store_data(key, value, data_cache:Dictionary, file_paths:=[]) -> void:
 	var mod_data:= {}

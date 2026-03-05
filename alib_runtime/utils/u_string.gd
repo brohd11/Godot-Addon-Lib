@@ -260,6 +260,7 @@ static func get_const_name_and_type_in_line(stripped_line_text:String):
 	return data
 
 
+
 static func _get_name_and_type_from_line(declaration:String):
 	var colon_idx = declaration.find(":")
 	var has_colon = colon_idx > -1

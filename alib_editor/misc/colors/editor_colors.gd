@@ -1,6 +1,7 @@
 #! namespace ALibEditor class Colors
 
 enum SyntaxColor {
+	TEXT,
 	ENGINE_TYPE,
 	SYMBOL,
 	KEYWORD,
@@ -26,6 +27,7 @@ static func get_syntax_color(color:SyntaxColor):
 	var ed_settings = EditorInterface.get_editor_settings()
 	var setting = ""
 	match color:
+		SyntaxColor.TEXT: setting = &"text_editor/theme/highlighting/text_color"
 		SyntaxColor.ENGINE_TYPE: setting = &"text_editor/theme/highlighting/engine_type_color"
 		SyntaxColor.SYMBOL: setting = &"text_editor/theme/highlighting/symbol_color"
 		SyntaxColor.KEYWORD: setting = &"text_editor/theme/highlighting/keyword_color"
