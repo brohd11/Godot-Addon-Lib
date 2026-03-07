@@ -2,7 +2,7 @@
 
 
 
-static func confirm(message_text:String, dialog_parent=null):
+static func confirm(message_text:String, dialog_parent=null) -> bool:
 	var handler = Handlers.Confirmation.new(message_text, dialog_parent)
 	return await handler.handled
 

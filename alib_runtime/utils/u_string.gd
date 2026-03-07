@@ -37,6 +37,11 @@ static func strip_comment(line:String):
 	
 	return valid
 
+static func dot_join(text:String, to_join:String):
+	if text == "" or to_join == "":
+		return text + to_join
+	return text + "." + to_join 
+
 static func rfind_index_safe(text: String, what: String, from: int = -1) -> int:
 	var limit = text.length()
 	if from > -1:
@@ -61,8 +66,8 @@ static func get_member_access_front(text:String, string_map:StringMap=null):
 					if next > count:
 						count = next
 						continue
-				var char = text[count]
-				if char == ".":
+				var _char = text[count]
+				if _char == ".":
 					break
 				count += 1
 			dot_idx = count
@@ -82,8 +87,8 @@ static func get_member_access_back(text:String, string_map:StringMap=null):
 					if next < count:
 						count = next
 						continue
-				var char = text[count]
-				if char == ".":
+				var _char = text[count]
+				if _char == ".":
 					break
 				count -= 1
 			dot_idx = count
@@ -103,8 +108,8 @@ static func trim_member_access_front(text:String, string_map:StringMap=null):
 					if next > count:
 						count = next
 						continue
-				var char = text[count]
-				if char == ".":
+				var _char = text[count]
+				if _char == ".":
 					break
 				count += 1
 			dot_idx = count
@@ -124,8 +129,8 @@ static func trim_member_access_back(text:String, string_map:StringMap=null):
 					if next < count:
 						count = next
 						continue
-				var char = text[count]
-				if char == ".":
+				var _char = text[count]
+				if _char == ".":
 					break
 				count -= 1
 			dot_idx = count
@@ -144,14 +149,14 @@ static func split_member_access(text:String, string_map:StringMap=null):
 			#if next > count:
 				#count = next
 				#continue
-		var char = text[count]
-		if char == ".":
+		var _char = text[count]
+		if _char == ".":
 			if string_map.string_mask[count] == 0:
 				member_parts.append(working_member_name)
 				working_member_name = ""
 				count += 1
 				continue
-		working_member_name += char
+		working_member_name += _char
 		count += 1
 	
 	if working_member_name != "":
