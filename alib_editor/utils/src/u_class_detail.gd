@@ -263,8 +263,8 @@ static func _check_dict_is_enum(dict:Dictionary) -> bool:
 	for i in dict.values():
 		if i is not int:
 			return false
-		if i != count:
-			return false
+		#if i != count: # these can be out of order if defined so
+			#return false
 		count += 1
 	return true
 
@@ -447,18 +447,19 @@ static func get_script_from_property_info(data:Dictionary, parent_script:GDScrip
 			#break
 	
 	#script_get_all_properties(script )
-	print("DOING DEEP SEARCH")
-	var script_source = target_script.source_code
-	var var_declaration_idx = script_source.find("var " + property_name)
-	var var_declaration = script_source.substr(var_declaration_idx, script_source.find("\n", var_declaration_idx) - var_declaration_idx)
-	if var_declaration.find(";") > -1:
-		var_declaration = var_declaration.get_slice(";", 0)
-	var var_data = UString.get_var_name_and_type_hint_in_line(var_declaration)
-	if var_data != null:
-		var type = var_data[1]
-		var new_member_info = get_member_info_by_path(target_script, type)
-		if new_member_info is GDScript:
-			return new_member_info
+	
+	#var script_source = target_script.source_code
+	#var var_declaration_idx = script_source.find("var " + property_name)
+	#var var_declaration = script_source.substr(var_declaration_idx, script_source.find("\n", var_declaration_idx) - var_declaration_idx)
+	#if var_declaration.find(";") > -1:
+		#var_declaration = var_declaration.get_slice(";", 0)
+	#var var_data = UString.get_var_name_and_type_hint_in_line(var_declaration)
+	#if var_data != null:
+		#var type = var_data[1]
+		#print("DOING DEEP SEARCH::", property_name,"::" ,type)
+		#var new_member_info = get_member_info_by_path(target_script, type)
+		#if new_member_info is GDScript:
+			#return new_member_info
 	
 	return null
 

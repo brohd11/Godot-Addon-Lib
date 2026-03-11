@@ -144,11 +144,13 @@ static func split_member_access(text:String, string_map:StringMap=null):
 	var working_member_name = ""
 	var count = 0
 	while count < text.length():
-		#if string_map.bracket_map.has(count):
-			#var next = string_map.bracket_map[count]
-			#if next > count:
-				#count = next
-				#continue
+		if string_map.bracket_map.has(count):
+			var next = string_map.bracket_map[count]
+			if next > count:
+				for i in range(count, next + 1):
+					working_member_name += text[i]
+				count = next + 1
+				continue
 		var _char = text[count]
 		if _char == ".":
 			if string_map.string_mask[count] == 0:
@@ -224,6 +226,21 @@ static func remove_comment(text:String, string_safe:=false, string_map=null):
 	return text
 
 
+static func get_script_path_and_suffix(script_path:String):
+	if not script_path.begins_with("res://"):
+		return []
+	var path = script_path
+	var suffix = ""
+	var gd_idx = script_path.find(".gd.")
+	if gd_idx > -1:
+		path = script_path.substr(0, gd_idx + 3)
+		suffix = script_path.substr(gd_idx + 4)
+	return [path, suffix]
+
+
+
+
+## these will be gone
 static func get_func_name_in_line(stripped_line_text:String) -> String:
 	if not (stripped_line_text.begins_with("func ") or stripped_line_text.begins_with("static func ")):
 		return ""
@@ -291,6 +308,7 @@ static func _get_name_and_type_from_line(declaration:String):
 	
 	return [var_nm, type_hint]
 
+## THESE WILL BE GONE
 
 static func get_paths_in_line(line_text:String):
 	var string_map = get_string_map(line_text, StringMap.Mode.STRING)
