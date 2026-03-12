@@ -103,7 +103,7 @@ static func _recur_get_class_members(script:Script, desired_members:=_MEMBER_ARG
 			var class_properties = ClassDB.class_get_property_list(instance_type)
 			for data in class_properties:
 				var name = data.get("name")
-				var usage = data.get("usage")
+				var usage = data.get(&"usage")
 				if usage & _PROP_USAGE_FLAGS:
 					continue
 				if name.is_empty():
@@ -233,12 +233,20 @@ static func _get_script_members(script:Script, desired_members:=_MEMBER_ARGS):
 		var script_property_list = script.get_script_property_list()
 		for data in script_property_list:
 			var name = data.get("name")
-			var usage = data.get("usage")
+			var usage = data.get(&"usage")
 			if usage & _PROP_USAGE_FLAGS:
 				continue
 			if name.is_empty():
 				continue
 			members_dict[name] = data
+		#var script_other_list = script.get_property_list() # this needs to deal with the fact that it includes inherited
+		#for data in script_other_list:
+			#var name = data.get("name")
+			#var usage = data.get(&"usage")
+			#if usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+				#if name.is_empty():
+					#continue
+				#members_dict[name] = data
 	if "const" in desired_members:
 		var const_dict = script.get_script_constant_map()
 		for name in const_dict.keys():

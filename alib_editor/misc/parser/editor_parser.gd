@@ -53,7 +53,6 @@ func _on_editor_script_changed(script):
 		await get_tree().process_frame
 		var code_edit = ScriptEditorRef.get_current_code_edit()
 		if is_instance_valid(code_edit):
-			print("SET")
 			gdscript_parser.set_current_script(script)
 			gdscript_parser.set_code_edit(code_edit)
 
