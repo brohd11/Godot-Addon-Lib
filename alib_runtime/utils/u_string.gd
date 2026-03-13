@@ -40,7 +40,14 @@ static func strip_comment(line:String):
 static func dot_join(text:String, to_join:String):
 	if text == "" or to_join == "":
 		return text + to_join
-	return text + "." + to_join 
+	return text + "." + to_join
+
+static func dot_joinv(string_array:PackedStringArray):
+	var text = ""
+	for string in string_array:
+		text = dot_join(text, string)
+	return text
+
 
 static func rfind_index_safe(text: String, what: String, from: int = -1) -> int:
 	var limit = text.length()
