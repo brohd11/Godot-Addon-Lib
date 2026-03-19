@@ -20,8 +20,7 @@ static func recursive_get_nodes(node: Node) -> Array:
 	if node.get_child_count() > 0:
 		var children = node.get_children()
 		for c in children:
-			var child_nodes = recursive_get_nodes(c) 
-			children_array += child_nodes 
+			children_array.append_array(recursive_get_nodes(c))
 	
 	return children_array
 
