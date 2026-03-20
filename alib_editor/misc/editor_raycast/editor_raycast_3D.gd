@@ -57,6 +57,7 @@ static func get_transformed_raycast_result(apply_randomize:=false):
 	var ins = get_instance()
 	if ins.last_raycast_result != null:
 		return ins.raycast.get_final_transform(ins.last_raycast_result, apply_randomize)
+	
 
 static func set_terrain_3D(node:Node):
 	if not node.get_class() == "Terrain3D":

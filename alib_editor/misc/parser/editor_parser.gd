@@ -28,12 +28,23 @@ static func call_on_ready(callable, print_err:bool=true):
 	_call_on_ready(PE_STRIP_CAST_SCRIPT, callable, print_err)
 
 
+const SCRIPT_CACHE_SIZE = 40
+
+signal editor_script_changed(script)
+
 var gdscript_parser:GDScriptParser
+
+var _parser_cache:Dictionary = {}
 
 
 func _init(node):
 	gdscript_parser = GDScriptParser.new()
-	
+	_set_parser_cache()
+
+
+func _set_parser_cache():
+	gdscript_parser.set_parser_cache(_parser_cache)
+	gdscript_parser.set_parser_cache_size(SCRIPT_CACHE_SIZE)
 
 func _ready() -> void:
 	await get_tree().create_timer(1).timeout
@@ -47,6 +58,7 @@ func _on_text_changed():
 
 func _on_script_validate():
 	gdscript_parser.parse()
+	gdscript_parser.clean_parser_cache.call_deferred()
 
 func _on_editor_script_changed(script):
 	if is_instance_valid(script):
@@ -55,14 +67,27 @@ func _on_editor_script_changed(script):
 		if is_instance_valid(code_edit):
 			gdscript_parser.set_current_script(script)
 			gdscript_parser.set_code_edit(code_edit)
+			gdscript_parser.parse()
+			editor_script_changed.emit(script)
 
 
-func get_parser() -> GDScriptParser:
-	return gdscript_parser
+static func get_parser(script_path:String="") -> GDScriptParser:
+	var ins = get_instance()
+	if script_path == "" or script_path == ins.gdscript_parser.get_script_path():
+		return ins.gdscript_parser
+	else:
+		return ins.gdscript_parser.get_parser_for_path(script_path)
 
 func get_caret_context() -> GDScriptParser.CaretContext:
 	return gdscript_parser.get_caret_context()
 
+static func clear_cache():
+	var ins = get_instance()
+	ins._parser_cache.clear()
+	ins._set_parser_cache()
+
+static func cache_size():
+	return get_instance()._parser_cache.size()
 
 #^ --- Singletone Methods
 
