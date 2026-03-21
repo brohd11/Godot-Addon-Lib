@@ -173,7 +173,6 @@ static func split_member_access(text:String, string_map:StringMap=null):
 	
 	return member_parts
 
-
 static func find_indentifier_in_line(line_text:String, identifier:String) -> int:
 	var line_length = line_text.length()
 	var idx = line_text.find(identifier)

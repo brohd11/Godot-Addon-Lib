@@ -396,6 +396,7 @@ static func get_member_info_by_path(script, member_name:String, member_hints_arr
 					current_script = load(global_class_path)
 					final_val = current_script # set final val in case only looking up the global, for some reason
 					err = false
+			
 			if err:
 				if print_err:
 					printerr("Member '%s' not found in: %s" % [part, member_name.get_slice(part, 0).trim_suffix(".")])
