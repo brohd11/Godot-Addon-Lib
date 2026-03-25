@@ -51,19 +51,20 @@ func _ready():
 	add_child(vbox)
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
-	main_container = MarginContainer.new()
+	#main_container = MarginContainer.new()
+	main_container = ALibEditor.UIHelpers.Margin.new_plugin_margin_container()
 	vbox.add_child(main_container)
 	main_container.name = "MainContainer"
 	main_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	var main_marg = 0
-	var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
-	if minor_version == 6:
-		main_marg = -2 * editor_scale
-	main_container.add_theme_constant_override("margin_top", main_marg)
-	main_container.add_theme_constant_override("margin_left", main_marg)
-	main_container.add_theme_constant_override("margin_right", main_marg)
-	main_container.add_theme_constant_override("margin_bottom", main_marg)
+	#var main_marg = 0
+	#var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	#if minor_version == 6:
+		#main_marg = -2 * editor_scale
+	#main_container.add_theme_constant_override("margin_top", main_marg)
+	#main_container.add_theme_constant_override("margin_left", main_marg)
+	#main_container.add_theme_constant_override("margin_right", main_marg)
+	#main_container.add_theme_constant_override("margin_bottom", main_marg)
 	
 	var dog_ear_size = 16 * editor_scale
 	var dog_ear = DogEarButton.new(DogEarButton.Position.TOP_RIGHT, dog_ear_size)

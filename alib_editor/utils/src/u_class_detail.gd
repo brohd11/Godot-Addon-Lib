@@ -751,6 +751,7 @@ static func _script_get_preloads_bfs(script:GDScript, preload_search:PreloadSear
 	
 	return preloads
 
+## Return dict [access_path, script]
 static func script_get_inner_classes(script:GDScript):
 	var classes = _script_get_preloads_bfs(script, PreloadSearch.INNER_CLASS)
 	for path in classes.keys():
