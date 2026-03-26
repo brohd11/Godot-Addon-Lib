@@ -1573,7 +1573,7 @@ func _get_modulated_icon(text: String, brightness:=0.8) -> Texture2D:
 	return EditorIcons.get_icon_white(text, brightness)
 
 class EditorSet:
-	const _DEFAULT_SETTINGS = &"plugin/filesystem_instances/defaults/"
+	const _DEFAULT_SETTINGS:StringName = &"plugin/filesystem_instances/defaults/"
 	const LIST_ALT_COLOR = _DEFAULT_SETTINGS + &"alternate_item_colors"
 	const VIEW_MODE = _DEFAULT_SETTINGS + &"view_mode"
 	
@@ -1595,8 +1595,7 @@ class EditorSet:
 			&"hint_string": "Tree,Items,Columns",
 		}
 		ed_settings.add_property_info(view_mode)
-		
-		pass
+	
 	
 
 class DataKeys:
