@@ -22,19 +22,22 @@ func append(text:Variant, color:Color=Color.TRANSPARENT):
 	return self
 
 func new_line():
+	_check_line_length()
+	
+	_raw_string += "\n"
+	_string += "\n"
+	return self
+
+func _check_line_length():
 	var last_new_line = _raw_string.rfind("\n")
 	var line_length = _raw_string.length() - last_new_line
 	if line_length > _longest_line:
 		_longest_line = line_length
 		_longest_line_start = last_new_line + 1
 		_longest_line_end = line_length
-		
-	_raw_string += "\n"
-	_string += "\n"
-	return self
-
 
 func get_longest_line():
+	_check_line_length()
 	if _longest_line <= 0:
 		return _raw_string
 	return _raw_string.substr(_longest_line_start, _longest_line_end)
