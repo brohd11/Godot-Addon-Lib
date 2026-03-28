@@ -84,6 +84,18 @@ func show_always_on_top(current_setting:=false):
 		always_on_top_button.add_theme_color_override("icon_normal_color", accent)
 	always_on_top_button.show()
 
+func add_custom_button(callable:Callable, text:="", icon=null):
+	var new_button = Button.new()
+	new_button.text = text
+	if icon is String:
+		icon = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
+	if icon is Texture2D:
+		new_button.icon = icon
+	
+	always_on_top_button.get_parent().add_child(new_button)
+	new_button.pressed.connect(_button_pressed.bind(callable))
+	size.y = size.y + new_button.size.y
+
 
 func _button_pressed(chosen):
 	option_chosen = true

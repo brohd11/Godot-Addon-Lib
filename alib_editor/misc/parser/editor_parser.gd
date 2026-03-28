@@ -35,6 +35,7 @@ signal parse_completed
 
 var gdscript_parser:GDScriptParser
 
+var _parse_queued:bool = false
 var _parser_cache:Dictionary = {}
 
 
@@ -71,9 +72,20 @@ func _on_editor_script_changed(script):
 		if is_instance_valid(code_edit):
 			gdscript_parser.set_current_script(script)
 			gdscript_parser.set_code_edit(code_edit)
-			gdscript_parser.parse()
 			editor_script_changed.emit(script)
-			parse_completed.emit()
+			_parse()
+
+static func queue_parse(force:=false):
+	get_instance()._parse(force)
+
+func _parse(force:=false):
+	if _parse_queued:
+		return
+	_parse_queued = true
+	gdscript_parser.parse(force)
+	parse_completed.emit()
+	await get_tree().process_frame
+	_parse_queued = false
 
 
 static func get_parser(script_path:String="") -> GDScriptParser:

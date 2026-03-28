@@ -384,9 +384,16 @@ func _on_dock_button_pressed():
 	var plugin_window = get_dock_manager_window()
 	if is_instance_valid(plugin_window):
 		dock_popup_handler.show_always_on_top(window_always_on_top)
+	if plugin_control.has_method(&"get_custom_dock_popup_buttons"):
+		var buttons = plugin_control.get_custom_dock_popup_buttons()
+		for b in buttons:
+			dock_popup_handler.add_custom_button(b)
 	
 	var handled = await dock_popup_handler.handled
 	if handled is String:
+		return
+	if handled is Callable:
+		handled.call()
 		return
 	
 	var current_dock
@@ -484,6 +491,9 @@ func undock_instance():
 	
 	dock_changed.emit(self)
 	return window
+
+func remove_control_from_parent():
+	_remove_control_from_parent()
 
 func _remove_control_from_parent():
 	var window = get_dock_manager_window()

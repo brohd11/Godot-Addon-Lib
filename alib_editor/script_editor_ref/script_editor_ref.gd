@@ -21,7 +21,7 @@ enum Event {
 	VALIDATE_SCRIPT,
 	CODE_COMPLETION_REQUESTED,
 	TEXT_CHANGED,
-	
+	TAB_CHANGED,
 }
 
 static func subscribe(event:Event, _callable:Callable):
@@ -35,6 +35,8 @@ static func subscribe(event:Event, _callable:Callable):
 		_signal = instance.code_completion_requested
 	elif event == Event.TEXT_CHANGED:
 		_signal = instance.text_changed
+	elif event == Event.TAB_CHANGED:
+		_signal = instance.tab_changed
 	
 	if _signal != null:
 		_connect_signal(_signal, _callable)
@@ -74,6 +76,7 @@ var _current_script
 
 #ScriptEditor
 signal editor_script_changed(script)
+signal tab_changed
 
 #ScriptEditorBase
 
@@ -86,11 +89,17 @@ signal text_changed
 
 func _ready() -> void:
 	_set_refs()
-	_connect_signal(EditorInterface.get_script_editor().editor_script_changed, _on_editor_script_changed)
+	#var script_ed = EditorInterface.get_script_editor()
+	#_connect_signal(script_ed.editor_script_changed, _on_editor_script_changed)
+	EditorNodeRef.call_on_ready(_on_enr_ready)
 
+func _on_enr_ready():
+	var tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER) as TabContainer
+	tab_container.tab_changed.connect(_on_tab_changed)
 
 func _on_editor_script_changed(script):
 	if script == null:
+		editor_script_changed.emit(script)
 		return
 	_disconnect_signals()
 	_set_refs()
@@ -144,6 +153,10 @@ func _on_code_completion_requested():
 func _on_text_changed():
 	text_changed.emit()
 
+func _on_tab_changed(_idx:int): # use this insstead of editor script changed so that we can tell when config files are current
+	var current_script = EditorInterface.get_script_editor().get_current_script()
+	_on_editor_script_changed(current_script)
+	tab_changed.emit()
 
 #^ utils
 

@@ -39,5 +39,8 @@ func allow_reload():
 func show_always_on_top(current_setting:=false):
 	dock_popup.show_always_on_top(current_setting)
 
+func add_custom_button(button_dict:Dictionary):
+	dock_popup.add_custom_button(button_dict.get("callable"), button_dict.get("text", ""), button_dict.get("icon", null))
+
 func _on_handled(arg):
 	handled.emit(arg)
