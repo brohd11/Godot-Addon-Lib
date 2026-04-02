@@ -261,7 +261,7 @@ static func popup_cleanup(popup:PopupMenu):
 
 
 static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_args, menu_items:Dictionary, context_menu_callable):
-	var fs_popup:PopupMenu
+	var fs_popup#:PopupMenu
 	if "SLOT" in plugin:
 		if plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_SCRIPT_EDITOR_CODE:
 			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.SCRIPT_EDITOR_CODE_POPUP)
@@ -278,6 +278,9 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 		elif plugin.SLOT == EditorContextMenuPlugin.CONTEXT_SLOT_2D_EDITOR:
 			fs_popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.EDITOR_2D_POPUP)
 	
+	if fs_popup != null and fs_popup is not PopupMenu:
+		printerr("POPUP WRAPPER - FSPOPUP NOT POPUP MENU")
+		printerr(fs_popup)
 	
 	var meta_dict = {}
 	var count = 0

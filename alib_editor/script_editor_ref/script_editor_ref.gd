@@ -24,7 +24,7 @@ enum Event {
 	TAB_CHANGED,
 }
 
-static func subscribe(event:Event, _callable:Callable):
+static func subscribe(event:Event, _callable:Callable, flags:=0):
 	var instance = get_instance()
 	var _signal
 	if event == Event.EDITOR_SCRIPT_CHANGED:
@@ -39,7 +39,7 @@ static func subscribe(event:Event, _callable:Callable):
 		_signal = instance.tab_changed
 	
 	if _signal != null:
-		_connect_signal(_signal, _callable)
+		_connect_signal(_signal, _callable, flags)
 
 
 
@@ -153,7 +153,7 @@ func _on_code_completion_requested():
 func _on_text_changed():
 	text_changed.emit()
 
-func _on_tab_changed(_idx:int): # use this insstead of editor script changed so that we can tell when config files are current
+func _on_tab_changed(_idx:int): # use this instead of editor script changed so that we can tell when config files are current
 	var current_script = EditorInterface.get_script_editor().get_current_script()
 	_on_editor_script_changed(current_script)
 	tab_changed.emit()
@@ -185,12 +185,12 @@ func _get_code_text_editor(script_text_editor:ScriptEditorBase):
 			return c
 
 
-static func _connect_signal(_signal:Signal, callable:Callable):
+static func _connect_signal(_signal:Signal, callable:Callable, flags:=0):
 	if callable == null:
 		print(_signal)
 		return
 	if not _signal.is_connected(callable):
-		_signal.connect(callable)
+		_signal.connect(callable, flags)
 
 static func _disconnect_signal(_signal:Signal, callable:Callable):
 	if callable == null:
