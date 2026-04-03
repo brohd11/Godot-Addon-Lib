@@ -28,6 +28,10 @@ var item_cache:= {}
 
 var current_script_editor:Node
 
+var _last_script_signature:Array
+var _update_debounce:bool = false
+var _update_timer:Timer
+
 signal cache_updated
 
 func _ready() -> void:
@@ -38,14 +42,41 @@ func _on_enr_ready():
 	filter_line_edit = side_bar.get_child(0).get_child(0)
 	script_list = side_bar.get_child(0).get_child(1)
 	
+	
+	
 	editor_script_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER)
 	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
 	
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
 	
+	
+	
 	update_cache()
 	EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed, 1)
+	
+	_update_timer = Timer.new()
+	add_child(_update_timer)
+	_update_timer.wait_time = 1.0
+	_update_timer.timeout.connect(_on_update_timer_timeout)
+	_update_timer.start()
+	
 	_initialized = true
+
+func _on_update_timer_timeout(): # quick check for differences
+	var arr = _get_list_signature()
+	if arr != _last_script_signature:
+		update_cache()
+	_last_script_signature = arr
+
+func _get_list_signature() -> Array:
+	var sig = []
+	for i in range(script_list.item_count):
+		# meta + text to catch reorders, renames
+		var meta = script_list.get_item_metadata(i)
+		var text = script_list.get_item_text(i)
+		sig.append(str(meta) + "_" + text)
+	return sig
+
 
 func _on_editor_tab_changed(_arg):
 	current_script_editor = editor_script_tab_container.get_current_tab_control()
@@ -55,9 +86,15 @@ func _on_script_editor_validate():
 	update_cache()
 
 func _on_filesystem_changed():
+	_update_debounce = false
 	update_cache()
 
+
 func update_cache():
+	if _update_debounce:
+		return
+	
+	_update_debounce = true
 	var current_text = filter_line_edit.text
 	if current_text != "":
 		filter_line_edit.clear()
@@ -69,9 +106,20 @@ func update_cache():
 		filter_line_edit.text_changed.emit(current_text)
 	
 	cache_updated.emit()
+	await get_tree().process_frame
+	_update_timer.start()
+	_update_debounce = false
+	
+
 
 func get_cached_item_data(tooltip:String):
 	return item_cache.get(tooltip)
+
+func get_current_script_editor():
+	return current_script_editor
+
+func get_current_script_editor_index():
+	return current_script_editor.get_index()
 
 func get_current_item():
 	var sel = -1
@@ -84,7 +132,7 @@ func get_item_by_tooltip(tooltip:String):
 	var data = item_cache.get(tooltip)
 	if data == null:
 		return -1
-	return data.get(Keys.IDX, -1)
+	return data.get(Keys.ITEM_IDX, -1)
 
 
 func get_current_item_data():
@@ -101,14 +149,22 @@ func get_item_data(idx:int):
 	var fg_color = script_list.get_item_custom_fg_color(idx)
 	var script_idx = script_list.get_item_metadata(idx)
 	return {
+		Keys.ITEM_IDX: idx,
+		#Keys.IDX: idx,
 		Keys.NAME:text,
 		Keys.TOOLTIP:tooltip,
 		Keys.ICON: icon,
 		Keys.ICON_MOD: icon_mod,
 		Keys.FG_COLOR: fg_color,
-		Keys.IDX: script_idx
+		Keys.SCRIPT_IDX: script_idx,
 		}
 
+
+func is_item_tool(idx:int):
+	return is_data_tool(get_item_data(idx))
+
+func is_data_tool(data:Dictionary):
+	return data.get(Keys.ICON_MOD) != Color.WHITE
 
 
 func close_script_by_idx(idx:int):
@@ -147,8 +203,8 @@ func activate_item_by_tooltip(tooltip:String):
 func get_all_script_data():
 	var all_data = {}
 	for i in range(script_list.item_count):
-		var tooltip = script_list.get_item_tooltip(i)
-		all_data[tooltip] = get_item_data(i)
+		var data = get_item_data(i)
+		all_data[data.get(Keys.SCRIPT_IDX)] = data
 	return all_data
 
 func get_script_index_or_open(file_path:String):
@@ -159,12 +215,14 @@ func get_script_index_or_open(file_path:String):
 		EditorInterface.edit_script(script, 0)
 		return -1
 	
-	return script_list_data.get(Keys.IDX)
+	return script_list_data.get(Keys.SCRIPT_IDX)
 
 class Keys:
+	const ITEM_IDX = &"item_idx"
 	const NAME = &"name"
 	const TOOLTIP = &"tooltip"
 	const ICON = &"icon"
 	const ICON_MOD = &"icon_mod"
-	const IDX = &"idx"
+	#const IDX = &"idx"
+	const SCRIPT_IDX = &"script_idx"
 	const FG_COLOR = &"fg_color"

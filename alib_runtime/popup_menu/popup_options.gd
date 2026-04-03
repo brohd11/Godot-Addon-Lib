@@ -6,6 +6,12 @@ const SELF = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup
 
 var _dict:= {}
 
+func is_empty():
+	return _dict.is_empty()
+
+func size():
+	return _dict.size()
+
 func get_options():
 	return _dict
 
@@ -30,6 +36,14 @@ func add_radio_option(menu_path:String, callable, is_checked:bool=false, icon_ar
 	data[Params.RADIO] = true
 	data[Params.RADIO_IS_CHECKED] = is_checked
 	return data
+
+## Add enum keys as radio option, passes enum as arg to the callable and compares to current value
+## to set checked radio item
+func add_enum_radio(menu_path:String, callable:Callable, _enum:Dictionary, current_val:int, icon_array=null):
+	for key in _enum.keys():
+		var val = _enum[key]
+		add_radio_option(menu_path.path_join(key), callable.bind(val), current_val == val, icon_array)
+
 
 func add_option_data(menu_path:String, icon_color=null, metadata:={}):
 	if not _dict.has(menu_path):

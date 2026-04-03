@@ -1,11 +1,15 @@
 extends VBoxContainer
 
+const _TAB_CONTROL = &"_tab_control"
+
 var _tab_panel:PanelContainer
 var _tab_bar:TabBar
 var _tab_bar_hbox:HBoxContainer
 var _tab_vbox:VBoxContainer
 
 var _current_tab_idx:int = 0
+
+var _tab_meta:= {}
 
 signal tab_changed(tab:int)
 
@@ -36,7 +40,7 @@ func _ready() -> void:
 
 func _on_active_tab_rearranged(idx_to:int):
 	for i in range(_tab_bar.tab_count):
-		var control = _tab_bar.get_tab_metadata(i)
+		var control = _get_tab_control_from_meta(i)
 		_tab_vbox.move_child(control, i)
 	set_current_tab(idx_to)
 
@@ -59,7 +63,7 @@ func set_current_tab(tab:int):
 func add_tab(control:Control, icon=null):
 	_tab_vbox.add_child(control)
 	_tab_bar.add_tab(control.name, icon)
-	_tab_bar.set_tab_metadata(_tab_bar.tab_count - 1, control)
+	_tab_bar.set_tab_metadata(_tab_bar.tab_count - 1, {_TAB_CONTROL:control})
 	control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_on_tab_changed(_tab_bar.tab_count - 1)
 
@@ -85,7 +89,20 @@ func _on_tab_changed(tab:int):
 func _on_child_exiting_tree(node:Node):
 	if node.is_queued_for_deletion():
 		for i in range(_tab_bar.tab_count):
-			var control = _tab_bar.get_tab_metadata(i)
+			var control = _get_tab_control_from_meta(i)
 			if control == node:
 				_tab_bar.remove_tab(i)
 				break
+
+func set_tab_meta_value(tab:int, key:String, value):
+	var meta = _tab_bar.get_tab_metadata(tab)
+	meta[key] = value
+	_tab_bar.set_tab_metadata(tab, meta)
+
+func get_tab_meta_value(tab:int, key:String):
+	var meta = _tab_bar.get_tab_metadata(tab)
+	return meta.get(key)
+
+func _get_tab_control_from_meta(tab:int):
+	var meta = _tab_bar.get_tab_metadata(tab)
+	return meta.get(_TAB_CONTROL)
