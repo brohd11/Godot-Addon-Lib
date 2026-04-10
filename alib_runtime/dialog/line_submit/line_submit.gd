@@ -8,7 +8,7 @@ enum SelectMode {
 	BASENAME
 }
 
-signal line_submitted(new_name)
+signal line_submitted(text:String)
 
 var mouse_helper: PopupHelper.MouseHelper
 

@@ -2,6 +2,8 @@
 extends SingletonBase
 const SingletonBase = Singleton.Base
 
+const TEXT_FILE_TYPES = ["gd", "json", "cfg", "txt", "ini", "md"]
+
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/misc/script_list/script_list_manager.gd")
 static func get_singleton_name() -> String:
 	return "ScriptListManager"
@@ -32,24 +34,24 @@ var _last_script_signature:Array
 var _update_debounce:bool = false
 var _update_timer:Timer
 
+var tool_color:Color
+
 signal cache_updated
 
 func _ready() -> void:
 	EditorNodeRef.call_on_ready(_on_enr_ready)
+	tool_color = EditorInterface.get_editor_theme().get_color(&"accent_color", &"Editor")
+	tool_color.s = min(tool_color.s * 1.5, 1.0)
 
 func _on_enr_ready():
 	var side_bar = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_SIDEBAR_V_SPLIT)
 	filter_line_edit = side_bar.get_child(0).get_child(0)
 	script_list = side_bar.get_child(0).get_child(1)
 	
-	
-	
 	editor_script_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER)
 	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
 	
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
-	
-	
 	
 	update_cache()
 	EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed, 1)
@@ -97,13 +99,16 @@ func update_cache():
 	_update_debounce = true
 	var current_text = filter_line_edit.text
 	if current_text != "":
-		filter_line_edit.clear()
+		#await get_tree().process_frame
+		#_update_debounce = false
+		#return
+		filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
 	
 	item_cache = get_all_script_data()
 	
-	if current_text != "":
-		filter_line_edit.text = current_text
-		filter_line_edit.text_changed.emit(current_text)
+	#if current_text != "":
+		#filter_line_edit.text = current_text
+		#filter_line_edit.text_changed.emit(current_text)
 	
 	cache_updated.emit()
 	await get_tree().process_frame
@@ -111,9 +116,12 @@ func update_cache():
 	_update_debounce = false
 	
 
-
+# need to redo
 func get_cached_item_data(tooltip:String):
-	return item_cache.get(tooltip)
+	for script_idx in item_cache.keys():
+		var data = item_cache[script_idx]
+		if data.get(Keys.TOOLTIP) == tooltip:
+			return data
 
 func get_current_script_editor():
 	return current_script_editor
@@ -128,6 +136,7 @@ func get_current_item():
 		sel = items[0]
 	return sel
 
+# need to redo
 func get_item_by_tooltip(tooltip:String):
 	var data = item_cache.get(tooltip)
 	if data == null:
@@ -207,15 +216,30 @@ func get_all_script_data():
 		all_data[data.get(Keys.SCRIPT_IDX)] = data
 	return all_data
 
+func get_all_script_data_tooltip_key():
+	var all_data = {}
+	for i in range(script_list.item_count):
+		var data = get_item_data(i)
+		all_data[data.get(Keys.TOOLTIP)] = data
+	return all_data
+
 func get_script_index_or_open(file_path:String):
-	if not file_path.ends_with(".gd"): return -1
+	var ext = file_path.get_extension()
+	if not ext in TEXT_FILE_TYPES: return -1
 	var script_list_data = get_cached_item_data(file_path)
+	print(file_path, "::DATA::", script_list_data)
 	if script_list_data == null:
-		var script = load(file_path)
-		EditorInterface.edit_script(script, 0)
+		EditorInterface.edit_resource(load(file_path))
 		return -1
 	
 	return script_list_data.get(Keys.SCRIPT_IDX)
+
+func clear_script_list_filter():
+	if is_instance_valid(filter_line_edit) and not filter_line_edit.text.is_empty():
+		filter_line_edit.clear()
+
+func script_list_filtering():
+	return filter_line_edit.text != ""
 
 class Keys:
 	const ITEM_IDX = &"item_idx"

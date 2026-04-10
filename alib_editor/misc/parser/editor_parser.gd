@@ -1,10 +1,8 @@
 #! namespace ALibEditor.Singletons class EditorGDScriptParser
 extends SingletonRefCount
 const SingletonRefCount = Singleton.RefCount
-## Implement in extended classes
 
 const GDScriptParser = ALibRuntime.Utils.UResource.UGDScript.Parser
-
 
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/misc/parser/editor_parser.gd")
@@ -84,15 +82,53 @@ func _on_editor_script_changed(script):
 	_script_change_debounce = false
 
 func _set_editor_script_code_edit():
+	gdscript_parser.active_parser = gdscript_parser
+	
 	valid_script = is_instance_valid(_current_script)
 	var code_edit = ScriptEditorRef.get_current_code_edit()
 	print("ACTUAL SCRIPT::", _current_script, "::CODE::", code_edit)
 	if is_instance_valid(code_edit):
-		gdscript_parser.set_current_script(_current_script)
+		_merge_current_with_cache(true) # merge resolved members to data, this is useful if the current script doesn't get polled much
+		#gdscript_parser.deactivate_parser(gdscript_parser.get_script_path())
+		gdscript_parser.set_current_script(_current_script) # this clears the current class objects
 		gdscript_parser.set_code_edit(code_edit)
 		editor_script_changed.emit(_current_script)
+		_merge_current_with_cache(false) # merge cached resolve. Before parse, so they can be updated if needed
+		#gdscript_parser.activate_parser(gdscript_parser.get_script_path(), gdscript_parser)
 		print("SCRIPT CHANGE PARSE")
 		_parse()
+
+func _get_or_add_cached_data(script_path:String):
+	var cached_data = gdscript_parser.get_cached_parser_data(script_path)
+	if not gdscript_parser.cached_data_valid(script_path, cached_data):
+		print("NOT VALID")
+		var _parser = gdscript_parser.get_parser_for_path(script_path, true) # this forces instancing and parse once
+		cached_data = gdscript_parser.get_cached_parser_data(script_path)
+	return cached_data
+
+func _merge_current_with_cache(to_cache:bool): # all this merges is the resolve cache, seems to be fine
+	var path = gdscript_parser.get_script_path()
+	if not is_instance_valid(gdscript_parser) or not FileAccess.file_exists(path):
+		return
+	var cached_data = _get_or_add_cached_data(path)
+	var classes = cached_data[GDScriptParser.Keys.CACHE_CLASSES]
+	gdscript_parser.clean_resolve_cache(classes) # cleans the cache from anything not actually in the class
+	if to_cache:
+		print("MERGING::TO CACHE")
+		merge_class_data(gdscript_parser._class_access, classes)
+	else:
+		print("MERGING::FROM CACHE")
+		merge_class_data(classes, gdscript_parser._class_access)
+
+func merge_class_data(from_classes:Dictionary, to_classes:Dictionary):
+	for access_name in from_classes.keys():
+		var to_obj = to_classes.get(access_name) as GDScriptParser.ParserClass
+		if not is_instance_valid(to_obj):
+			continue
+		var from_obj = from_classes[access_name] as GDScriptParser.ParserClass
+		print("MERGING::", from_obj._resolve_cache.keys(), "::->::", to_obj._resolve_cache.keys())
+		to_obj._resolve_cache.merge(from_obj._resolve_cache.duplicate(), true) #^ should this overwrite?
+
 
 
 static func queue_parse(force:=false):
@@ -102,7 +138,7 @@ static func queue_parse(force:=false):
 func _parse(force:=false):
 	if force:
 		_parse_force_queued = true
-	if _parse_queued:
+	if _parse_queued: # if gdscriptparser hits an error in parse, this can get stuck as true
 		return
 	_parse_queued = true
 	gdscript_parser.parse(_parse_force_queued)
@@ -139,3 +175,35 @@ func _all_unregistered_callback():
 
 func _get_ready_bool() -> bool:
 	return is_node_ready()
+
+
+
+static func test_memory():
+	var ins = get_instance()
+	var cache = ins._parser_cache
+	print("ORPHAN NODES::", ins.get_orphan_node_ids().size())
+	print("CACHE SIZE::", cache.get(GDScriptParser.Keys.CACHE_ACTIVE_PARSERS, {}).size(), "::INACTIVE::", cache.get(GDScriptParser.Keys.CACHE_INACTIVE_PARSERS, {}).size())
+	print("MEM BEFORE::", String.humanize_size(OS.get_static_memory_usage()))
+	cache.clear()
+	await ins.get_tree().process_frame
+	print("MEM AFTER::", String.humanize_size(OS.get_static_memory_usage()))
+	print("ORPHAN NODES AFTER::", ins.get_orphan_node_ids().size())
+
+static func test_mem():
+	var ins = get_instance()
+	var cache = ins._parser_cache
+	print("MEM BEFORE::", String.humanize_size(OS.get_static_memory_usage()))
+	for script in EditorInterface.get_script_editor().get_open_scripts():
+		
+		var g = ins.get_parser(script.resource_path)
+		for c in g._class_access.values():
+			for m in c.get_members():
+				c.get_member_type(m)
+	
+		#print("NEW PARSER::", String.humanize_size(OS.get_static_memory_usage()))
+		pass
+	#print("MEM AFTER::", String.humanize_size(OS.get_static_memory_usage()))
+	cache.clear()
+	await ins.get_tree().process_frame
+	print("MEM AFTER CLEAR::", String.humanize_size(OS.get_static_memory_usage()))
+	pass

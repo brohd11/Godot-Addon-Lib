@@ -54,6 +54,9 @@ func get_tab_bar():
 func get_tab_bar_hbox():
 	return _tab_bar_hbox
 
+func get_tab_parent():
+	return _tab_vbox
+
 func set_current_tab(tab:int):
 	if tab != _tab_bar.current_tab:
 		_tab_bar.current_tab = tab
