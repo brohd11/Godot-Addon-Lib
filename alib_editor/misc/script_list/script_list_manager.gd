@@ -50,6 +50,7 @@ func _on_enr_ready():
 	
 	editor_script_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER)
 	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
+	current_script_editor = editor_script_tab_container.get_current_tab_control()
 	
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
 	
@@ -223,13 +224,18 @@ func get_all_script_data_tooltip_key():
 		all_data[data.get(Keys.TOOLTIP)] = data
 	return all_data
 
-func get_script_index_or_open(file_path:String):
+## Pass FileSystemSingleton instance. This allows ScriptTabs to be used without including the singleton.
+func get_script_index_or_open(file_path:String, filesystem_singleton=null):
 	var ext = file_path.get_extension()
 	if not ext in TEXT_FILE_TYPES: return -1
 	var script_list_data = get_cached_item_data(file_path)
 	print(file_path, "::DATA::", script_list_data)
 	if script_list_data == null:
-		EditorInterface.edit_resource(load(file_path))
+		if filesystem_singleton != null:
+			if filesystem_singleton.instance_valid():
+				filesystem_singleton.activate_path(file_path)
+		elif ext == "gd":
+			EditorInterface.edit_resource(load(file_path))
 		return -1
 	
 	return script_list_data.get(Keys.SCRIPT_IDX)

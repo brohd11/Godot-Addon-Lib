@@ -65,7 +65,8 @@ func _on_text_changed():
 
 
 func _on_script_validate():
-	print("VALIDATE PARSE")
+	#print("VALIDATE PARSE")
+	
 	_parse()
 	#gdscript_parser.parse()
 	#parse_completed.emit()
@@ -73,7 +74,8 @@ func _on_script_validate():
 
 func _on_editor_script_changed(script):
 	_current_script = script
-	print("CURRENT SCRIPT::", _current_script)
+	#print("CURRENT SCRIPT::", _current_script)
+	
 	if _script_change_debounce:
 		return
 	_script_change_debounce = true
@@ -86,22 +88,22 @@ func _set_editor_script_code_edit():
 	
 	valid_script = is_instance_valid(_current_script)
 	var code_edit = ScriptEditorRef.get_current_code_edit()
-	print("ACTUAL SCRIPT::", _current_script, "::CODE::", code_edit)
+	#print("ACTUAL SCRIPT::", _current_script, "::CODE::", code_edit)
+	
 	if is_instance_valid(code_edit):
 		_merge_current_with_cache(true) # merge resolved members to data, this is useful if the current script doesn't get polled much
-		#gdscript_parser.deactivate_parser(gdscript_parser.get_script_path())
 		gdscript_parser.set_current_script(_current_script) # this clears the current class objects
 		gdscript_parser.set_code_edit(code_edit)
 		editor_script_changed.emit(_current_script)
 		_merge_current_with_cache(false) # merge cached resolve. Before parse, so they can be updated if needed
-		#gdscript_parser.activate_parser(gdscript_parser.get_script_path(), gdscript_parser)
-		print("SCRIPT CHANGE PARSE")
+		
+		#print("SCRIPT CHANGE PARSE", _current_script)
 		_parse()
 
 func _get_or_add_cached_data(script_path:String):
 	var cached_data = gdscript_parser.get_cached_parser_data(script_path)
 	if not gdscript_parser.cached_data_valid(script_path, cached_data):
-		print("NOT VALID")
+		#print("NOT VALID")
 		var _parser = gdscript_parser.get_parser_for_path(script_path, true) # this forces instancing and parse once
 		cached_data = gdscript_parser.get_cached_parser_data(script_path)
 	return cached_data
@@ -114,10 +116,10 @@ func _merge_current_with_cache(to_cache:bool): # all this merges is the resolve 
 	var classes = cached_data[GDScriptParser.Keys.CACHE_CLASSES]
 	gdscript_parser.clean_resolve_cache(classes) # cleans the cache from anything not actually in the class
 	if to_cache:
-		print("MERGING::TO CACHE")
+		#print("MERGING::TO CACHE")
 		merge_class_data(gdscript_parser._class_access, classes)
 	else:
-		print("MERGING::FROM CACHE")
+		#print("MERGING::FROM CACHE")
 		merge_class_data(classes, gdscript_parser._class_access)
 
 func merge_class_data(from_classes:Dictionary, to_classes:Dictionary):
@@ -126,13 +128,13 @@ func merge_class_data(from_classes:Dictionary, to_classes:Dictionary):
 		if not is_instance_valid(to_obj):
 			continue
 		var from_obj = from_classes[access_name] as GDScriptParser.ParserClass
-		print("MERGING::", from_obj._resolve_cache.keys(), "::->::", to_obj._resolve_cache.keys())
+		#print("MERGING::", from_obj._resolve_cache.keys(), "::->::", to_obj._resolve_cache.keys())
 		to_obj._resolve_cache.merge(from_obj._resolve_cache.duplicate(), true) #^ should this overwrite?
 
 
 
 static func queue_parse(force:=false):
-	print("FS PARSE")
+	#print("FS PARSE")
 	get_instance()._parse(force)
 
 func _parse(force:=false):
@@ -168,7 +170,7 @@ static func clear_cache():
 static func cache_size():
 	return get_instance()._parser_cache.size()
 
-#^ --- Singletone Methods
+#^ --- Singleton Methods
 
 func _all_unregistered_callback():
 	pass
@@ -189,7 +191,7 @@ static func test_memory():
 	print("MEM AFTER::", String.humanize_size(OS.get_static_memory_usage()))
 	print("ORPHAN NODES AFTER::", ins.get_orphan_node_ids().size())
 
-static func test_mem():
+static func test_mem_current_scripts():
 	var ins = get_instance()
 	var cache = ins._parser_cache
 	print("MEM BEFORE::", String.humanize_size(OS.get_static_memory_usage()))
@@ -206,4 +208,3 @@ static func test_mem():
 	cache.clear()
 	await ins.get_tree().process_frame
 	print("MEM AFTER CLEAR::", String.humanize_size(OS.get_static_memory_usage()))
-	pass

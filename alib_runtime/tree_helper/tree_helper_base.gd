@@ -194,7 +194,7 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			
 			continue
 		vis_files.append(path)
-	
+	print(vis_files)
 	filtered_item_paths = vis_files
 	
 	for path:String in vis_files:
