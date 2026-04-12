@@ -89,8 +89,10 @@ func _set_editor_script_code_edit():
 	valid_script = is_instance_valid(_current_script)
 	var code_edit = ScriptEditorRef.get_current_code_edit()
 	#print("ACTUAL SCRIPT::", _current_script, "::CODE::", code_edit)
-	
-	if is_instance_valid(code_edit):
+
+	if not is_instance_valid(code_edit) or not valid_script: # if not emit null. Mostly for clearing the outline when nothing left
+		editor_script_changed.emit(null)
+	else:
 		_merge_current_with_cache(true) # merge resolved members to data, this is useful if the current script doesn't get polled much
 		gdscript_parser.set_current_script(_current_script) # this clears the current class objects
 		gdscript_parser.set_code_edit(code_edit)
@@ -99,6 +101,7 @@ func _set_editor_script_code_edit():
 		
 		#print("SCRIPT CHANGE PARSE", _current_script)
 		_parse()
+	
 
 func _get_or_add_cached_data(script_path:String):
 	var cached_data = gdscript_parser.get_cached_parser_data(script_path)
@@ -138,6 +141,9 @@ static func queue_parse(force:=false):
 	get_instance()._parse(force)
 
 func _parse(force:=false):
+	if not valid_script:
+		#print("Not a valid script for editor GDScriptParser")
+		return
 	if force:
 		_parse_force_queued = true
 	if _parse_queued: # if gdscriptparser hits an error in parse, this can get stuck as true
@@ -153,7 +159,7 @@ func _parse(force:=false):
 static func get_parser(script_path:String="") -> GDScriptParser:
 	var ins = get_instance()
 	if not ins.valid_script:
-		return
+		return null
 	if script_path == "" or script_path == ins.gdscript_parser.get_script_path():
 		return ins.gdscript_parser
 	else:

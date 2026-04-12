@@ -4,7 +4,7 @@ extends Node
 
 const PLUGIN_EXPORTED = false
 
-const UFile = ALibRuntime.Utils.UFile
+const UFile = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_file.gd") # ALibRuntime.Utils.UFile
 
 enum SingletonType {
 	STANDARD,

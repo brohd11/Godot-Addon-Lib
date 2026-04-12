@@ -2,9 +2,7 @@ extends PopupMenu
 #! namespace ALibRuntime class PopupHelper
 
 const ButtonHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/button_helper.gd")
-
-const UResource = preload("uid://72uu8yngsoht") # u_resource.gd
-
+const UTexture = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_texture.gd") # ALibRuntime.Utils.UTexture
 
 
 const ICON_DEFAULT_SIZE = Vector2(16,16)
@@ -192,7 +190,7 @@ static func _create_popup_item(_popup:PopupMenu, params:PopupMenuPathParams, tex
 			if icon.get_size() != ICON_DEFAULT_SIZE * EditorInterface.get_editor_scale():
 				#print("RESIZE")
 				var icon_size = 16 * EditorInterface.get_editor_scale()
-				icon = UResource.resize_texture(icon, icon_size)
+				icon = UTexture.resize_texture(icon, icon_size)
 			if params.radio:
 				_popup.add_icon_radio_check_item(icon, text, id)
 				if params.radio_is_checked:

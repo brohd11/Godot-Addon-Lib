@@ -181,7 +181,6 @@ func close_script_by_idx(idx:int):
 	script_list.item_clicked.emit(idx, Vector2(), MOUSE_BUTTON_MIDDLE)
 
 func right_click_by_idx(idx:int, position:Vector2):
-	print("CLICKED RIGHT:: ", script_list, idx)
 	script_list.item_clicked.emit(idx, position, MOUSE_BUTTON_RIGHT)
 
 func activate_item_by_idx(idx:int):
@@ -229,7 +228,7 @@ func get_script_index_or_open(file_path:String, filesystem_singleton=null):
 	var ext = file_path.get_extension()
 	if not ext in TEXT_FILE_TYPES: return -1
 	var script_list_data = get_cached_item_data(file_path)
-	print(file_path, "::DATA::", script_list_data)
+	#print(file_path, "::DATA::", script_list_data)
 	if script_list_data == null:
 		if filesystem_singleton != null:
 			if filesystem_singleton.instance_valid():

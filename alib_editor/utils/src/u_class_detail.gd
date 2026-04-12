@@ -1,7 +1,7 @@
 extends RefCounted
 #! namespace ALibEditor.Utils class UClassDetail
 
-const UString = ALibRuntime.Utils.UString
+const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_string.gd") # ALibRuntime.Utils.UString
 
 enum IncludeInheritance{
 	NONE,
@@ -298,11 +298,11 @@ static func get_member_info_by_path_expr(script, member_name):
 	var _call = member_name
 
 	if member_name.find(".") > -1:
-		var first_script_name = ALibRuntime.Utils.UString.get_member_access_front(member_name)
-		var first_script_path = ALibEditor.Utils.UClassDetail.get_global_class_path(first_script_name)
+		var first_script_name = UString.get_member_access_front(member_name)
+		var first_script_path = get_global_class_path(first_script_name)
 		if first_script_path != "":
 			script = load(first_script_path)
-			_call = ALibRuntime.Utils.UString.trim_member_access_front(member_name)
+			_call = UString.trim_member_access_front(member_name)
 	
 	var ex = Expression.new()
 	var err = ex.parse(_call)
