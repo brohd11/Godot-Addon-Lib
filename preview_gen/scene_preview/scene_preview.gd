@@ -1,5 +1,9 @@
 extends Node
 
+const UString = preload("uid://cwootkivqiwq1") #! resolve ALibRuntime.Utils.UString
+const UResource = preload("uid://72uu8yngsoht") #! resolve ALibRuntime.Utils.UResource
+const PackedSceneReadFile = UResource.UPackedScene.ReadFile
+
 const ScenePreviewViewport = preload("res://addons/addon_lib/brohd/preview_gen/scene_preview/scene_preview_viewport.gd")
 
 const VALID_ROOTS = ["Node3D", "MeshInstance3D", "Decal", "StaticBody3D", "Character"]
@@ -22,7 +26,7 @@ var cache:= {}
 var hash_cache:={}
 
 var preview_queue: Array[String] = []
-var is_processing = false
+var _is_processing = false
 
 func _ready() -> void:
 	_pre_checks()
@@ -42,11 +46,11 @@ func queue_paths(file_paths:PackedStringArray):
 
 func queue_path(scene_path: String):
 	preview_queue.append(scene_path)
-	if not is_processing:
+	if not _is_processing:
 		_process_queue()
 
 func _process_queue():
-	is_processing = true
+	_is_processing = true
 	var valid_roots = ClassDB.get_inheriters_from_class("Node3D")
 	valid_roots.append("Node3D")
 	
@@ -59,7 +63,8 @@ func _process_queue():
 		
 		# 1. Do the heavy work
 		if path.get_extension() == "tscn": 
-			if not ALibRuntime.Utils.UResource.check_scene_root(path, valid_roots):
+			
+			if not PackedSceneReadFile.check_root(path, valid_roots):
 				print("Path is not valid 3D scene: %s" % path)
 				fail_count += 1
 				continue
@@ -100,18 +105,18 @@ func _process_queue():
 	
 	print("Generation finished. Success: %s Failed: %s" % [gen_count, fail_count])
 	queue_processed.emit()
-	is_processing = false
+	_is_processing = false
 
 
 
 func _save_texture(path:String, texture):
-	var hash = get_path_hash(path)
-	var file_name = "%s.png" % hash
-	#var file_name = path.get_file().get_basename() + "_%s.png" % hash
+	var _hash = get_path_hash(path)
+	var file_name = "%s.png" % _hash
+	#var file_name = path.get_file().get_basename() + "_%s.png" % _hash
 	var save_path = TEXTURE_DIR.path_join(file_name)
 	texture.get_image().save_png(save_path)
 	
-	cache[hash] = texture
+	cache[_hash] = texture
 
 
 func threaded_load_cache():
@@ -126,26 +131,26 @@ func load_texture_cache():
 	var files = DirAccess.get_files_at(TEXTURE_DIR)
 	for f in files:
 		var path = TEXTURE_DIR.path_join(f)
-		var hash = f.get_basename()
+		var _hash = f.get_basename()
 		var image = Image.load_from_file(path)
 		var texture = ImageTexture.create_from_image(image)
-		cache[hash] = {PREVIEW_PATH:path, PREVIEW:texture}
+		cache[_hash] = {PREVIEW_PATH:path, PREVIEW:texture}
 
 
 
 func hash_file_paths(paths:PackedStringArray):
 	hash_cache = {}
 	for path:String in paths:
-		var hash = get_path_hash(path)
-		hash_cache[path] = hash
+		var _hash = get_path_hash(path)
+		hash_cache[path] = _hash
 
 
 func get_path_hash(path:String):
 	if hash_cache.has(path):
 		return hash_cache[path]
-	var hash:String = get_path_hash_static(path)
-	hash_cache[path] = hash
-	return hash
+	var _hash:String = get_path_hash_static(path)
+	hash_cache[path] = _hash
+	return _hash
 
 func clear_texture_cache():
 	if not DirAccess.dir_exists_absolute(TEXTURE_DIR):
@@ -158,4 +163,4 @@ func clear_texture_cache():
 	cache.clear()
 
 static func get_path_hash_static(path:String):
-	return ALibRuntime.Utils.UString.hash_string(path, HashingContext.HashType.HASH_SHA256, 10)
+	return UString.hash_string(path, HashingContext.HashType.HASH_SHA256, 10)

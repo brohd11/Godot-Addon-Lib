@@ -1,14 +1,11 @@
 extends RefCounted
 #! namespace ALibRuntime.Utils class UResource
 
-const UTexture = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_texture.gd")
-
-const UFile = preload("uid://gs632l1nhxaf") # u_file.gd
+const UTexture = preload("uid://ddu76iygjkxih") #! resolve ALibRuntime.Utils.UTexture
+const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
 
 const Audio = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/audio.gd")
 const ImageSize = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/image_size.gd")
-const UGDScript = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript.gd")
-const GDScriptFileAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript.gd") # deprecate
 const UPackedScene = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/packed_scene.gd")
 
 static func save_resource_to_path(res:Resource,path:String, name_overide:String="") -> void:
@@ -19,41 +16,6 @@ static func save_resource_to_path(res:Resource,path:String, name_overide:String=
 	ResourceSaver.save(res, path)
 	res.take_over_path(path)
 
-
-static func edit_resource(path):
-	if path == "" or path.get_extension() == "":
-		return
-	if not FileAccess.file_exists(path):
-		printerr("u_resource - File doens't exist: %s" % path)
-		return
-	var editor_interface = Engine.get_singleton("EditorInterface")
-	if not editor_interface:
-		printerr("u_resource - Could not get EditorInterface.")
-		return
-	var path_ext = path.get_extension()
-	#var text_files = ["cfg", "json", "txt"]
-	#if path_ext in text_files:
-		#print("Not possible to open by code. Open via FileSystem or ScriptViewer")
-		#return
-	if path_ext == "tscn" or path_ext == "scn":
-		editor_interface.open_scene_from_path(path)
-		return
-	
-	var res = ResourceLoader.load(path)
-	editor_interface.edit_resource(res)
-
-
-# moved to UTexture
-static func resize_texture(texture:Texture2D, new_size_x:int, new_size_y:int=-1):
-	return UTexture.resize_texture(texture, new_size_x, new_size_y)
-
-static func get_modulated_icon(texture:Texture2D, color:=Color(1,1,1)) -> Texture2D:
-	return UTexture.get_modulated_icon(texture, color)
-
-static func create_rect_texture(color:Color=Color.WHITE, size_x:int=1, size_y:int=1):
-	return UTexture.create_rect_texture(color, size_x, size_y)
-
-# end moved to UTexture
 
 static func load_or_get_icon(name_or_path:String):
 	if FileAccess.file_exists(name_or_path):
@@ -114,23 +76,3 @@ static func _get_resource_script_class_file_access(file_path: String) -> String:
 			if end_index != -1:
 				result = header.substr(start_index, end_index - start_index)
 	return result
-
-static func check_scene_root(file_path:String, valid_types:Array) -> bool:
-	var root = get_scene_root_type(file_path)
-	return root in valid_types
-	
-
-static func get_scene_root_type(file_path:String):
-	var file = UFile.get_file_access(file_path)
-	if file:
-		while not file.eof_reached():
-			var line = file.get_line()
-			if not line.find("[node name=") > -1:
-				continue
-			if line.find("instance=") > -1:
-				pass
-			else:
-				var first_pass_type = line.get_slice('type="', 1)
-				var type = first_pass_type.get_slice('"', 0)
-				return type
-	return ""

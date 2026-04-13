@@ -4,6 +4,7 @@ const FSUtil = FSClasses.FSUtil
 
 const UFile = FSUtil.UFile
 const UResource = FSUtil.UResource
+const UGDScript = FSUtil.UGDScript
 const UPackedScene = UResource.UPackedScene
 const ImageSize = UResource.ImageSize
 const Audio = UResource.Audio
@@ -100,16 +101,16 @@ static func _get_file_specific_details(path:String):
 			label_text += inh_text
 		
 	elif ext == "gd":
-		var _class = UResource.GDScriptFileAccess.get_class_name(path)
+		var _class = UGDScript.FileRead.get_class_name(path)
 		if _class:
 			label_text += "\nClass Name: %s" % _class
 		
-		var _extends = UResource.GDScriptFileAccess.get_extends(path)
+		var _extends = UGDScript.FileRead.get_extends(path)
 		if not _extends:
 			_extends = "RefCounted"
 		label_text += "\nExtends: %s" % _extends
 		
-		if UResource.GDScriptFileAccess.get_is_tool(path):
+		if UGDScript.FileRead.get_is_tool(path):
 			label_text += "\nTool Script"
 		
 	

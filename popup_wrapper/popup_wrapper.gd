@@ -191,7 +191,12 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 					print(text)
 					print("---")
 					continue
-				var callable = signal_connections.get(0).get("callable") as Callable
+				
+				#var callable = signal_connections.get(0).get("callable") as Callable
+				var callables = [] # append all callables, this is needed if a popup is going to multiple callables
+				for dict in signal_connections: # unlikely scenario, but not impossible
+					callables.append(dict.get("callable"))
+				
 				var icon = popup_to_copy.get_item_icon(i)
 				var icons = []
 				if ItemParams.ICON in parent_data:
@@ -205,7 +210,7 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 				
 				var popup_data = {
 					ItemParams.ID: id,
-					ItemParams.CALLABLE: callable,
+					ItemParams.CALLABLE: callables,
 					ItemParams.ICON: icons,
 					ItemParams.METADATA: user_metadata,
 				}
@@ -225,16 +230,21 @@ static func _add_custom_item(popup, item_path, item_data, popup_item_dict):
 	if submenu:
 		return
 	var id = item_data.get(ItemParams.ID)
-	var callable = item_data.get(ItemParams.CALLABLE)# as Callable
+	var callables = item_data.get(ItemParams.CALLABLE)# as Callable
 	item_data[ItemParams.CALLABLE] = null
 	#if callable == null: # does this need more handling? commented to allow seperators to work
 		#return
 	var parent = PopupHelper.add_single_item(popup, item_path, item_data, popup_item_dict)
 	if id < 2000: # does this need to be changed to account for scene tags 3000
-		if callable == null:
+		if callables == null:
 			return
-		if not parent.id_pressed.is_connected(callable):
-			parent.id_pressed.connect(callable)
+		if callables is Callable:
+			callables = [callables]
+		
+		for c in callables:
+			if not parent.id_pressed.is_connected(c):
+				parent.id_pressed.connect(c)
+
 
 static func squash_icons(popup:PopupMenu, recursive=true):
 	var popup_has_texture = false
@@ -259,7 +269,7 @@ static func popup_cleanup(popup:PopupMenu):
 	if popup.is_item_separator(popup.item_count - 1):
 		popup.remove_item(popup.item_count - 1)
 
-
+# popup_args is what the specific context slot callback would pass, ie. script_editor for ScriptEditorCode, etc.
 static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_args, menu_items:Dictionary, context_menu_callable):
 	var fs_popup#:PopupMenu
 	if "SLOT" in plugin:
@@ -318,8 +328,15 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 	var popup_items = {}
 	for group in multi_popup_groups:
 		var group_data = multi_popup_groups.get(group)
-		var popup = PopupMenu.new()
-		var _submenu_pressed = func(id, popup, se, callable): callable.call(se, PopupHelper.parse_menu_path(id, popup))
+		
+		var popup = _get_fs_popup_submenu(fs_popup, group) # this will stop overwrite if the popup has already been added
+		var is_existing:= is_instance_valid(popup)
+		if not is_existing:
+			popup = PopupMenu.new()
+		
+		var _submenu_pressed = func(id, _popup, se, callable):
+			callable.call(se, PopupHelper.parse_menu_path(id, _popup))
+		
 		popup.id_pressed.connect(_submenu_pressed.bind(popup, popup_args, context_menu_callable))
 		popup_items[group] = popup
 		var icon = null
@@ -336,10 +353,13 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 			popup_data[ItemParams.CALLABLE] = _submenu_pressed.bind(popup_args, context_menu_callable)
 			PopupHelper.add_single_item(popup, menu_path, popup_data, popup_items)
 		
-		plugin.add_context_submenu_item(group, popup, icon)
+		if not is_existing:
+			plugin.add_context_submenu_item(group, popup, icon)
 	
 	if fs_popup:
-		var set_metadata = func(fs, dict): for i in dict: fs.set_item_metadata(i, dict.get(i))
+		var set_metadata = func(fs, dict): 
+			for i in dict:
+				fs.set_item_metadata(i, dict.get(i))
 		set_metadata.call_deferred(fs_popup, meta_dict)
 
 static func set_fs_popup_metadata(fs_popup:PopupMenu, meta_data_dict): #TODO test on weaker machine, converted to anon above
@@ -347,6 +367,15 @@ static func set_fs_popup_metadata(fs_popup:PopupMenu, meta_data_dict): #TODO tes
 		var meta = meta_data_dict.get(index)
 		fs_popup.set_item_metadata(index, meta)
 
+static func _get_fs_popup_submenu(fs_popup:PopupMenu, submenu_name:String):
+	if not is_instance_valid(fs_popup):
+		return null
+	for i in range(fs_popup.item_count):
+		var text = fs_popup.get_item_text(i)
+		if text != submenu_name:
+			continue
+		return fs_popup.get_item_submenu_node(i)
+	return null
 
 
 static func _context_plugin_submenu_pressed(id, popup, popup_args, callable):

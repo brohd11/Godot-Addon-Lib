@@ -1,19 +1,8 @@
-const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_string.gd")
 
-const GDScriptParser = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript/parser/gdscript_parser.gd")
-const Keys = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript/parser/utils/keys.gd")
-const CodeEditParser = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript/parser/utils/code_edit_parser.gd")
-const BuiltInChecker = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/gdscript/parser/utils/builtin/builtin_checker.gd")
-const AccessObject = GDScriptParser.TypeLookup.AccessObject
+const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
 
-const UFile = GDScriptParser.UFile
-const UClassDetail = GDScriptParser.UClassDetail
+const _QUOTES = ["'", '"']
 
-
-
-
-
-const ENUM_SUFFIX = Keys.ENUM_PATH_SUFFIX
 
 static var _class_regex:RegEx
 static var _var_const_regex:RegEx
@@ -22,35 +11,35 @@ static var _enum_regex:RegEx
 static var _func_regex:RegEx
 static var _arg_regex:RegEx
 static var _signal_regex:RegEx
-static var _string_path_regex:RegEx
 
-static func is_gdscript_path(file_path:String):
-	return file_path.ends_with(".gd") or file_path.contains(".gd.")
-
-static func file_path_to_type(file_path:String):
-	if is_gdscript_path(file_path):
-		return file_path
-	var ext = file_path.get_extension()
-	var type = ""
-	if not FileAccess.file_exists(file_path):
-		return ""
-	var resource = load(file_path) as Resource
-	return resource.get_class()
-	match ext:
-		"tscn": type = &"PackedScene"
-		"svg": type = &"Texture2D"
-		"png": type = &"Texture2D"
-		_: type = file_path
-	
-	return type
-
+## Check if a path is an absolute path, but not a string wrapped in quotes
 static func is_absolute_path(string:String):
-	if string.begins_with("'") or string.begins_with('"'):
-		return false
-	return string.is_absolute_path()
-
-static func member_is_const_class_enum(member_type:String):
-	return member_type == Keys.MEMBER_TYPE_CLASS or member_type == Keys.MEMBER_TYPE_CONST or member_type == Keys.MEMBER_TYPE_ENUM
+	if not string.is_absolute_path():
+		return false # quick exit, definitely not raw path
+	
+	if string.begins_with("res://") or string.begins_with("user://"):
+		return true
+	if string.begins_with("/") or string.begins_with("\\"):
+		return true
+	# check Windows drive letter ("C:/", "d:\")
+	if string.length() >= 3 and string[1] == ":" and (string[2] == "/" or string[2] == "\\"):
+		# Use unicode_at() for the fastest possible letter check (avoids string allocation)
+		var c := string.unicode_at(0)
+		if (c >= 65 and c <= 90) or (c >= 97 and c <= 122): # A-Z or a-z
+			return true
+	
+	return false # passed is_absolute_path() but didn't match the strict starts, false positive ie 'preload'
+	
+	# OLD VERSION
+	#if string.length() < 2:
+		#if string.is_empty():
+			#return false
+		#return string.is_absolute_path()
+	#
+	#if string[0] in _QUOTES or string[1] in _QUOTES:
+		#return false
+	#
+	#return string.is_absolute_path()
 
 
 static func get_func_name_in_line(stripped_line_text:String) -> String:
@@ -83,7 +72,7 @@ static func get_class_info(stripped_line: String):
 	return [_class_name, extends_name]
 
 
-static func get_var_or_const_info(stripped_line:String):# -> Array:
+static func get_var_or_const_info(stripped_line:String, convert_preload:=true):# -> Array:
 	if not is_instance_valid(_var_const_regex):
 		_var_const_regex = RegEx.new()
 		_var_const_regex.compile("^(?:static\\s+)?(?:var|const)\\s+([a-zA-Z_]\\w*)(?:\\s*:\\s*(?!=)([^=]+?))?(?:\\s*(?::?=)\\s*(.*))?$")
@@ -100,7 +89,7 @@ static func get_var_or_const_info(stripped_line:String):# -> Array:
 	var assignment = _match.get_string(3).strip_edges()
 
 	# --- HANDLE THE PRELOAD REQUEST ---
-	if assignment.begins_with("preload"):
+	if assignment.begins_with("preload") and convert_preload:
 		var p_match = _preload_regex.search(assignment)
 		if p_match:
 			var path = p_match.get_string(1)
@@ -281,122 +270,17 @@ static func safe_split_args(args_str: String) -> Array[String]:
 	return args
 
 
-static func line_has_any_declaration(stripped_line:String):
-	for dec in Keywords.DECLARATIONS:
-		if stripped_line.begins_with(dec):
-			return true
-	return false
-
-static func add_var_to_dict(stripped_line:String, line:int, dict:Dictionary, int_key:=false):
-	var var_data = get_var_or_const_info(stripped_line)
-	if var_data != null:
-		var var_name = var_data[0]
-		var type = var_data[1]
-		if type.find(".new(") > -1:
-			type = type.get_slice(".new(", 0)
-		var key = line if int_key else var_name
-		dict[key] = {
-			Keys.MEMBER_NAME: var_name,
-			Keys.LINE_INDEX: line,
-			Keys.MEMBER_TYPE: Keys.MEMBER_TYPE_VAR,
-			Keys.TYPE: type,
-			}
-	return var_data
-
 
 static func _initialize_arg_regex():
 	if not is_instance_valid(_arg_regex):
 		_arg_regex = RegEx.new()
 		_arg_regex.compile("^([a-zA-Z_]\\w*)(?:\\s*:\\s*(?!=)([^=]+?))?(?:\\s*(?::?=)\\s*(.*))?$")
 
-static func token_is_string(text:String):
-	if text.begins_with('"') or text.begins_with("'"):
-		return true
-	return false
 
-static func get_full_path_from_string(text:String):
-	if not is_instance_valid(_string_path_regex):
-		_string_path_regex = RegEx.new()
-		_string_path_regex.compile("\\s*[\"\']([^\"\']+)[\"\']\\s*(.*)")
-	
-	if token_is_string(text):
-		var p_match = _string_path_regex.search(text)
-		if p_match:
-			var path = p_match.get_string(1)
-			var tail = p_match.get_string(2).strip_edges()
-			# This turns "my_path".SomeClass -> "my_path.SomeClass"
-			return path + tail
-	return ""
+class Keys:
+	const FUNC_NAME = &"func_name"
+	const FUNC_ARGS = &"func_args"
+	const FUNC_RETURN = &"func_return"
 
-static func ensure_absolute_path(path:String, main_script_path:String):
-	if path.is_absolute_path():
-		return path
-	var new_path = main_script_path.get_base_dir().path_join(path).simplify_path()
-	var script_data = UString.get_script_path_and_suffix(new_path)
-	if FileAccess.file_exists(script_data[0]): # script path only
-		return new_path
-	return path
-
-class Keywords:
-	const DECLARATIONS = [VAR, STATIC_VAR, FUNC, STATIC_FUNC, CONST, SIGNAL, ENUM, CLASS]
-	
-	const VAR = &"var "
-	const STATIC_VAR = &"static var " 
-	const FUNC = &"func "
-	const STATIC_FUNC = &"static func "
-	const CONST = &"const "
-	const SIGNAL = &"signal "
-	const ENUM = &"enum "
-	const CLASS = &"class "
-	
-	const CONTROL_FLOW_KEYWORDS = [FOR, MATCH, IF, ELIF, ELSE, WHILE]
-	
-	const FOR = &"for "
-	const MATCH = &"match" # no space to allow for backslashes. Do I bother?
-	const IF = &"if "
-	const ELIF = &"elif "
-	const ELSE = &"else:"
-	const WHILE = &"while "
-	
-	const BOOL_OPERATORS = ["==", "!=", "<", "<=", ">", ">=", " and ", " not ", " or ", "&&", "!", "||"]
-	const NON_BOOL_OPERATORS = ["+", "-", "*", "/", "%"]
-
-
-
-class ParserRef:
-	static func set_refs(object:Object, parser:GDScriptParser, class_obj:GDScriptParser.ParserClass=null):
-		object.set(&"_parser", weakref(parser))
-		object.set(&"_code_edit_parser", weakref(parser.code_edit_parser))
-		if is_instance_valid(class_obj):
-			object.set(&"_class_obj", weakref(class_obj))
-	
-	static func get_parser(object:Object) -> GDScriptParser:
-		return _get_ref(object, &"_parser")
-	
-	static func get_code_edit_parser(object:Object) -> CodeEditParser:
-		return _get_ref(object, &"_code_edit_parser")
-	
-	static func get_class_obj(object:Object) -> GDScriptParser.ParserClass:
-		return _get_ref(object, &"_class_obj")
-	
-	static func _get_ref(object, string_name:StringName):
-		var ref = object.get(string_name)
-		if ref:
-			return ref.get_ref()
-		return
-
-
-
-#! arg_location section:T
-static func print_deb(section:String, ...msg:Array):
-	if section in _PRINT:
-		msg.push_front(section)
-		ALibEditor.PrintDebug.print(msg)
-
-const _PRINT = [
-	T.ACCESS_PATH, 
-	]
-
-
-class T:
-	const ACCESS_PATH = "ENUM ACCESS PATH"
+	const SIGNAL_NAME = &"signal_name"
+	const SIGNAL_ARGS = &"signal_args"

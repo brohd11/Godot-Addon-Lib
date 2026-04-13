@@ -2,7 +2,7 @@
 extends SingletonRefCount
 const SingletonRefCount = Singleton.RefCount
 
-const GDScriptParser = ALibRuntime.Utils.UResource.UGDScript.Parser
+const GDScriptParser = ALibRuntime.Utils.UGDScript.Parser
 
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/misc/parser/editor_parser.gd")

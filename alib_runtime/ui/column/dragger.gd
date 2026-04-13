@@ -1,6 +1,6 @@
 extends Control
 
-const ClickState = preload("uid://bp4nmev3f3fcc") # click_state.gd
+const ClickState = preload("uid://bp4nmev3f3fcc") #! resolve ClickHandlers.ClickState
 
 var dragging: bool = false
 var target_control: Control

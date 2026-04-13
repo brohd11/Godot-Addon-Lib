@@ -65,7 +65,7 @@ func _get_icon(icon_name:String, color=null, brightness:=0.8, overwrite:=false):
 	if color == null:
 		return icon
 	color *= brightness
-	var texture = ALibRuntime.Utils.UResource.get_modulated_icon(icon, color)
+	var texture = ALibRuntime.Utils.UTexture.get_modulated_icon(icon, color)
 	color_dict[brightness] = texture
 	return texture
 

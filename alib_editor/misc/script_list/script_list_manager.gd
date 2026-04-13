@@ -102,8 +102,8 @@ func update_cache():
 	if current_text != "":
 		#await get_tree().process_frame
 		#_update_debounce = false
-		#return
-		filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
+		return
+		#filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
 	
 	item_cache = get_all_script_data()
 	

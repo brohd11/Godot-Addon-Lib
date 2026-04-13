@@ -1,14 +1,14 @@
 #! namespace ALibRuntime.NodeUtils.NUCodeEdit
 
-const UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_string.gd")
+const _UString = preload("res://addons/addon_lib/brohd/alib_runtime/utils/u_string.gd")
 
 const Selection = preload("res://addons/addon_lib/brohd/alib_runtime/node_utils/code_edit/selection.gd")
+const StringParse = preload("res://addons/addon_lib/brohd/alib_runtime/node_utils/code_edit/string_parse.gd")
 
 
-
-static func parse_identifier_at_position(text:String, start_pos:int, string_map:UString.StringMap=null):
+static func parse_identifier_at_position(text:String, start_pos:int, string_map:_UString.StringMap=null):
 	if string_map == null:
-		string_map = UString.get_string_map(text, UString.StringMap.Mode.STRING)
+		string_map = _UString.get_string_map(text, _UString.StringMap.Mode.STRING)
 	
 	var current_pos = start_pos
 	var name_start_pos = start_pos + 1
@@ -26,7 +26,7 @@ static func parse_identifier_at_position(text:String, start_pos:int, string_map:
 			var valid = false
 			if _char == ")" and last_char == ".":
 				valid = true
-			if _char in UString.NUMBERS:
+			if _char in _UString.NUMBERS:
 				valid = true
 			
 			if not valid:

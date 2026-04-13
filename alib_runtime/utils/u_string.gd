@@ -7,14 +7,14 @@ const Token = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/to
 const Filter = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/filter.gd")
 const StringMap = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/string_map.gd")
 const PrintRich = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/print_rich_helper.gd")
+const GDScriptParse = preload("res://addons/addon_lib/brohd/alib_runtime/utils/string/gdscript_parse.gd")
 
 static func hash_string(text:String, hash_type:=HashingContext.HASH_SHA256, chars:int=-1):
-	
 	var ctx = HashingContext.new()
 	ctx.start(hash_type)
 	ctx.update(text.to_utf8_buffer())
-	var hash = ctx.finish()
-	var hash_encode = hash.hex_encode()
+	var _hash = ctx.finish()
+	var hash_encode = _hash.hex_encode()
 	if chars > 0:
 		hash_encode = hash_encode.substr(0, chars)
 	return hash_encode
@@ -23,17 +23,17 @@ static func strip_comment(line:String):
 	var valid = ""
 	var string_char = ""
 	for i in range(line.length()):
-		var char = line[i]
-		if char == "'" or char == '"':
+		var _char = line[i]
+		if _char == "'" or _char == '"':
 			if string_char != "":
-				if char == string_char:
+				if _char == string_char:
 					string_char = ""
 			else:
-				string_char = char
-		if char == "#":
+				string_char = _char
+		if _char == "#":
 			if string_char == "":
 				return valid
-		valid += char
+		valid += _char
 	
 	return valid
 
@@ -173,6 +173,8 @@ static func split_member_access(text:String, string_map:StringMap=null):
 	
 	return member_parts
 
+
+#^r only used in import code completion, could probably be removed?
 static func find_indentifier_in_line(line_text:String, identifier:String) -> int:
 	var line_length = line_text.length()
 	var idx = line_text.find(identifier)
@@ -246,78 +248,6 @@ static func get_script_path_and_suffix(script_path:String):
 	return [path, suffix]
 
 
-
-
-## these will be gone
-static func get_func_name_in_line(stripped_line_text:String) -> String:
-	if not (stripped_line_text.begins_with("func ") or stripped_line_text.begins_with("static func ")):
-		return ""
-	var func_name = stripped_line_text.get_slice("func ", 1).get_slice("(", 0)
-	return func_name
-
-static func get_class_name_in_line(stripped_line_text:String) -> String:
-	if not stripped_line_text.begins_with("class "): # "" <- parser
-		return ""
-	var _class = stripped_line_text.get_slice("class ", 1).get_slice(":", 0) # "" <- parser
-	if _class.find("extends ") > -1: #  "" <- parser
-		_class = _class.get_slice("extends ", 0) #  "" <- parser
-	return _class.strip_edges()
-
-static func get_var_name_and_type_hint_in_line(stripped_line_text:String): # for local vars
-	var var_idx = stripped_line_text.find("var ")
-	if not(var_idx == 0 or var_idx == 7): # start with or static
-		return null
-	
-	var var_dec = stripped_line_text.substr(var_idx + 4)
-	return _get_name_and_type_from_line(var_dec)
-
-static func get_const_name_and_type_in_line(stripped_line_text:String):
-	var const_idx = stripped_line_text.find("const ")
-	if const_idx != 0:
-		return null
-	var preload_path = ""
-	if stripped_line_text.find('preload("') > -1:
-		preload_path = stripped_line_text.get_slice("preload(", 1) #""
-		preload_path = preload_path.get_slice(")", 0)
-		preload_path = preload_path.trim_prefix("'").trim_suffix("'").trim_prefix('"').trim_suffix('"')
-		var const_name = stripped_line_text.get_slice("preload(", 0)
-		const_name = const_name.substr(const_idx + 6)
-		const_name = const_name.replace("=","").replace(":", "").strip_edges()
-		return [const_name, preload_path]
-	
-	var const_dec = stripped_line_text.substr(const_idx + 6)
-	var data = _get_name_and_type_from_line(const_dec)
-	return data
-
-
-
-static func _get_name_and_type_from_line(declaration:String):
-	var colon_idx = declaration.find(":")
-	var has_colon = colon_idx > -1
-	var eq_idx = declaration.find("=")
-	var has_eq = eq_idx > -1
-	
-	var var_nm:String
-	var type_hint:String = ""
-	if has_colon and has_eq:
-		var col_sub_idx = colon_idx + 1
-		var_nm = declaration.substr(0, col_sub_idx - 1).strip_edges()
-		type_hint = declaration.substr(col_sub_idx, eq_idx - col_sub_idx).strip_edges()
-		if type_hint == "":
-			type_hint = declaration.get_slice("=", 1).strip_edges()
-	elif has_colon:
-		var_nm = declaration.get_slice(":", 0).strip_edges()
-		type_hint = declaration.get_slice(":", 1).strip_edges()
-	elif has_eq:
-		var_nm = declaration.get_slice("=", 0).strip_edges()
-		type_hint = declaration.get_slice("=", 1).strip_edges()
-	else:
-		var_nm = declaration.strip_edges()
-	
-	return [var_nm, type_hint]
-
-## THESE WILL BE GONE
-
 static func get_paths_in_line(line_text:String):
 	var string_map = get_string_map(line_text, StringMap.Mode.STRING)
 	var paths = []
@@ -331,21 +261,21 @@ static func get_paths_in_line(line_text:String):
 
 static func unescape(text: String) -> String:
 	var output: PackedStringArray = []
-	var len = text.length()
+	var _len = text.length()
 	var i = 0
-	while i < len:
-		var char = text[i]
-		if char == "\\":
-			if i + 1 < len:
+	while i < _len:
+		var _char = text[i]
+		if _char == "\\":
+			if i + 1 < _len:
 				output.append(text[i + 1])
 				i += 2
 			else: # Edge case: String ends with a backslash (e.g. "abc\")
 				# Just keep it or discard it based on preference. 
 				# Usually we keep it if it's not escaping anything.
-				output.append(char)
+				output.append(_char)
 				i += 1
 		else:
-			output.append(char)
+			output.append(_char)
 			i += 1
 	return "".join(output)
 
