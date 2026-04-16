@@ -66,6 +66,8 @@ func _on_enr_ready():
 	_initialized = true
 
 func _on_update_timer_timeout(): # quick check for differences
+	if _update_debounce:
+		return # if updating, abort
 	var arr = _get_list_signature()
 	if arr != _last_script_signature:
 		update_cache()
@@ -73,10 +75,9 @@ func _on_update_timer_timeout(): # quick check for differences
 
 func _get_list_signature() -> Array:
 	var sig = []
-	for i in range(script_list.item_count):
-		# meta + text to catch reorders, renames
+	for i in range(script_list.item_count): # meta + text to catch reorders, renames
 		var meta = script_list.get_item_metadata(i)
-		var text = script_list.get_item_text(i)
+		var text = script_list.get_item_text(i) 
 		sig.append(str(meta) + "_" + text)
 	return sig
 
@@ -101,7 +102,7 @@ func update_cache():
 	var current_text = filter_line_edit.text
 	if current_text != "":
 		#await get_tree().process_frame
-		#_update_debounce = false
+		_update_debounce = false
 		return
 		#filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
 	
