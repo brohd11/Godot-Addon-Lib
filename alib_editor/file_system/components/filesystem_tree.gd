@@ -3,7 +3,7 @@ extends Tree
 
 const _MIN_SIZE = Vector2(100,0)
 
-#! import-p FileData,
+#! import_p FileData,
 
 const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
 const FileSystemTab = FSClasses.FileSystemTab

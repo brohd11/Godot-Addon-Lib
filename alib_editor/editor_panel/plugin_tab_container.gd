@@ -1,7 +1,7 @@
 @tool
 extends Control
 
-#! import-p Keys,
+#! import_p Keys,
 
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const UFile = ALibRuntime.Utils.UFile

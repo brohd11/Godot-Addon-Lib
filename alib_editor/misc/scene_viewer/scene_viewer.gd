@@ -1,6 +1,6 @@
 extends VBoxContainer
 
-#! import-p Keys,
+#! import_p Keys,
 
 const PluginButton = ALibEditor.UIHelpers.Buttons.PluginButton
 

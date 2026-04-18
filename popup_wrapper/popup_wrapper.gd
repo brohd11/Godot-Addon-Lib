@@ -269,7 +269,7 @@ static func popup_cleanup(popup:PopupMenu):
 	if popup.is_item_separator(popup.item_count - 1):
 		popup.remove_item(popup.item_count - 1)
 
-# popup_args is what the specific context slot callback would pass, ie. script_editor for ScriptEditorCode, etc.
+## popup_args is what the specific context slot callback would pass, ie. script_editor for ScriptEditorCode, etc.
 static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_args, menu_items:Dictionary, context_menu_callable):
 	var fs_popup#:PopupMenu
 	if "SLOT" in plugin:

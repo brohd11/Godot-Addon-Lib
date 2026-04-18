@@ -1,5 +1,5 @@
 extends Control
-#! import-p Keys,
+#! import_p Keys,
 
 const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")

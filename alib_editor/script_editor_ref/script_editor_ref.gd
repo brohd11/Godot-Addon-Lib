@@ -74,6 +74,8 @@ var _current_code_text_editor
 var _current_code_edit:CodeEdit
 var _current_script
 
+var _script_editor_tab_container:TabContainer
+
 #ScriptEditor
 signal editor_script_changed(script)
 signal tab_changed
@@ -94,8 +96,8 @@ func _ready() -> void:
 	EditorNodeRef.call_on_ready(_on_enr_ready)
 
 func _on_enr_ready():
-	var tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER) as TabContainer
-	tab_container.tab_changed.connect(_on_tab_changed)
+	_script_editor_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER) as TabContainer
+	_script_editor_tab_container.tab_changed.connect(_on_tab_changed)
 
 func _on_editor_script_changed(script):
 	if script == null:

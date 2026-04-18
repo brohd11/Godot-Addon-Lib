@@ -58,18 +58,14 @@ func _ready() -> void:
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_validate)
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.EDITOR_SCRIPT_CHANGED, _on_editor_script_changed)
 	_on_editor_script_changed(ScriptEditorRef.get_current_script())
-	
+
 
 func _on_text_changed():
 	gdscript_parser.reset_caret_context()
 
 
 func _on_script_validate():
-	#print("VALIDATE PARSE")
-	
 	_parse()
-	#gdscript_parser.parse()
-	#parse_completed.emit()
 	gdscript_parser.clean_parser_cache.call_deferred()
 
 func _on_editor_script_changed(script):
@@ -78,6 +74,7 @@ func _on_editor_script_changed(script):
 	
 	if _script_change_debounce:
 		return
+	_parse_queued = false # fallback, if the queue is stuck this will get things moving
 	_script_change_debounce = true
 	await get_tree().process_frame
 	_set_editor_script_code_edit()
@@ -175,6 +172,9 @@ static func clear_cache():
 
 static func cache_size():
 	return get_instance()._parser_cache.size()
+
+static func reset_debounce(): # possibly make a timer? check if the queue has been in for too long
+	get_instance()._parse_queued = false
 
 #^ --- Singleton Methods
 

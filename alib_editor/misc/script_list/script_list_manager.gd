@@ -30,6 +30,8 @@ var item_cache:= {}
 
 var current_script_editor:Node
 
+var script_editor_map:= {}
+
 var _last_script_signature:Array
 var _update_debounce:bool = false
 var _update_timer:Timer
@@ -50,6 +52,7 @@ func _on_enr_ready():
 	
 	editor_script_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER)
 	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
+	editor_script_tab_container.child_order_changed.connect(_on_editor_tab_child_order_changed)
 	current_script_editor = editor_script_tab_container.get_current_tab_control()
 	
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
@@ -81,6 +84,8 @@ func _get_list_signature() -> Array:
 		sig.append(str(meta) + "_" + text)
 	return sig
 
+func _on_editor_tab_child_order_changed():
+	update_cache()
 
 func _on_editor_tab_changed(_arg):
 	current_script_editor = editor_script_tab_container.get_current_tab_control()
@@ -94,19 +99,31 @@ func _on_filesystem_changed():
 	update_cache()
 
 
-func update_cache():
+func update_cache(clear_filter:=false):
 	if _update_debounce:
 		return
 	
 	_update_debounce = true
 	var current_text = filter_line_edit.text
 	if current_text != "":
-		#await get_tree().process_frame
-		_update_debounce = false
-		return
-		#filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
+		if not clear_filter:
+			_update_debounce = false
+			return
+		filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
 	
-	item_cache = get_all_script_data()
+	script_editor_map = {}
+	item_cache.clear()
+	#item_cache = get_all_script_data()
+	var script_tab_child_count:= editor_script_tab_container.get_child_count()
+	for i in range(script_list.item_count):
+		var data = get_item_data(i)
+		var script_idx = data.get(Keys.SCRIPT_IDX)
+		item_cache[script_idx] = data
+		if script_idx < script_tab_child_count:
+			var script_editor = editor_script_tab_container.get_child(script_idx)
+			script_editor_map[script_editor] = data.get(Keys.TOOLTIP)
+			if script_editor.get_class().ends_with("TextEditor"):
+				script_editor_map[script_editor.get_base_editor()] = data.get(Keys.TOOLTIP)
 	
 	#if current_text != "":
 		#filter_line_edit.text = current_text

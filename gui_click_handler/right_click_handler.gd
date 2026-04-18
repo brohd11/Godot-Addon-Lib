@@ -2,7 +2,7 @@
 @tool
 extends Node
 
-#! import-p PopupHelper,
+#! import_p PopupHelper,
 
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
 const MouseHelper = PopupHelper.MouseHelper

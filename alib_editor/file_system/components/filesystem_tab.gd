@@ -1,7 +1,7 @@
 @tool
 extends VBoxContainer
 
-#! import-p DataKeys,
+#! import_p DataKeys,
 
 const ATTEMPT_RENAME = true
 

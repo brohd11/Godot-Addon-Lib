@@ -2,8 +2,8 @@
 class_name DockManager
 extends Node
 
-#! import-p Keys,
-#! import-show-global DockManager,
+#! import_p Keys,
+#! import_show_global DockManager,
 
 const UFile = ALibRuntime.Utils.UFile
 const UName = ALibRuntime.Utils.UName
