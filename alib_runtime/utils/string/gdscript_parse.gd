@@ -101,7 +101,7 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 			
 	if type_hint == "":
 		type_hint = assignment
-
+	
 	return [name, type_hint]
 
 
