@@ -41,17 +41,19 @@ func start():
 		_unit = "usec"
 		_start_time = Time.get_ticks_usec()
 
-func stop():
+func stop(msg:=""):
 	if _time_scale == TimeScale.MSEC:
 		_end_time = Time.get_ticks_msec()
 	else:
 		_end_time = Time.get_ticks_usec()
-	_print()
+	_print(msg)
 
-func _print():
+func _print(msg_overide:=""):
 	if _one_shot:
 		var print_string = "Function complete in: "
-		if _message != "":
+		if msg_overide != "":
+			print_string = "%s: " % msg_overide
+		elif _message != "":
 			print_string = "%s: " % _message
 		if callable:
 			var callable_name = callable.get_method() as String
@@ -69,6 +71,7 @@ func _print():
 			print(print_string, iterations, " iterations: ", result , _unit)
 			_accumulated_time = 0
 			_current_time_count = 0
+
 
 func run_callable():
 	if not callable:
