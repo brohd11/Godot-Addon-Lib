@@ -174,21 +174,6 @@ static func split_member_access(text:String, string_map:StringMap=null):
 	return member_parts
 
 
-#^r only used in import code completion, could probably be removed?
-static func find_indentifier_in_line(line_text:String, identifier:String) -> int:
-	var line_length = line_text.length()
-	var idx = line_text.find(identifier)
-	var i = idx + identifier.length()
-	while idx != -1 and i < line_length:
-		var next_char = line_text[i]
-		var full_id:String = identifier + next_char
-		if not full_id.is_valid_ascii_identifier():
-			break
-		idx = line_text.find(identifier, idx + 1)
-		i = idx + identifier.length()
-	return idx
-
-
 static func string_safe_count(text:String, what:String, from:int=0, to:int=0, string_map=null):
 	if string_map == null:
 		string_map = get_string_map(text)

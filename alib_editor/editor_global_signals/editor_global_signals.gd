@@ -48,9 +48,7 @@ static func pick_signals_dialog(signals_to_display:PackedStringArray=[], valid_s
 	file_list.show_add_entry_button()
 	file_list.set_entries(signals_to_display)
 	
-	
 	dialog.add_content(file_list)
-	
 	
 	var result = await dialog.show_dialog()
 	if result is String and result == dialog.CANCEL_STRING:
