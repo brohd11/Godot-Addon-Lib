@@ -22,6 +22,7 @@ enum Event {
 	CODE_COMPLETION_REQUESTED,
 	TEXT_CHANGED,
 	TAB_CHANGED,
+	CARET_CHANGED,
 }
 
 static func subscribe(event:Event, _callable:Callable, flags:=0):
@@ -37,6 +38,8 @@ static func subscribe(event:Event, _callable:Callable, flags:=0):
 		_signal = instance.text_changed
 	elif event == Event.TAB_CHANGED:
 		_signal = instance.tab_changed
+	elif event == Event.CARET_CHANGED:
+		_signal = instance.caret_changed
 	
 	if _signal != null:
 		_connect_signal(_signal, _callable, flags)
@@ -80,6 +83,7 @@ var _script_editor_tab_container:TabContainer
 signal editor_script_changed(script)
 signal tab_changed
 
+
 #ScriptEditorBase
 
 # CodeTextEditor
@@ -88,6 +92,7 @@ signal validate_script
 #CodeEdit
 signal code_completion_requested
 signal text_changed
+signal caret_changed
 
 func _ready() -> void:
 	_set_refs()
@@ -120,6 +125,7 @@ func _connect_signals():
 	if is_instance_valid(_current_code_edit):
 		_connect_signal(_current_code_edit.code_completion_requested, _on_code_completion_requested)
 		_connect_signal(_current_code_edit.text_changed, _on_text_changed) # may want to limit this? Not sure how much string allocation is happening
+		_connect_signal(_current_code_edit.caret_changed, _on_caret_changed)
 
 func _disconnect_signals():
 	
@@ -131,6 +137,7 @@ func _disconnect_signals():
 	if is_instance_valid(_current_code_edit):
 		_disconnect_signal(_current_code_edit.code_completion_requested, _on_code_completion_requested)
 		_disconnect_signal(_current_code_edit.text_changed, _on_text_changed)
+		_disconnect_signal(_current_code_edit.caret_changed, _on_caret_changed)
 
 func _set_refs():
 	_current_script_text_editor = EditorInterface.get_script_editor().get_current_editor()
@@ -154,6 +161,9 @@ func _on_code_completion_requested():
 
 func _on_text_changed():
 	text_changed.emit()
+
+func _on_caret_changed():
+	caret_changed.emit()
 
 func _on_tab_changed(_idx:int): # use this instead of editor script changed so that we can tell when config files are current
 	var current_script = EditorInterface.get_script_editor().get_current_script()

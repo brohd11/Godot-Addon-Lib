@@ -15,7 +15,7 @@ static var _style_boxes = {}
 var path_in_res:=true
 
 var tab_bar:TabBar
-var scroll_container:ScrollContainer
+var scroll_container:ScrollContainer # DEPRECATED ??
 var line_edit:LineEdit
 var button_hbox:HBoxContainer
 
