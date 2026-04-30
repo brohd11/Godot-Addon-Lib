@@ -6,6 +6,7 @@ const _QUOTES = ["'", '"']
 
 static var _class_regex:RegEx
 static var _var_const_regex:RegEx
+static var _for_loop_regex:RegEx
 static var _preload_regex:RegEx
 static var _enum_regex:RegEx
 static var _func_regex:RegEx
@@ -40,6 +41,12 @@ static func is_absolute_path(string:String):
 		#return false
 	#
 	#return string.is_absolute_path()
+
+static func get_line_declaration(stripped_line:String) -> StringName:
+	for dec in Keywords.DECLARATIONS:
+		if stripped_line.begins_with(dec):
+			return dec
+	return ""
 
 
 static func get_func_name_in_line(stripped_line_text:String) -> String:
@@ -102,8 +109,28 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 	if type_hint == "":
 		type_hint = assignment
 	
+	#TEST
+	if type_hint == "Signal":
+		type_hint = assignment
+	#TEST
+	
 	return [name, type_hint]
 
+static func get_for_loop_info(stripped_line:String):
+	if not is_instance_valid(_for_loop_regex):
+		_for_loop_regex = RegEx.new()
+		_for_loop_regex.compile(r"\bfor\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*:\s*([A-Za-z_][A-Za-z0-9_]*(\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*))?\s+in\s+(.+)")
+	
+	var _match = _for_loop_regex.search(stripped_line)
+	if not _match:
+		return null
+	
+	var nm = _match.get_string(1)
+	var hint = _match.get_string(2)
+	if hint == "":
+		hint = _match.get_string(4).strip_edges().trim_suffix(":")
+	
+	return [nm, hint]
 
 static func get_enum_info(stripped_line: String) -> Array:
 	if not is_instance_valid(_enum_regex):
@@ -284,3 +311,28 @@ class Keys:
 
 	const SIGNAL_NAME = &"signal_name"
 	const SIGNAL_ARGS = &"signal_args"
+
+class Keywords:
+	const DECLARATIONS = [VAR, STATIC_VAR, FUNC, STATIC_FUNC, CONST, SIGNAL, ENUM, CLASS]
+	
+	const VAR = &"var "
+	const STATIC_VAR = &"static var " 
+	const FUNC = &"func "
+	const STATIC_FUNC = &"static func "
+	const CONST = &"const "
+	const SIGNAL = &"signal "
+	const ENUM = &"enum "
+	const CLASS = &"class "
+	
+	const CONTROL_FLOW_KEYWORDS = [FOR, MATCH, IF, ELIF, ELSE, WHILE]
+	
+	const FOR = &"for "
+	const MATCH = &"match" # no space to allow for backslashes. Do I bother?
+	const IF = &"if "
+	const ELIF = &"elif "
+	const ELSE = &"else:"
+	const WHILE = &"while "
+	
+	const BITWISE_OPERATORS = ["<<", ">>", "~", "^", "|", "&"]
+	const BOOL_OPERATORS = ["==", "!=", "<", "<=", ">", ">=", " and ", " not ", " or ", "&&", "!", "||"]
+	const NON_BOOL_OPERATORS = ["+", "-", "*", "/", "%"]

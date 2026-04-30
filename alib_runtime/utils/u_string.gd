@@ -158,6 +158,7 @@ static func split_member_access(text:String, string_map:StringMap=null):
 					working_member_name += text[i]
 				count = next + 1
 				continue
+		
 		var _char = text[count]
 		if _char == ".":
 			if string_map.string_mask[count] == 0:
@@ -265,8 +266,13 @@ static func unescape(text: String) -> String:
 	return "".join(output)
 
 static func unquote(text:String):
-	return text.trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
+	#return text.trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
+	return text.trim_prefix("&").trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
 
+static func is_string_or_string_name(text:String):
+	if text.begins_with("&"):
+		text = text.trim_prefix("&")
+	return (text.begins_with("'") and text.ends_with("'")) or (text.begins_with('"') and text.ends_with('"'))
 
 static func get_string_map(text:String, _mode:StringMap.Mode=StringMap.Mode.FULL, print_err:=false) -> StringMap:
 	return StringMap.new(text, _mode, print_err)
