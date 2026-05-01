@@ -231,7 +231,8 @@ static func get_script_path_and_suffix(script_path:String):
 	if gd_idx > -1:
 		path = script_path.substr(0, gd_idx + 3)
 		suffix = script_path.substr(gd_idx + 4)
-	return [path, suffix]
+	var array:Array[String] = [path, suffix]
+	return array
 
 
 static func get_paths_in_line(line_text:String):
