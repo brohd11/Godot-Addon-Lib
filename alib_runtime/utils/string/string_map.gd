@@ -14,7 +14,7 @@ var string_map:Dictionary
 ## A dictionary mapping a quote's index to its matching partner's index.
 var quote_map: Dictionary
 ## A dictionary mapping each bracket's index to the index of its matching partner.
-var bracket_map: Dictionary
+var bracket_map: Dictionary[int, int]
 ## A flag to indicate if any parsing errors (like mismatched brackets) occurred.
 var has_errors: bool = false
 ## Select full scan or only string mask

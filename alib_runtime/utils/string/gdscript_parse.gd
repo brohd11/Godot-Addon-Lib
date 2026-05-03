@@ -104,17 +104,17 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 				path = UFile.uid_to_path(path)
 			var tail = p_match.get_string(2).strip_edges()
 			# This turns preload("my_path").SomeClass -> "my_path.SomeClass"
-			assignment = path + tail 
-			
-	if type_hint == "":
-		type_hint = assignment
+			assignment = path + tail
 	
-	#TEST
-	if type_hint == "Signal":
-		type_hint = assignment
-	#TEST
+	#if type_hint == "":
+		#type_hint = assignment
+	#
+	##TEST
+	#if type_hint == "Signal":
+		#type_hint = assignment
+	##TEST
 	
-	return [name, type_hint]
+	return [name, type_hint, assignment]
 
 static func get_for_loop_info(stripped_line:String):
 	if not is_instance_valid(_for_loop_regex):
@@ -127,10 +127,11 @@ static func get_for_loop_info(stripped_line:String):
 	
 	var nm = _match.get_string(1)
 	var hint = _match.get_string(2)
-	if hint == "":
-		hint = _match.get_string(4).strip_edges().trim_suffix(":")
+	var collection = _match.get_string(4).strip_edges().trim_suffix(":")
+	#if hint == "":
+		#hint = _match.get_string(4).strip_edges().trim_suffix(":")
 	
-	return [nm, hint]
+	return [nm, hint, collection]
 
 static func get_enum_info(stripped_line: String) -> Array:
 	if not is_instance_valid(_enum_regex):
@@ -214,10 +215,11 @@ static func get_func_info(stripped_text: String) -> Dictionary:
 				
 				# If no type hint was provided, use the default value as the fallback
 				# (Just like you did with your variable logic!)
-				if type_hint.is_empty():
-					type_hint = default_val
-					
-				func_data[Keys.FUNC_ARGS][arg_name] = type_hint
+				#if type_hint.is_empty():
+					#type_hint = default_val
+				#func_data[Keys.FUNC_ARGS][arg_name] = type_hint
+				
+				func_data[Keys.FUNC_ARGS][arg_name] = [arg_name, type_hint, default_val]
 
 	return func_data
 

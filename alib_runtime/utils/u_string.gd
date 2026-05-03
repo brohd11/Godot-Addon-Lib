@@ -266,6 +266,15 @@ static func unescape(text: String) -> String:
 			i += 1
 	return "".join(output)
 
+static func quote(text:String, string_name:=false):
+	var quoted = text
+	if not is_string_or_string_name(text):
+		quoted = '"' + text + '"'
+	if string_name:
+		if not quoted.begins_with("&"):
+			quoted = "&" + quoted
+	return quoted
+
 static func unquote(text:String):
 	#return text.trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
 	return text.trim_prefix("&").trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")

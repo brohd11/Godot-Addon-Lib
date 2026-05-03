@@ -14,6 +14,7 @@ static func strip_symbols(text):
 	
 	return words
 
+#! struct_dict tokens:PackedStringArray
 static func tokenize_string(text: String, include_strings:=true, include_comments:=false, include_new_lines:=false) -> Dictionary:
 	if _token_regex == null:
 		_token_regex = RegEx.new()

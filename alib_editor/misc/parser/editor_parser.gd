@@ -48,7 +48,6 @@ func _init(node):
 	_set_parser_cache()
 
 
-
 func _set_parser_cache():
 	gdscript_parser.set_parser_cache(_parser_cache)
 	gdscript_parser.set_parser_cache_size(SCRIPT_CACHE_SIZE)
@@ -183,7 +182,6 @@ func _all_unregistered_callback():
 
 func _get_ready_bool() -> bool:
 	return is_node_ready()
-
 
 
 static func test_memory():
