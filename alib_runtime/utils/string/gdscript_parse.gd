@@ -119,7 +119,7 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 static func get_for_loop_info(stripped_line:String):
 	if not is_instance_valid(_for_loop_regex):
 		_for_loop_regex = RegEx.new()
-		_for_loop_regex.compile(r"\bfor\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*:\s*([A-Za-z_][A-Za-z0-9_]*(\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*))?\s+in\s+(.+)")
+		_for_loop_regex.compile(r"\bfor\s+([A-Za-z_][A-Za-z0-9_]*)(?:\s*:\s*([A-Za-z_][A-Za-z0-9_]*(\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*(?:\s*\[[^\]]+\])?))?\s+in\s+(.+)")
 	
 	var _match = _for_loop_regex.search(stripped_line)
 	if not _match:
@@ -128,8 +128,6 @@ static func get_for_loop_info(stripped_line:String):
 	var nm = _match.get_string(1)
 	var hint = _match.get_string(2)
 	var collection = _match.get_string(4).strip_edges().trim_suffix(":")
-	#if hint == "":
-		#hint = _match.get_string(4).strip_edges().trim_suffix(":")
 	
 	return [nm, hint, collection]
 

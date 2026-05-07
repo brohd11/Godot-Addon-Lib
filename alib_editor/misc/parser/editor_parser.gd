@@ -183,6 +183,10 @@ func _all_unregistered_callback():
 func _get_ready_bool() -> bool:
 	return is_node_ready()
 
+static func parse_expression(expression:String, line:int=-1):
+	var parser = get_parser()
+	return parser.resolve_expression_to_type(expression)
+
 
 static func test_memory():
 	var ins = get_instance()
