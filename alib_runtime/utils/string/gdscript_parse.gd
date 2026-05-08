@@ -87,6 +87,9 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 		_preload_regex = RegEx.new()
 		_preload_regex.compile("preload\\(\\s*[\"']([^\"']+)[\"']\\s*\\)(.*)")
 	
+	if stripped_line.ends_with(":"): # this would be for setter and getter
+		stripped_line = stripped_line.trim_suffix(":")
+	
 	var _match = _var_const_regex.search(stripped_line)
 	if not _match:
 		return null# [] # Not a valid var/const declaration
