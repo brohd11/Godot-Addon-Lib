@@ -99,6 +99,11 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 	var assignment = _match.get_string(3).strip_edges()
 
 	# --- HANDLE THE PRELOAD REQUEST ---
+	var is_load = false
+	if assignment.begins_with("load") and convert_preload:
+		is_load = true
+		assignment = "pre" + assignment
+	
 	if assignment.begins_with("preload") and convert_preload:
 		var p_match = _preload_regex.search(assignment)
 		if p_match:
@@ -108,16 +113,18 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 			var tail = p_match.get_string(2).strip_edges()
 			# This turns preload("my_path").SomeClass -> "my_path.SomeClass"
 			assignment = path + tail
+		
+		elif is_load:
+			assignment = assignment.trim_prefix("pre")
 	
-	#if type_hint == "":
-		#type_hint = assignment
-	#
+	var implicit_type_hint = type_hint.is_empty() and stripped_line.rfind(":", _match.get_start(3)) > -1
+	
 	##TEST
 	#if type_hint == "Signal":
 		#type_hint = assignment
 	##TEST
 	
-	return [name, type_hint, assignment]
+	return [name, type_hint, assignment, implicit_type_hint]
 
 static func get_for_loop_info(stripped_line:String):
 	if not is_instance_valid(_for_loop_regex):
@@ -214,13 +221,14 @@ static func get_func_info(stripped_text: String) -> Dictionary:
 				var type_hint = arg_match.get_string(2).strip_edges()
 				var default_val = arg_match.get_string(3).strip_edges()
 				
+				var implicit_type_hint = type_hint.is_empty() and arg_str.rfind(":", _match.get_start(3)) > -1
 				# If no type hint was provided, use the default value as the fallback
 				# (Just like you did with your variable logic!)
 				#if type_hint.is_empty():
 					#type_hint = default_val
 				#func_data[Keys.FUNC_ARGS][arg_name] = type_hint
 				
-				func_data[Keys.FUNC_ARGS][arg_name] = [arg_name, type_hint, default_val]
+				func_data[Keys.FUNC_ARGS][arg_name] = [arg_name, type_hint, default_val, implicit_type_hint]
 
 	return func_data
 

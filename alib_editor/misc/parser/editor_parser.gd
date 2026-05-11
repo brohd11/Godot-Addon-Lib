@@ -45,6 +45,7 @@ var valid_script:= true
 
 func _init(node):
 	gdscript_parser = GDScriptParser.new()
+	gdscript_parser.set_autoload_cache()
 	_set_parser_cache()
 
 
@@ -54,10 +55,14 @@ func _set_parser_cache():
 
 func _ready() -> void:
 	await get_tree().create_timer(1).timeout
+	ProjectSettings.settings_changed.connect(_on_project_settings_changed)
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_validate)
 	ScriptEditorRef.subscribe(ScriptEditorRef.Event.EDITOR_SCRIPT_CHANGED, _on_editor_script_changed)
 	_on_editor_script_changed(ScriptEditorRef.get_current_script())
 
+func _on_project_settings_changed():
+	if is_instance_valid(gdscript_parser):
+		gdscript_parser.set_autoload_cache()
 
 func _on_text_changed():
 	gdscript_parser.reset_caret_context()

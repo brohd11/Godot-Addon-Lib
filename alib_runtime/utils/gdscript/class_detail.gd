@@ -608,6 +608,13 @@ static func get_global_class_path(class_nm:String):
 	connect_fs_signal()
 	return global_class_registry.get(class_nm, "")
 
+static func get_global_class_name(script_path:String) -> String:
+	connect_fs_signal()
+	var name:Variant = global_class_registry.find_key(script_path)
+	if name != null:
+		return name
+	return ""
+
 static func _script_get_member_by_value_recur(script:GDScript, value:Variant, deep:=false, member_hints:=_MEMBER_ARGS, checked:={}):
 	if checked.has(script):
 		return null

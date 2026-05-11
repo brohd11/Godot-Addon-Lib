@@ -39,7 +39,7 @@ static func get_root_line(file_path:String):
 static func get_resource_line(file_path:String, resource_id:String):
 	var file = UFile.get_file_access(file_path)
 	if file:
-		var id_string = 'id="%s"' % resource_id
+		var id_string = ' id="%s"' % resource_id
 		while not file.eof_reached():
 			var line = file.get_line()
 			if not line.find(id_string) > -1:
@@ -48,8 +48,8 @@ static func get_resource_line(file_path:String, resource_id:String):
 	return ""
 
 static func get_id_from_line(line:String):
-	if line.find('id="') > -1:
-		return _get_slice_from_line(line, 'id="')
+	if line.find(' id="') > -1:
+		return _get_slice_from_line(line, ' id="')
 	elif line.find('Resource("') > -1:
 		return _get_slice_from_line(line, 'Resource("')
 	return ""
@@ -67,3 +67,34 @@ static func _get_slice_from_line(line:String, slice_string:String, second_slice:
 	if line.find(slice_string):
 		return line.get_slice(slice_string, 1).get_slice(second_slice, 0)
 	return ""
+
+
+static func get_root_script_path(file_path:String):
+	var file = UFile.get_file_access(file_path)
+	if not file:
+		return ""
+	var scripts = {}
+	
+	var in_node = false
+	while not file.eof_reached():
+		var line = file.get_line()
+		if line.begins_with("[ext_resource"):
+			var type = get_type_from_line(line)
+			if type != "Script":
+				continue
+			var id = get_id_from_line(line)
+			var path = get_path_from_line(line)
+			scripts[id] = path
+			continue
+		if not line.begins_with("[node name="):
+			if not in_node:
+				continue
+		elif in_node:
+			return ""
+		else:
+			in_node = true
+		if not line.begins_with("script = "):
+			continue
+		
+		var script_id = get_id_from_line(line)
+		return scripts.get(script_id, "")
