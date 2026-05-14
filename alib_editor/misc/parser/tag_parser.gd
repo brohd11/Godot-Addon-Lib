@@ -136,7 +136,7 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 	
 	#if not gdscript_parser:
 		#return {}
-	var code_edit_parser = gdscript_parser.code_edit_parser
+	var code_edit_parser = gdscript_parser.get_code_edit_parser()
 	
 	# pending_tags format: {"tag_name": "args string"}
 	var pending_tags = {}

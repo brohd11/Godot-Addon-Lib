@@ -1,5 +1,6 @@
 
 const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
+const UString = preload("uid://cwootkivqiwq1") #! resolve ALibRuntime.Utils.UString
 
 const _QUOTES = ["'", '"']
 
@@ -117,7 +118,8 @@ static func get_var_or_const_info(stripped_line:String, convert_preload:=true):#
 		elif is_load:
 			assignment = assignment.trim_prefix("pre")
 	
-	var implicit_type_hint = type_hint.is_empty() and stripped_line.rfind(":", _match.get_start(3)) > -1
+	var implicit_type_hint = type_hint.is_empty() and UString.rfind_index_safe(stripped_line, ":", _match.get_start(3)) > -1
+	
 	
 	##TEST
 	#if type_hint == "Signal":
@@ -221,9 +223,9 @@ static func get_func_info(stripped_text: String) -> Dictionary:
 				var type_hint = arg_match.get_string(2).strip_edges()
 				var default_val = arg_match.get_string(3).strip_edges()
 				
-				var implicit_type_hint = type_hint.is_empty() and arg_str.rfind(":", _match.get_start(3)) > -1
+				var implicit_type_hint = type_hint.is_empty() and UString.rfind_index_safe(arg_str, ":", _match.get_start(3)) > -1
+				
 				# If no type hint was provided, use the default value as the fallback
-				# (Just like you did with your variable logic!)
 				#if type_hint.is_empty():
 					#type_hint = default_val
 				#func_data[Keys.FUNC_ARGS][arg_name] = type_hint

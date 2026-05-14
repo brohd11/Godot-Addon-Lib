@@ -669,6 +669,7 @@ static func reset_dialogs(parent=null, _mouse=null):
 			return
 	for dialog:Window in dialog_nodes:
 		dialog.reparent(EditorInterface.get_file_system_dock())
+		dialog.cancel_free()
 
 static func _get_move_dialog() -> Window:
 	var dialogs = FileSystemSingleton.get_dialogs()
