@@ -12,6 +12,7 @@ static func generate_theme(file_name:String, mod_callable:Callable, save_to_res:
 		printerr("Modify callable must return 'Theme'")
 		return
 	
+	DirAccess.make_dir_recursive_absolute(save_path.get_base_dir())
 	ResourceSaver.save(new_theme, save_path)
 	
 	if not save_to_res:

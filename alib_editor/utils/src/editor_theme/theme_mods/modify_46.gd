@@ -4,11 +4,13 @@ extends "res://addons/addon_lib/brohd/alib_editor/utils/src/editor_theme/theme_m
 const FILE_NAME = "custom_theme_46"
 const SAVE_TO_RES = false
 
+# Usage: run this and it will save a new theme with these changes made to it.
+# may need to me be reset if the theme doesn't update right away.
 func _run() -> void:
 	generate_theme(FILE_NAME, _modify_theme, SAVE_TO_RES)
 
 
-static func _modify_theme():
+static func _modify_theme() -> Theme:
 	var new_theme = Theme.new()
 	var thm = EditorInterface.get_editor_theme()
 	var editor_scale = EditorInterface.get_editor_scale()

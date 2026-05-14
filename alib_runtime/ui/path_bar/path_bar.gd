@@ -168,7 +168,8 @@ func _set_theme_items() -> void:
 		var sb:StyleBoxFlat = ed_theme.get_stylebox(style_name, &"Button").duplicate() as StyleBoxFlat
 		if style_name == &"normal":
 			#sb.draw_center = false
-			sb.bg_color = sb.bg_color.darkened(0.7)
+			#sb.bg_color = sb.bg_color.darkened(0.7)
+			sb.bg_color = ed_theme.get_color(&"dark_color_1", &"Editor")
 		sb.set_border_width_all(0)
 		
 		
