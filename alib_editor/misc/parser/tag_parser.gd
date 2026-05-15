@@ -76,12 +76,20 @@ static func get_metadata_for_type(type_path:String, tag:StringName=&""):
 	var script_path = script_data[0]
 	var class_access = script_data[1]
 	var member = GDScriptParser.Utils.type_path_get_member(type_path)
+	if member == "":
+		return
+	
+	var member_path:String
+	if class_access != "":
+		member_path = GDScriptParser.Utils.type_path_add_member(class_access, member)
+	else:
+		member_path = member
 	
 	var ins = get_instance()
 	var script_meta = ins.get_script_metadata(script_path)
 	if not script_meta:
 		return
-	var data_for_class = script_meta.get(class_access)
+	var data_for_class = script_meta.get(member_path)
 	if not data_for_class:
 		return
 	
@@ -91,9 +99,10 @@ static func get_metadata_for_type(type_path:String, tag:StringName=&""):
 		var tag_data = data_for_class.get(t)
 		if not tag_data:
 			continue
-		var member_data = tag_data.get(member)
-		if member_data:
-			data[t] = member_data.duplicate()
+		data[t] = tag_data
+		#var member_data = tag_data.get(member)
+		#if member_data:
+			#data[t] = member_data.duplicate()
 	return data
 
 static func get_tag_metadata(tag:StringName, path:String=""):
@@ -169,9 +178,9 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 		if member_match:
 			if not pending_tags.is_empty():
 				var class_access_path = gdscript_parser.get_class_at_line(i)
-				var class_access_dict = metadata_cache.get_or_add(class_access_path, {})
 				var member_name = member_match.get_string("name")
-				
+				var full_member_path = GDScriptParser.Utils.type_path_add_member(class_access_path, member_name)
+				var full_member_path_dict = metadata_cache.get_or_add(full_member_path, {})
 				
 				# NOTE: You mentioned you have your own inner-class handling logic.
 				# You would apply your "member_name" path logic here. 
@@ -185,11 +194,11 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 						var parsed_data = tag_parser.parse_tag(raw_tags)
 						
 						# Ensure the tag category exists in the root cache
-						if not class_access_dict.has(tag):
-							class_access_dict[tag] = {}
-							
+						if not full_member_path_dict.has(tag):
+							full_member_path_dict[tag] = {}
+						
 						# Store the data under the member name
-						class_access_dict[tag][member_name] = parsed_data
+						full_member_path_dict[tag] = parsed_data
 					else:
 						pass
 						#push_warning("Script Metadata: No parser defined for tag: #! " + tag)
@@ -204,5 +213,9 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 			# We hit standard code, so clear any floating tags that 
 			# didn't attach to a recognized member to prevent misattribution.
 			pending_tags.clear()
-
+	
 	return metadata_cache
+
+
+static func clear_cache():
+	get_instance()._cache.clear()

@@ -41,12 +41,17 @@ func start():
 		_unit = "usec"
 		_start_time = Time.get_ticks_usec()
 
-func stop(msg:=""):
+func stop(msg:="", lap:=false):
 	if _time_scale == TimeScale.MSEC:
 		_end_time = Time.get_ticks_msec()
 	else:
 		_end_time = Time.get_ticks_usec()
 	_print(msg)
+	if lap:
+		if _time_scale == TimeScale.MSEC:
+			_start_time = Time.get_ticks_msec()
+		else:
+			_start_time = Time.get_ticks_usec()
 
 func _print(msg_overide:=""):
 	if _one_shot:
@@ -64,6 +69,10 @@ func _print(msg_overide:=""):
 		_current_time_count += 1
 		if _current_time_count >= iterations:
 			var print_string = "Average speed in "
+			if msg_overide != "":
+				print_string = "%s: " % msg_overide
+			elif _message != "":
+				print_string = "%s: " % _message
 			if callable:
 				var callable_name = callable.get_method() as String
 				print_string = "Function: '%s' average speed in: " % callable_name

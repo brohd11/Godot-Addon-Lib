@@ -37,3 +37,7 @@ const _PRINT = [
 const _PATHS = [
 	"res://addons/addon_lib/brohd/alib_runtime/utils/gdscript/parser/gdscript_parser.gd"
 ]
+
+
+static func print_enum(_enum:Dictionary, selected:int):
+	print(_enum.keys()[selected])
