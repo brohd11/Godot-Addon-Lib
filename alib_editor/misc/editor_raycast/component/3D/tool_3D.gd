@@ -1,6 +1,6 @@
 extends "res://addons/addon_lib/brohd/alib_runtime/controller/viewport_raycast/component/base/tool_base.gd"
 
-const EditorRaycast3D = ALibEditor.Singletons.EditorRaycast3D
+const EditorRaycast3D = ALibEditor.Singleton.EditorRaycast3D
 
 func _init() -> void:
 	_register_self()

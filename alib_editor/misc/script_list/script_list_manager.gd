@@ -1,6 +1,6 @@
-#! namespace ALibEditor.Singletons class ScriptListManager
+#! namespace ALibEditor.Singleton class ScriptListManager
 extends SingletonBase
-const SingletonBase = Singleton.Base
+const SingletonBase = Singletons.Base
 
 const TEXT_FILE_TYPES = ["gd", "json", "cfg", "txt", "ini", "md"]
 

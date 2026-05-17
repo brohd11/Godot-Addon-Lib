@@ -1,6 +1,7 @@
 @tool
 extends Tree
 
+const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singleton.EditorIcons
 
 var scene_info = {}
 var tree_items = {}
@@ -122,17 +123,17 @@ func build_tree():
 
 func _set_node_item_params(item:TreeItem, node:Node):
 	item.set_text(0, node.name)
-	item.set_icon(0, ALibEditor.Singletons.EditorIcons.get_class_icon(node))
+	item.set_icon(0, EditorIcons.get_class_icon(node))
 	var meta = {"path":node.scene_file_path, "object": node}
 	item.set_metadata(0, meta)
 	if node.scene_file_path != "" and FileAccess.file_exists(node.scene_file_path):
 		item.add_button(0, EditorInterface.get_editor_theme().get_icon("Load", "EditorIcons"), 0)
 	if node is Node3D:#EditorInterface.get_editor_theme().get_icon("GuiVisibilityVisible", "EditorIcons")
-		item.add_button(0, ALibEditor.Singletons.EditorIcons.get_visibility_icon(node.visible), 5)
+		item.add_button(0, EditorIcons.get_visibility_icon(node.visible), 5)
 
 func _set_resource_item_params(item:TreeItem, resource:Resource):
 	item.set_text(0, _get_resource_name(resource))
-	item.set_icon(0, ALibEditor.Singletons.EditorIcons.get_class_icon(resource))
+	item.set_icon(0, EditorIcons.get_class_icon(resource))
 	var meta = {"path":resource.resource_path, "object": resource}
 	item.set_metadata(0, meta)
 	if resource.resource_path != "" and FileAccess.file_exists(resource.resource_path):

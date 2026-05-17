@@ -1,5 +1,9 @@
 class_name EditorGlobalSignals
 
+const Dialog = ALibRuntime.Dialog
+const LineEditList = ALibRuntime.UICustom.LineEditList
+const EditorIcons = ALibEditor.Singleton.EditorIcons
+
 const SignalBus = preload("res://addons/addon_lib/brohd/alib_runtime/signal_bus/signal_bus.gd")
 
 const BUS_NAME = &"EditorGlobalSignals"
@@ -21,19 +25,19 @@ static func signal_emitv(signal_name:StringName, arg_array:Array=[]):
 
 
 static func pick_signals_dialog(signals_to_display:PackedStringArray=[], valid_signals:PackedStringArray=[]):
-	var dialog = ALibRuntime.Dialog.Handlers.General.new()
+	var dialog = Dialog.Handlers.General.new()
 	dialog.set_title("Editor Signals")
 	dialog.default_size = Vector2(500, 300)
 	
 	var right_click_handler = ClickHandlers.RightClickHandler.new()
-	dialog.add_content(right_click_handler, ALibRuntime.Dialog.Handlers.General.TargetSection.ROOT)
+	dialog.add_content(right_click_handler, Dialog.Handlers.General.TargetSection.ROOT)
 	
-	var file_list = ALibRuntime.UICustom.LineEditList.new()
+	var file_list = LineEditList.new()
 	file_list.set_background(EditorInterface.get_editor_theme().get_stylebox("panel", "ItemList"))
 	file_list.set_title("Editor Signals")
 	
 	var signals_button = Button.new()
-	signals_button.icon = ALibEditor.Singletons.EditorIcons.get_icon_white("Signal")
+	signals_button.icon = EditorIcons.get_icon_white("Signal")
 	var signal_callable = func():
 		var options = ClickHandlers.RightClickHandler.Options.new()
 		for signal_name in EditorGlobalSignals.get_signal_bus().get_signal_names():

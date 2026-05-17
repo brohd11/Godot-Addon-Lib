@@ -1,6 +1,6 @@
 class_name EditorPanelSingleton
 extends SingletonBase
-const SingletonBase = Singleton.Base
+const SingletonBase = Singletons.Base
 
 const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
 const PluginTabContainer = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_tab_container.gd")

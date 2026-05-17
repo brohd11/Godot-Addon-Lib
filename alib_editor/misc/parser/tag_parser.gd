@@ -1,10 +1,10 @@
-#! namespace ALibEditor.Singletons class TagParser
-extends Singleton.Base
+#! namespace ALibEditor.Singleton class TagParser
+extends Singletons.Base
 
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
-const EditorGDScriptParser = ALibEditor.Singletons.EditorGDScriptParser
+const EditorGDScriptParser = preload("uid://t2dewmuth0sy") #! resolve ALibEditor.Singleton.EditorGDScriptParser
 const GDScriptParser = EditorGDScriptParser.GDScriptParser
-const UString = ALibRuntime.Utils.UString
+const UString = preload("uid://cwootkivqiwq1") #! resolve ALibRuntime.Utils.UString
 
 ## Implement in extended classes
 
@@ -61,10 +61,10 @@ func _on_editor_script_changed(script):
 	pass
 
 
-static func get_tag_parser(tag:StringName):
+static func get_tag_parser(tag:StringName, print_err:=true):
 	var ins = get_instance()
 	var parser = ins.parsers.get(tag)
-	if parser == null:
+	if parser == null and print_err:
 		print("Parser not registered: ", tag)
 	return parser
 
@@ -100,9 +100,6 @@ static func get_metadata_for_type(type_path:String, tag:StringName=&""):
 		if not tag_data:
 			continue
 		data[t] = tag_data
-		#var member_data = tag_data.get(member)
-		#if member_data:
-			#data[t] = member_data.duplicate()
 	return data
 
 static func get_tag_metadata(tag:StringName, path:String=""):
@@ -110,7 +107,7 @@ static func get_tag_metadata(tag:StringName, path:String=""):
 	if path == "":
 		path = ScriptEditorRef.get_current_script().resource_path
 	var meta = ins.get_script_metadata(path)
-	print("GETTING::", path, "::", meta)
+	#print("GETTING::", path, "::", meta)
 	return meta.get(tag)
 
 func get_script_metadata(path:String):
@@ -130,7 +127,10 @@ func get_script_metadata(path:String):
 
 func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 	var metadata_cache = {}
+	if not gdscript_parser:
+		return metadata_cache
 	
+	var code_edit_parser = gdscript_parser.get_code_edit_parser()
 	# Captures "arg_location" as 'tag' and "line:Keys context:SubSpace" as 'args'
 	if not is_instance_valid(meta_regex):
 		meta_regex = RegEx.new()
@@ -143,17 +143,11 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 		member_regex = RegEx.new()
 		member_regex.compile("^\\s*(?:@[a-zA-Z0-9_]+(?:\\([^)]*\\))?\\s*)*(?:static\\s+)?(?<type>func|var|const|signal|class)\\s+(?<name>\\w+)")
 	
-	#if not gdscript_parser:
-		#return {}
-	var code_edit_parser = gdscript_parser.get_code_edit_parser()
-	
-	# pending_tags format: {"tag_name": "args string"}
+	# pending_tags format: {"tag_name": {"args": "args string", "mods": "mods string"}}
 	var pending_tags = {}
-	#var source_code_lines = source_code.split("\n")
-	
 	for i in range(code_edit_parser.code_edit.get_line_count()):
 		var line = code_edit_parser.get_line(i)
-		# 1. Check for Meta Tags
+		# Check for Meta Tags
 		var meta_match = meta_regex.search(line)
 		if meta_match:
 			var tag = meta_match.get_string("tag")
@@ -173,7 +167,7 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 				pending_tags[tag] = {"args": args, "mods": modifiers}
 			continue
 			
-		# 2. Check for Member Declarations (func, var, const, etc.)
+		# Check for Member Declarations (func, var, const, etc.)
 		var member_match = member_regex.search(line)
 		if member_match:
 			if not pending_tags.is_empty():
@@ -181,10 +175,6 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 				var member_name = member_match.get_string("name")
 				var full_member_path = GDScriptParser.Utils.type_path_add_member(class_access_path, member_name)
 				var full_member_path_dict = metadata_cache.get_or_add(full_member_path, {})
-				
-				# NOTE: You mentioned you have your own inner-class handling logic.
-				# You would apply your "member_name" path logic here. 
-				# e.g., if inside an inner class: member_name = "InnerClass." + member_name
 				
 				# Process each collected tag
 				for tag in pending_tags.keys():
@@ -207,7 +197,7 @@ func parse_script_metadata(gdscript_parser: GDScriptParser) -> Dictionary:
 				pending_tags.clear()
 			continue
 			
-		# 3. Code/Comment Reset Rule
+		# Code/Comment Reset Rule
 		var stripped = line.strip_edges()
 		if not stripped.begins_with("#") and not stripped.is_empty():
 			# We hit standard code, so clear any floating tags that 

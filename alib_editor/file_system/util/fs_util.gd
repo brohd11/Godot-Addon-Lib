@@ -2,7 +2,7 @@
 const RightClickHandler = preload("uid://mmtkf4h8er3m") #! resolve ClickHandlers.RightClickHandler
 const Options = RightClickHandler.Options
 
-const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singletons.EditorIcons
+const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singleton.EditorIcons
 
 const Dialog = preload("uid://bccd38qwc47vu") #! resolve ALibRuntime.Dialog
 const LineSubmit = Dialog.Handlers.LineSubmit

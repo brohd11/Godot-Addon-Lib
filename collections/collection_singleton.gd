@@ -1,5 +1,5 @@
 
-extends Singleton.Base
+extends Singletons.Base
 
 const Form = preload("res://addons/addon_lib/brohd/alib_runtime/dialog/form/form.gd")
 

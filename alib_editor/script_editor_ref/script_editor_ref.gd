@@ -1,6 +1,6 @@
 class_name ScriptEditorRef
 extends SingletonBase
-const SingletonBase = Singleton.Base
+const SingletonBase = Singletons.Base
 ## Singleton for accessing script editor nodes and signals. Manages the signals for the current script editor.
 
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/script_editor_ref/script_editor_ref.gd")

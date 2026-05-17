@@ -1,5 +1,5 @@
 #! namespace ALibRuntime.Settings class SettingHelperSingleton
-extends Singleton.Base
+extends Singletons.Base
 
 const SettingHelperJson = preload("uid://byo18jbf0wwbt") # setting_helper_json.gd
 

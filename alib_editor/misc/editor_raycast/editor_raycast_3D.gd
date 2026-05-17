@@ -1,5 +1,5 @@
-#! namespace ALibEditor.Singletons class EditorRaycast3D
-extends Singleton.Base
+#! namespace ALibEditor.Singleton class EditorRaycast3D
+extends Singletons.Base
 
 const Intercept3D = preload("res://addons/addon_lib/brohd/alib_editor/misc/editor_raycast/component/3D/intercept_3D.gd")
 const ToolBase = preload("res://addons/addon_lib/brohd/alib_runtime/controller/viewport_raycast/component/base/tool_base.gd")

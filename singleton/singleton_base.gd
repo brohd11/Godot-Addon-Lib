@@ -1,4 +1,4 @@
-#! namespace Singleton.Base
+#! namespace Singletons.Base
 #class_name SingletonBase
 extends Node
 

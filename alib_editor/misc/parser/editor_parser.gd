@@ -1,6 +1,6 @@
-#! namespace ALibEditor.Singletons class EditorGDScriptParser
+#! namespace ALibEditor.Singleton class EditorGDScriptParser
 extends SingletonRefCount
-const SingletonRefCount = Singleton.RefCount
+const SingletonRefCount = Singletons.RefCount
 
 const GDScriptParser = ALibRuntime.Utils.UGDScript.Parser
 

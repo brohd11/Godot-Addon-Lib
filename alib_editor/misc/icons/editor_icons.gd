@@ -1,6 +1,6 @@
-#! namespace ALibEditor.Singletons class EditorIcons
+#! namespace ALibEditor.Singleton class EditorIcons
 extends SingletonBase
-const SingletonBase = Singleton.Base
+const SingletonBase = Singletons.Base
 
 ## Implement in extended classes
 

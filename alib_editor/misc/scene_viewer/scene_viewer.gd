@@ -3,12 +3,14 @@ extends VBoxContainer
 #! import_p Keys,
 
 const PluginButton = ALibEditor.UIHelpers.Buttons.PluginButton
+const EditorIcons = ALibEditor.Singleton.EditorIcons
+const SettingHelperJson = ALibRuntime.Settings.SettingHelperJson
 
 const MeshManager = preload("res://addons/addon_lib/brohd/alib_editor/misc/scene_viewer/components/mesh_manager.gd")
 const NodeTree = preload("res://addons/addon_lib/brohd/alib_editor/misc/scene_viewer/components/node_tree.gd")
 const ControllerFreeView = preload("res://addons/addon_lib/brohd/alib_runtime/controller/mouse_camera/free_view.gd")
 
-const SettingHelperJson = ALibRuntime.Settings.SettingHelperJson
+
 
 const LONGEST_SLIDER_LAB = "Camera Rotate Sens"
 
@@ -110,10 +112,10 @@ func _on_options_button_clicked():
 	var options = ALibRuntime.Popups.Options.new()
 	
 	options.add_option("Toggle SceneTree", _on_node_tree_button_pressed, ["FileTree"])
-	var col_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("CollisionShape3D")
+	var col_icon = EditorIcons.get_icon_white("CollisionShape3D")
 	options.add_option("Toggle Collision", _on_toggle_collision, [col_icon])
 	options.add_option("Toggle Camera Controls", func():camera_panel.visible = not camera_panel.visible, ["Camera"])
-	var light_icon = ALibEditor.Singletons.EditorIcons.get_icon_white("DirectionalLight3D")
+	var light_icon = EditorIcons.get_icon_white("DirectionalLight3D")
 	options.add_option("Toggle Light Controls", func():light_panel.visible = not light_panel.visible, [light_icon])
 	options.add_option("Clear Scenes", _on_clear_pressed, ["Clear"])
 	
@@ -136,7 +138,7 @@ func _on_toggle_collision():
 func _list_loaded_scenes():
 	var options = ALibRuntime.Popups.Options.new()
 	
-	var show_icon = ALibEditor.Singletons.EditorIcons.get_visibility_icon(not mesh_manager.show_only_active)
+	var show_icon = EditorIcons.get_visibility_icon(not mesh_manager.show_only_active)
 	var show_text = "Show only active scene"
 	if mesh_manager.show_only_active:
 		show_text = "Show all scenes"
@@ -150,7 +152,7 @@ func _list_loaded_scenes():
 	else:
 		for path in loaded_scenes:
 			var ins = mesh_manager.get_scene_instance(path)
-			var root_icon = ALibEditor.Singletons.EditorIcons.get_class_icon(ins)
+			var root_icon = EditorIcons.get_class_icon(ins)
 			options.add_option(path.get_file(), mesh_manager.show_scene.bind(path), [root_icon])
 	
 	right_click_handler.display_on_control(options, list_scene_button)

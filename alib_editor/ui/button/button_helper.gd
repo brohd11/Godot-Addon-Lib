@@ -1,5 +1,6 @@
 #! namespace ALibEditor.UIHelpers class Buttons
 
+const EditorIcons = ALibEditor.Singleton.EditorIcons
 
 static func new_button(icon="", callable=null, _name="", icon_color:=Color.TRANSPARENT, tooltip:=""):
 	var button = Button.new()
@@ -12,7 +13,7 @@ static func new_button(icon="", callable=null, _name="", icon_color:=Color.TRANS
 	elif icon != "":
 		var icon_texture
 		if icon_color:
-			icon_texture = ALibEditor.Singletons.EditorIcons.get_icon(icon)
+			icon_texture = EditorIcons.get_icon(icon)
 		else:
 			icon_texture = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
 		button.icon = icon_texture
@@ -47,7 +48,7 @@ class PluginButton:
 		elif icon != "":
 			var icon_texture
 			if icon_color:
-				icon_texture = ALibEditor.Singletons.EditorIcons.get_icon(icon)
+				icon_texture = EditorIcons.get_icon(icon)
 			else:
 				icon_texture = EditorInterface.get_editor_theme().get_icon(icon, "EditorIcons")
 			button.icon = icon_texture
