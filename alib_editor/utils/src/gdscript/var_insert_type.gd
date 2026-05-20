@@ -3,8 +3,9 @@ const GDScriptParser = preload("res://addons/addon_lib/brohd/alib_runtime/utils/
 const UString = GDScriptParser.UString
 const GDScriptParse = UString.GDScriptParse
 const Keywords = GDScriptParse.Keywords
-const TagParser = ALibEditor.Singleton.TagParser
-const EditorGDScriptParser = ALibEditor.Singleton.EditorGDScriptParser
+
+const TagParser = preload("uid://gmbyxd0dnujb") #! resolve ALibEditor.Singleton.TagParser
+const EditorGDScriptParser = preload("uid://t2dewmuth0sy") #! resolve ALibEditor.Singleton.EditorGDScriptParser
 
 const UObject = preload("uid://b6w3produe5fn") #! resolve ALibRuntime.Utils.UObject
 

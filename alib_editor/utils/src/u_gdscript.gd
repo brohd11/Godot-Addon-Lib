@@ -1,7 +1,10 @@
 #! namespace ALibEditor.Utils class UGDScript
 
-const UString = ALibRuntime.Utils.UString
-const UClassDetail = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/u_class_detail.gd")
+const UString = preload("uid://cwootkivqiwq1") #! resolve ALibRuntime.Utils.UString
+const UClassDetail = preload("uid://dpmubecadgfk8") #! resolve ALibRuntime.Utils.UGDScript.UClassDetail
+
+
+const VarInsertType = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/gdscript/var_insert_type.gd")
 
 enum ContextType {
 	
