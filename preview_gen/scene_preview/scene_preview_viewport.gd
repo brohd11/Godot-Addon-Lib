@@ -1,6 +1,8 @@
 @tool
 extends Node
 
+const UNode = preload("uid://dsywt12xnn7oh") #! resolve ALibRuntime.Utils.UNode
+
 var viewport:SubViewport
 
 var tools:Node3D
@@ -35,7 +37,7 @@ func instance_scene(scene_path:String):
 		is_decal = true
 		return true
 	
-	var all_nodes = ALibRuntime.Utils.UNode.recursive_get_nodes(scene_instance)
+	var all_nodes = UNode.recursive_get_nodes(scene_instance)
 	mesh_nodes = []
 	for node in all_nodes:
 		if node is MeshInstance3D:

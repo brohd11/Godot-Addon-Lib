@@ -1,10 +1,10 @@
 
-const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
-const FSUtil = FSClasses.FSUtil
+#const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
+#const FSUtil = preload("uid://c7yf322tn6f0b") #! resolve FSClasses.FSUtil
 
-const UFile = FSUtil.UFile
-const UResource = FSUtil.UResource
-const UGDScript = FSUtil.UGDScript
+const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
+const UResource = preload("uid://72uu8yngsoht") #! resolve ALibRuntime.Utils.UResource
+const UGDScript = preload("uid://bqwb564jwff43") #! resolve ALibRuntime.Utils.UGDScript
 const UPackedScene = UResource.UPackedScene
 const ImageSize = UResource.ImageSize
 const Audio = UResource.Audio
@@ -33,7 +33,7 @@ static func get_custom_tooltip(path: String) -> Object:
 		# get other metadata? files
 		return container
 	
-	if not FSUtil.is_path_valid_res(path):
+	if not FileSystemSingleton.is_path_valid_res(path):
 		label.text = _get_non_res_details(path)
 		return container
 	

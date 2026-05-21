@@ -1,3 +1,4 @@
+const UVersion = preload("uid://b4f7kxqukmbj2") #! resolve ALibRuntime.Utils.UVersion
 
 static func add_to_favorites():
 	var minor = _get_minor_version()
@@ -36,4 +37,4 @@ static func reimport():
 
 
 static func _get_minor_version():
-	return ALibRuntime.Utils.UVersion.get_minor_version()
+	return UVersion.get_minor_version()

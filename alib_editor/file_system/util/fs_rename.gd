@@ -1,8 +1,6 @@
 
-const FSClasses = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_classes.gd")
-const FSUtil = FSClasses.FSUtil
-const FileSystem = FSUtil.FileSystem
-const UVersion = FSUtil.UVersion
+const FileSystem = preload("uid://dagr353kjvdrc") #! resolve FileSystemSingleton.FileSystem
+const UVersion = preload("uid://b4f7kxqukmbj2") #! resolve FileSystemSingleton.UVersion
 
 
 static func is_new_name_valid(original_file_name:String, new_file_name:String) -> bool:

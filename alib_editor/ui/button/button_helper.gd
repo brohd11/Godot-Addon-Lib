@@ -1,6 +1,6 @@
 #! namespace ALibEditor.UIHelpers class Buttons
 
-const EditorIcons = ALibEditor.Singleton.EditorIcons
+const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singleton.EditorIcons
 
 static func new_button(icon="", callable=null, _name="", icon_color:=Color.TRANSPARENT, tooltip:=""):
 	var button = Button.new()

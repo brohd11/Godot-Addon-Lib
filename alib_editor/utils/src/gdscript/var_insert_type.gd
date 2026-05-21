@@ -34,7 +34,7 @@ static func format_script(parser:GDScriptParser, script_editor:CodeEdit):
 	for _i in range(script_editor.get_line_count()):
 		if i >= script_editor.get_line_count():
 			break
-		print(i)
+		
 		var text = script_editor.get_line(i)
 		var stripped_text = text.strip_edges()
 		if GDScriptParse.get_line_declaration(stripped_text).is_empty() and not stripped_text.begins_with("for "):
@@ -201,13 +201,11 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 		var type_array = type_data.get("result")
 		var assignment = type_array[2]
 		var tag_parser = TagParser.get_tag_parser("keys")
-		if not tag_parser:
-			printerr("CAN NOT GET TAG PARSER")
 		if tag_parser:
 			var adjusted_string = tag_parser.resolve_tagged_expression(assignment, line - 1)
 			if adjusted_string:
 				inferred_type = parser.resolve_expression_to_type(adjusted_string, line - 1)
-				print("ADJ STRING::TYPE", "::", adjusted_string, " -> ", inferred_type)
+				#print("ADJ STRING::TYPE", "::", adjusted_string, " -> ", inferred_type)
 	
 	#print("HERE::",inferred_type)
 	
@@ -240,9 +238,10 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 			var access_object:GDScriptParser.CaretContext.AccessObject = parser.resolve_to_access_object(expression)
 			var access_options:GDScriptParser.Access.AccessOptions = parser.get_access().find_path_to_type_simple(class_obj, access_object, inferred_type)
 			
-			print(access_options.standard)
-			print(access_options.script_alias)
-			print(access_options.global)
+			#print(access_options.standard)
+			#print(access_options.script_alias)
+			#print(access_options.global)
+			
 			if access_options.standard != "":
 				inferred_type = access_options.standard
 			elif access_options.script_alias != "":

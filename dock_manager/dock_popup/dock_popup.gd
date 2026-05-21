@@ -1,6 +1,8 @@
 @tool
 extends PopupPanel
 
+const ThemeColor = preload("uid://dsukbd2hmebmw") #! resolve ALibEditor.Utils.UEditorTheme.ThemeColor
+
 const CANCEL_STRING = "CANCEL_STRING"
 
 @onready var panels_h_box: HBoxContainer = %PanelsHBox
@@ -80,7 +82,7 @@ func allow_reload():
 func show_always_on_top(current_setting:=false):
 	size.y = size.y + always_on_top_button.size.y
 	if current_setting:
-		var accent = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.ACCENT)
+		var accent = ThemeColor.get_theme_color(ThemeColor.Type.ACCENT)
 		always_on_top_button.add_theme_color_override("icon_normal_color", accent)
 	always_on_top_button.show()
 

@@ -33,6 +33,7 @@ const ColumnDragger = preload("res://addons/addon_lib/brohd/alib_runtime/ui/colu
 const CacheHelper = preload("res://addons/addon_lib/brohd/alib_runtime/cache_helper/cache_helper.gd")
 
 
+#^ THESE ARE MOVED TO SINGLETON
 static func is_path_valid_res(path:String) -> bool:
 	if not path.begins_with("res://"):
 		return false
@@ -56,3 +57,5 @@ static func paths_have_same_root(path:String, path_2:String):
 		if path_2.begins_with("/"):
 			return true
 		return false
+
+#^ THESE ARE MOVED TO SINGLETON

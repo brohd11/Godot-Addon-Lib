@@ -1,8 +1,8 @@
 class_name EditorGlobalSignals
 
-const Dialog = ALibRuntime.Dialog
-const LineEditList = ALibRuntime.UICustom.LineEditList
-const EditorIcons = ALibEditor.Singleton.EditorIcons
+const Dialog = preload("uid://bccd38qwc47vu") #! resolve ALibRuntime.Dialog
+const LineEditList = preload("uid://bipuqam2kunfj") #! resolve ALibRuntime.UICustom.LineEditList
+const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singleton.EditorIcons
 
 const SignalBus = preload("res://addons/addon_lib/brohd/alib_runtime/signal_bus/signal_bus.gd")
 

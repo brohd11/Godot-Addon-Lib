@@ -4,9 +4,10 @@ extends Node
 
 #! import_p PopupHelper,
 
+const UWindow = preload("uid://q2lbynew21er") #! resolve ALibRuntime.Utils.UWindow
 const PopupHelper = preload("res://addons/addon_lib/brohd/alib_runtime/popup_menu/popup_menu_path_helper.gd")
 const MouseHelper = PopupHelper.MouseHelper
-const Options = ALibRuntime.Popups.Options
+const Options = preload("uid://c61qxuau2v0pb") #! resolve ALibRuntime.Popups.Options
 const Params = PopupHelper.ParamKeys
 
 var popup:PopupMenu
@@ -160,5 +161,5 @@ static func get_centered_control_position(control:Control):
 	return get_window_offset_position(control, button_pos)
 
 static func get_window_offset_position(control:Control, position:Vector2i):
-	var window_pos = ALibRuntime.Utils.UWindow.get_window_global_position(control.get_window(), false)
+	var window_pos = UWindow.get_window_global_position(control.get_window(), false)
 	return window_pos + position

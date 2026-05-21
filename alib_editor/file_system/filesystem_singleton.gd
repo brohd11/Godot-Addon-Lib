@@ -908,6 +908,32 @@ static func get_drag_preview(paths:Array):
 	
 	return container
 
+
+static func is_path_valid_res(path:String) -> bool:
+	if not path.begins_with("res://"):
+		return false
+	return is_path_valid(path)
+
+static func is_root_folder(path:String):
+	if path.ends_with("://") or path == "/":
+		return true
+	return false
+
+static func paths_have_same_root(path:String, path_2:String):
+	if path.begins_with("res://"):
+		if path_2.begins_with("res://"):
+			return true
+		return false
+	elif path.begins_with("user://"):
+		if path_2.begins_with("user://"):
+			return true
+		return false
+	elif path.begins_with("/"):
+		if path_2.begins_with("/"):
+			return true
+		return false
+
+
 func _all_unregistered_callback():
 	var move_dialog = _get_move_dialog()
 	if move_dialog.about_to_popup.is_connected(_move_dialog_create_file_list):

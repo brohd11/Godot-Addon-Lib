@@ -2,6 +2,8 @@
 extends SingletonBase
 const SingletonBase = Singletons.Base
 
+const UTexture = preload("uid://ddu76iygjkxih") #! resolve ALibRuntime.Utils.UTexture
+
 ## Implement in extended classes
 
  #Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
@@ -65,7 +67,7 @@ func _get_icon(icon_name:String, color=null, brightness:=0.8, overwrite:=false):
 	if color == null:
 		return icon
 	color *= brightness
-	var texture = ALibRuntime.Utils.UTexture.get_modulated_icon(icon, color)
+	var texture = UTexture.get_modulated_icon(icon, color)
 	color_dict[brightness] = texture
 	return texture
 

@@ -1,8 +1,9 @@
-
 #! namespace ALibEditor.Nodes class Docks
 
+const UVersion = preload("uid://b4f7kxqukmbj2") #! resolve ALibRuntime.Utils.UVersion
+
 static func get_current_dock(control):
-	var version = ALibRuntime.Utils.UVersion.get_minor_version()
+	var version = UVersion.get_minor_version()
 	if version < 6:
 		return _get_current_dock_44(control)
 	elif version == 6:
@@ -60,7 +61,7 @@ static func _get_current_dock_46(control):
 
 
 static func get_current_dock_control(control):
-	var version = ALibRuntime.Utils.UVersion.get_minor_version()
+	var version = UVersion.get_minor_version()
 	if version < 6:
 		return _get_current_dock_control_44(control)
 	elif version == 6:

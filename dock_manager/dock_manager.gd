@@ -5,8 +5,13 @@ extends Node
 #! import_p Keys,
 #! import_show_global DockManager,
 
-const UFile = ALibRuntime.Utils.UFile
-const UName = ALibRuntime.Utils.UName
+const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
+const UName = preload("uid://e2t8o184os5r") #! resolve ALibRuntime.Utils.UName
+const UVersion = preload("uid://b4f7kxqukmbj2") #! resolve ALibRuntime.Utils.UVersion
+const UWindow = preload("uid://q2lbynew21er") #! resolve ALibRuntime.Utils.UWindow
+const UResource = preload("uid://72uu8yngsoht") #! resolve ALibRuntime.Utils.UResource
+const ThemeColor = preload("uid://dsukbd2hmebmw") #! resolve ALibEditor.Utils.UEditorTheme.ThemeColor
+
 const DockPopupHandler = preload("res://addons/addon_lib/brohd/dock_manager/dock_popup/dock_popup_handler.gd")
 const Docks = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/docks.gd")
 const BottomPanel = preload("res://addons/addon_lib/brohd/alib_editor/utils/src/editor_nodes/bottom_panel.gd")
@@ -126,7 +131,7 @@ static func get_layout_file_dir(_plugin:EditorPlugin):
 
 func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, 
 	_main_screen_handler=null, _add_to_tree:=true) -> void:
-	_engine_minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
+	_engine_minor_version = UVersion.get_minor_version()
 	plugin = _plugin
 	plugin.add_child(self)
 	if _control is Control:
@@ -343,7 +348,7 @@ func save_layout_data():
 	if is_instance_valid(window):
 		scene_data[Keys.CURRENT_SCREEN] = window.current_screen
 		scene_data[Keys.WINDOW_SIZE] = var_to_str(window.size)
-		scene_data[Keys.WINDOW_POSITION] = var_to_str(ALibRuntime.Utils.UWindow.get_window_global_position(window, false))
+		scene_data[Keys.WINDOW_POSITION] = var_to_str(UWindow.get_window_global_position(window, false))
 	
 	#var is_tab = current_dock >= 0
 	#if _engine_minor_version >= 6:
@@ -633,7 +638,7 @@ func get_docked_name():
 	return _name
 
 static func get_scene_or_script(control):
-	return ALibRuntime.Utils.UResource.get_object_file_path(control)
+	return UResource.get_object_file_path(control)
 
 static func _plugin_has_main_screen(_plugin:EditorPlugin):
 	return _plugin.has_method("_has_main_screen")
@@ -650,12 +655,12 @@ class PanelWrapper extends PanelContainer:
 		if _empty_pan:
 			panel_sb = StyleBoxEmpty.new()
 		else:
-			var minor = ALibRuntime.Utils.UVersion.get_minor_version()
+			var minor = UVersion.get_minor_version()
 			if minor < 6:
 				panel_sb = get_theme_stylebox("panel").duplicate()
 			elif minor == 6:
 				panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
-				panel_sb.bg_color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BASE)
+				panel_sb.bg_color = ThemeColor.get_theme_color(ThemeColor.Type.BASE)
 			
 			panel_sb.content_margin_left = 4 * EditorInterface.get_editor_scale()
 			panel_sb.content_margin_right = 4 * EditorInterface.get_editor_scale()
