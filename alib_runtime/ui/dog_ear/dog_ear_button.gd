@@ -73,7 +73,7 @@ func _draw():
 	draw_colored_polygon(points, draw_color) # Semi-transparent
 
 # THE MAGIC SAUCE
-func _has_point(point):
+func _has_point(point) -> bool:
 	# This logic defines the clickable area.
 	# If this returns false, the mouse event passes through to the control below.
 	
@@ -92,6 +92,7 @@ func _has_point(point):
 		return x <= y
 	elif _button_position == Position.BOTTOM_RIGHT:
 		return x + y >= _triangle_size
+	return false
 
 func _gui_input(event):
 	mouse_filter = Control.MOUSE_FILTER_PASS

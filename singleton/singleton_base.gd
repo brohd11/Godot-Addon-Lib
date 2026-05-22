@@ -29,7 +29,7 @@ static func _instance_valid(script:Script) -> bool:
 		return true
 	return false
 
-static func _get_instance(script:Script) -> Node:
+static func _get_instance(script:Script):
 	var root = Engine.get_main_loop().root
 	return _get_singleton_node_or_null(script, script._get_singleton_node_path())
 
