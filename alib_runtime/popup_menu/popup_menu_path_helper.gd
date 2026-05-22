@@ -133,6 +133,7 @@ static func _parse_popup_menu_path(params:PopupMenuPathParams, current_id, extra
 			var sep_string = ParamKeys.get_seperator(slice)
 			if sep_string != null:
 				parent_popup.add_separator(sep_string)
+				parent_popup.set_item_metadata(parent_popup.item_count - 1, {ParamKeys.METADATA: user_metadata})
 				break
 			
 			_create_popup_item(parent_popup, params, slice, tool_tip, icon, icon_color, current_id)
@@ -230,11 +231,13 @@ class ParamKeys:
 	const RADIO = &"RADIO"
 	const RADIO_IS_CHECKED = &"RADIO_IS_CHECKED"
 	const ID = &"ID"
+	const PRIORITY = "PRIORITY"
+	const DEFAULT_PRIORITY = 1000
 	
 	const SEPARATOR_STRING = "#sep"
 	const _SEP_DELIM = "-&|-"
 	
-	static func add_separator(dict:Dictionary, label:="", path:=""):
+	static func add_separator(dict:Dictionary, label:="", path:="", priority:int=DEFAULT_PRIORITY):
 		var string = SEPARATOR_STRING + _SEP_DELIM + label
 		if path != "":
 			string = path.path_join(string)
@@ -242,7 +245,7 @@ class ParamKeys:
 		while dict.has(string):
 			string = SEPARATOR_STRING + str(count) + _SEP_DELIM + label
 			count += 1
-		dict[string] = {}
+		dict[string] = {METADATA: {PRIORITY: priority}}
 		return string
 	
 	static func get_seperator(text:String):

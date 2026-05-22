@@ -17,9 +17,9 @@ static func tets_scrip() -> void:
 
 
 static func infer_single_line(parser:GDScriptParser, script_editor:CodeEdit, idx:int):
-	var code_edit_parser = parser.get_code_edit_parser()
+	var code_edit_parser:GDScriptParser.CodeEditParser = parser.get_code_edit_parser()
 	var untyped_line_data:Dictionary = {}
-	var line_type_data = check_type_in_line(code_edit_parser, idx)
+	var line_type_data:Dictionary = check_type_in_line(code_edit_parser, idx)
 	if not line_type_data:
 		return 
 	untyped_line_data[idx] = line_type_data
@@ -101,8 +101,6 @@ static func _insert_types(parser:GDScriptParser, script_editor:CodeEdit, untyped
 	var action_started:bool = false
 	
 	var line_idxes:Array = untyped_line_data.keys()
-	
-	
 	for i:int in line_idxes:
 		var data:Dictionary = untyped_line_data[i]
 		var context_data:Dictionary = data.get("context")
@@ -113,8 +111,8 @@ static func _insert_types(parser:GDScriptParser, script_editor:CodeEdit, untyped
 		var end_idx:int = context_data.get(GDScriptParser.Keys.CONTEXT_END)
 		var multiline:bool = start_idx != end_idx
 		
-		var target_line_idx = -1
-		var target_line_new_text = ""
+		var target_line_idx:int = -1
+		var target_line_new_text:String = ""
 		
 		if dec == Keywords.VAR or dec == Keywords.STATIC_VAR or dec == Keywords.FOR:
 			var nm:String = member_info[0]
@@ -189,40 +187,37 @@ static func _insert_types(parser:GDScriptParser, script_editor:CodeEdit, untyped
 	script_editor.update_code_completion_options.call_deferred(false)
 
 
-static func get_type_access_path(parser:GDScriptParser, expression:String, line:int): # preserve comments
+static func get_type_access_path(parser:GDScriptParser, expression:String, line:int) -> String: # preserve comments
 	var type_rich:Dictionary = parser.resolve_expression_to_type_rich(expression, line)
 	var inferred_type:String = type_rich.type
-	#print("HERE::",inferred_type)
+	print("HERE::",expression, "->", inferred_type)
 	
 	# these ones operate on the member line dec itself, not the next up
 	var type_data:Dictionary = parser.get_code_edit_parser().get_type_from_line(line - 1)
 	#print(type_data)
 	if type_data and type_data.get(GDScriptParser.Keys.TYPE) == "var":
-		var type_array = type_data.get("result")
-		var assignment = type_array[2]
+		var type_array:Array = type_data.get("result")
+		var assignment:String = type_array[2]
 		var tag_parser = TagParser.get_tag_parser("keys")
 		if tag_parser:
-			var adjusted_string = tag_parser.resolve_tagged_expression(assignment, line - 1)
+			var adjusted_string:String = tag_parser.resolve_tagged_expression(assignment, line - 1)
 			if adjusted_string:
 				inferred_type = parser.resolve_expression_to_type(adjusted_string, line - 1)
 				#print("ADJ STRING::TYPE", "::", adjusted_string, " -> ", inferred_type)
 	
-	#print("HERE::",inferred_type)
-	
-	
+	print("HERE::",inferred_type)
 	if inferred_type == "":
 		return ""
 	
 	inferred_type = inferred_type.trim_suffix(GDScriptParser.Keys.INS_DELIM)
-	
 	if not GDScriptParse.is_absolute_path(inferred_type):
 		if inferred_type.ends_with(GDScriptParser.Keys.ENUM_PATH_SUFFIX): # these are handled
 			return inferred_type.trim_suffix(GDScriptParser.Keys.ENUM_PATH_SUFFIX)
 		
-		var member_name = GDScriptParser.Utils.type_path_get_member(inferred_type)
+		var member_name:String = GDScriptParser.Utils.type_path_get_member(inferred_type)
 		if member_name == "":
 			return inferred_type
-		var non_member = GDScriptParser.Utils.type_path_get_non_member(inferred_type)
+		var non_member:String = GDScriptParser.Utils.type_path_get_non_member(inferred_type)
 		if non_member != "":
 			var current_script = ScriptEditorRef.get_current_script()
 			if ClassDB.is_parent_class(non_member, current_script.get_instance_base_type()):
@@ -232,10 +227,11 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 		var current_class:String = parser.get_class_at_line(line)
 		var class_obj:GDScriptParser.ParserClass = parser.get_class_object(current_class) as GDScriptParser.ParserClass
 		var preload_check:Variant = class_obj.has_preload(inferred_type)
+		var access_string:String = ""
 		if preload_check != null:
-			inferred_type = preload_check
+			access_string = preload_check
 		else:
-			var access_object:GDScriptParser.CaretContext.AccessObject = parser.resolve_to_access_object(expression)
+			var access_object:GDScriptParser.TypeLookup.AccessObject = parser.resolve_to_access_object(expression, line)
 			var access_options:GDScriptParser.Access.AccessOptions = parser.get_access().find_path_to_type_simple(class_obj, access_object, inferred_type)
 			
 			#print(access_options.standard)
@@ -243,14 +239,19 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 			#print(access_options.global)
 			
 			if access_options.standard != "":
-				inferred_type = access_options.standard
+				access_string = access_options.standard
 			elif access_options.script_alias != "":
-				inferred_type = access_options.script_alias
+				access_string = access_options.script_alias
 			elif access_options.global != "":
-				inferred_type = access_options.global
+				access_string = access_options.global
 			else:
 				return ""
-		return inferred_type
+			
+			var access_check:String = parser.resolve_expression_to_type(access_string, line)
+			if access_check != inferred_type:
+				return ""
+			
+		return access_string
 	
 	
 	return ""

@@ -10,7 +10,7 @@ class ItemParams extends PopupHelper.ParamKeys:
 		TOP,
 		BOTTOM
 	}
-	const PRIORITY = "PRIORITY"
+	
 
 class WrapperParams:
 	var fs_popup_callable = null
@@ -147,9 +147,15 @@ static func _scan_popup_for_custom_items(popup_to_copy:PopupMenu, top_popup:Popu
 		if is_sep:
 			if not is_custom:
 				continue
+			var metadata = popup_to_copy.get_item_metadata(i)
+			if metadata is Dictionary:
+				metadata = metadata.get(ItemParams.METADATA, {})
+			else:
+				metadata = {}
+			
 			var sep_path = ItemParams.add_separator(custom_item_data[target_popup], text, parent_data.get("popup_path",""))
 			custom_item_data[target_popup][sep_path][ItemParams.ID] = id
-			custom_item_data[target_popup][sep_path][ItemParams.METADATA] = {}
+			custom_item_data[target_popup][sep_path][ItemParams.METADATA] = metadata
 			continue
 		
 		
@@ -401,7 +407,7 @@ static func sort_custom_context_items(all_custom_items:Dictionary):#, pre_dict, 
 			var item_data = popup_data.get(item_path)
 			var meta = item_data.get(ItemParams.METADATA)
 			if meta is Dictionary:
-				var priority = meta.get(ItemParams.PRIORITY, 1000)
+				var priority = meta.get(ItemParams.PRIORITY, ItemParams.DEFAULT_PRIORITY)
 				var position = meta.get(ItemParams.POSITION, ItemParams.Position.TOP)
 				if position == ItemParams.Position.TOP:
 					pre_priority_dict[item_path] = priority

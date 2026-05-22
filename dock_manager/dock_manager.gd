@@ -723,18 +723,18 @@ class InstanceManager:
 		return _new_dock_manager(scene, slot, true, _add_to_tree)
 	
 	func _new_dock_manager(scene, slot:Slot, _can_be_freed:=false, _add_to_tree:=true):
-		var scene_path = DockManager.get_scene_or_script(scene)
+		var scene_path:String = DockManager.get_scene_or_script(scene)
 		
 		if _single_instance:
 			for ins in instances:
 				if not is_instance_valid(ins):
 					continue
-				var ins_path = DockManager.get_scene_or_script(ins.plugin_control)
+				var ins_path:String = DockManager.get_scene_or_script(ins.plugin_control)
 				if ins_path == scene_path:
 					print("Scene already instanced: ", scene_path)
 					return
 		
-		var ins = DockManager.new(_plugin,scene, slot, _msh, false)
+		var ins:DockManager = DockManager.new(_plugin,scene, slot, _msh, false)
 		ins.can_be_freed = _can_be_freed
 		var id = _get_dock_data(scene, _can_be_freed)
 		if id > -1:
@@ -747,18 +747,18 @@ class InstanceManager:
 		return ins
 	
 	func get_current_dock_ids():
-		var _ids = []
+		var _ids:Array = []
 		for i in instances:
 			if is_instance_valid(i):
 				_ids.append(i.dock_id)
 		return _ids
 	
 	func _get_dock_data(scene, _can_be_freed:bool):
-		var target_type = Keys.FREEABLE if _can_be_freed else Keys.PERSISTENT
-		var layout_data = DockManager.get_plugin_layout_data(_plugin)
-		var docks = layout_data.get(Keys.DOCKS, {})
-		var current_ids = get_current_dock_ids()
-		var scene_path = ""
+		var target_type:String = Keys.FREEABLE if _can_be_freed else Keys.PERSISTENT
+		var layout_data:Dictionary = DockManager.get_plugin_layout_data(_plugin)
+		var docks:Dictionary = layout_data.get(Keys.DOCKS, {})
+		var current_ids:Array = get_current_dock_ids()
+		var scene_path:String = ""
 		if scene is PackedScene:
 			scene_path = scene.resource_path
 		elif scene is Control:
