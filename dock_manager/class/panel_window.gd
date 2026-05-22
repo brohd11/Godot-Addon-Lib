@@ -28,7 +28,7 @@ func _init(control, empty_panel:=false, window_size:=Vector2i(1200, 800), window
 	var minor = UVersion.get_minor_version()
 	if minor < 6:
 		panel_sb = panel.get_theme_stylebox("panel").duplicate() # as StyleBoxFlat
-	elif minor == 6:
+	else: #elif version <= 7: # Deal with when there is an issue in new version
 		panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
 		panel_sb.content_margin_top += 2 * EditorInterface.get_editor_scale()
 		panel_sb.content_margin_bottom += 2 * EditorInterface.get_editor_scale()

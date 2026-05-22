@@ -8,5 +8,5 @@ static func get_line_edit(tree:Tree):
 	var version = UVersion.get_minor_version()
 	if version < 6:
 		return tree.get_child(1, true).get_child(0, true).get_child(0, true)
-	elif version == 6:
+	else: #elif version <= 7: # Deal with when there is an issue in new version
 		return tree.get_child(0, true).get_child(0, true).get_child(0, true)

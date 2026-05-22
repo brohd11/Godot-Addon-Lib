@@ -59,7 +59,7 @@ func _ready():
 	
 	#var main_marg = 0
 	#var minor_version = ALibRuntime.Utils.UVersion.get_minor_version()
-	#if minor_version == 6:
+	#if minor_version >= 6:
 		#main_marg = -2 * editor_scale
 	#main_container.add_theme_constant_override("margin_top", main_marg)
 	#main_container.add_theme_constant_override("margin_left", main_marg)

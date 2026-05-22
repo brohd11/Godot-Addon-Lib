@@ -61,6 +61,7 @@ func _has_point(point):
 		return x <= y
 	elif _corner == Corner.BOTTOM_RIGHT:
 		return x + y >= corner_size
+	return false
 
 func _gui_input(event):
 	if event is InputEventMouseButton:

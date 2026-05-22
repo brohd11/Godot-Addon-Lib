@@ -6,7 +6,7 @@ static func get_current_dock(control):
 	var version = UVersion.get_minor_version()
 	if version < 6:
 		return _get_current_dock_44(control)
-	elif version == 6:
+	else: #elif version <= 7:
 		return _get_current_dock_46(control)
 
 static func _get_current_dock_44(control):
@@ -64,7 +64,7 @@ static func get_current_dock_control(control):
 	var version = UVersion.get_minor_version()
 	if version < 6:
 		return _get_current_dock_control_44(control)
-	elif version == 6:
+	else: #elif version <= 7:
 		return _get_current_dock_control_46(control)
 
 static func _get_current_dock_control_44(control):

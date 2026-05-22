@@ -33,7 +33,7 @@ func _set_style_boxes():
 		var sb
 		if version < 6:
 			sb = _get_style_box_44(_name)
-		elif version == 6:
+		else: #elif version <= 7:
 			sb = _get_style_box_46(_name)
 		add_theme_stylebox_override(_name, sb)
 	

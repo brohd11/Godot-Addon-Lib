@@ -132,12 +132,14 @@ static func get_layout_file_dir(_plugin:EditorPlugin):
 func _init(_plugin:EditorPlugin, _control, _dock:Slot=Slot.BOTTOM_PANEL, 
 	_main_screen_handler=null, _add_to_tree:=true) -> void:
 	_engine_minor_version = UVersion.get_minor_version()
+	
 	plugin = _plugin
 	plugin.add_child(self)
 	if _control is Control:
 		plugin_control = _control
 	elif _control is PackedScene:
 		plugin_control = _control.instantiate()
+	
 	
 	if _plugin_has_main_screen(plugin):
 		plugin_has_main = plugin._has_main_screen()
@@ -269,7 +271,7 @@ func show_in_editor():
 			_show_in_tab_container()
 		elif current_dock == -2:
 			BottomPanel.show_panel(_docked_name)
-	elif _engine_minor_version == 6:
+	else: #elif _engine_minor_version <= 7: # Deal with when there is an issue in new version
 		if current_dock > -1 or current_dock == -2:
 			_show_in_tab_container()
 
@@ -350,11 +352,7 @@ func save_layout_data():
 		scene_data[Keys.WINDOW_SIZE] = var_to_str(window.size)
 		scene_data[Keys.WINDOW_POSITION] = var_to_str(UWindow.get_window_global_position(window, false))
 	
-	#var is_tab = current_dock >= 0
-	#if _engine_minor_version >= 6:
-		#if current_dock == -2:
-			#is_tab = true
-	#if is_tab:
+	
 	var tab_idx = _get_tab_index()
 	if tab_idx != null:
 		scene_data[Keys.CURRENT_DOCK_INDEX] = tab_idx
@@ -450,7 +448,7 @@ func dock_instance(target_dock:int):
 		elif target_dock == -2:
 			plugin.add_control_to_bottom_panel(plugin_control, get_docked_name())
 	
-	elif _engine_minor_version == 6:
+	else: #elif _engine_minor_version <= 7: # Deal with when there is an issue in new version
 		if target_dock > -1 or target_dock == -2:
 			if not is_instance_valid(editor_dock):
 				editor_dock = ClassDB.instantiate("EditorDock")
@@ -521,7 +519,7 @@ func _remove_control_from_parent():
 				BottomPanel.show_first_panel()
 			else:
 				control_parent.remove_child(plugin_control)
-		elif _engine_minor_version == 6:
+		else: #elif _engine_minor_version <= 7: # Deal with when there is an issue in new version
 			if control_parent == editor_dock:
 				plugin.remove_dock(editor_dock)
 				editor_dock.remove_child(plugin_control)
@@ -604,7 +602,7 @@ func _get_tab_index():
 		return
 	if _engine_minor_version < 6:
 		return dock.get_tab_idx_from_control(plugin_control)
-	elif _engine_minor_version == 6:
+	else: #elif _engine_minor_version <= 7: # Deal with when there is an issue in new version
 		return dock.get_tab_idx_from_control(editor_dock)
 
 func _set_tab_index(idx:int):
@@ -655,10 +653,10 @@ class PanelWrapper extends PanelContainer:
 		if _empty_pan:
 			panel_sb = StyleBoxEmpty.new()
 		else:
-			var minor = UVersion.get_minor_version()
-			if minor < 6:
+			var _version = UVersion.get_minor_version()
+			if _version < 6:
 				panel_sb = get_theme_stylebox("panel").duplicate()
-			elif minor == 6:
+			else: #elif _version <= 7:
 				panel_sb = EditorInterface.get_editor_theme().get_stylebox("panel", "Panel").duplicate()
 				panel_sb.bg_color = ThemeColor.get_theme_color(ThemeColor.Type.BASE)
 			

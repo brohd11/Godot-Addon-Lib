@@ -813,7 +813,7 @@ static func get_fs_dock_split_mode():
 		return -1
 	var search_node = tree
 	var minor_version = UVersion.get_minor_version()
-	if minor_version == 6:
+	if minor_version >= 6:
 		search_node = search_node.get_parent()
 	var item_list = search_node.get_parent().get_child(1)
 	if not item_list.visible:
@@ -832,7 +832,7 @@ static func fs_dock_in_bottom_panel() -> bool:
 			return false
 		dock_par = dock_par.get_parent()
 		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL
-	elif minor_version == 6:
+	else: #elif minor_version <= 7:
 		var dock_par = fs_dock.get_parent()
 		return dock_par.get_class() == Keys.EDITOR_BOTTOM_PANEL
 	return false
