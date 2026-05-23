@@ -59,6 +59,8 @@ func _ready() -> void:
 	file_type_icon_size = Vector2(16, 16) * EditorInterface.get_editor_scale()
 	file_type_icon_margin = Vector2(4, 4) * EditorInterface.get_editor_scale()
 	
+	
+	
 	#allow_rmb_select = true
 	allow_reselect = true
 	
@@ -123,14 +125,14 @@ func _set_list_settings():
 		max_columns = 1
 		fixed_column_width = 0
 		icon_mode = ItemList.ICON_MODE_LEFT
-		fixed_icon_size = Vector2i(16,16)
+		fixed_icon_size = Vector2i(16,16) * EditorInterface.get_editor_scale()
 	else:
 		wraparound_items = true
 		max_text_lines = 2
 		max_columns = 0
-		fixed_column_width = 96
+		fixed_column_width = 96 * EditorInterface.get_editor_scale()
 		icon_mode = ItemList.ICON_MODE_TOP
-		fixed_icon_size = Vector2i(64,64)
+		fixed_icon_size = Vector2i(64,64) * EditorInterface.get_editor_scale()
 
 
 func set_filtered_paths(paths:Array):
@@ -293,6 +295,7 @@ func get_paths_at_dir(path:String, _path_in_res:= true) -> Array:
 
 
 func _draw() -> void:
+	var ed_scale = EditorInterface.get_editor_scale()
 	var scroll_bar_offset = Vector2(get_h_scroll_bar().value, get_v_scroll_bar().value)
 	if display_as_list:
 		if draw_alternate_line_colors:
@@ -316,7 +319,7 @@ func _draw() -> void:
 			rect.size = Vector2(og_y_size * 0.75, og_y_size * 0.75)
 			rect.position.x = rect.position.x + (og_x_size - (rect.size.y * 1.25))
 			rect.position.y = rect.position.y + (og_y_size / 2) - (rect.size.y / 2)
-			draw_texture_rect(folder_texture, rect, false, Color(0.7, 0.7, 0.7))
+			draw_texture_rect(folder_texture, rect, false, Color(0.7, 0.7, 0.7, 0.5))
 		return
 	
 	#^ grid items
@@ -339,11 +342,11 @@ func _draw() -> void:
 	var text = "Items: %s" % count
 	var rect = get_rect()
 	var pos = rect.size
-	var string_size = font.get_string_size(text)
+	var string_size = font.get_string_size(text) * ed_scale
 	pos.x -= string_size.x
-	pos -= Vector2(6,6)
+	pos -= (Vector2(6,6) * ed_scale)
 	
-	draw_string(font, pos, text,0,-1,14, Color(1,1,1,0.7))
+	draw_string(font, pos, text,0,-1, 14 * ed_scale, Color(1,1,1,0.7))
 
 
 func get_selected_paths():

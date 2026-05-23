@@ -34,7 +34,7 @@ var places:= {}
 func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
-	custom_minimum_size = _MIN_SIZE
+	custom_minimum_size = _MIN_SIZE * EditorInterface.get_editor_scale()
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
 	setting_helper = SettingHelperSingleton.get_file_helper(PROJECT_PLACES_FILE)

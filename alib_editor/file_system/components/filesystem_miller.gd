@@ -49,11 +49,15 @@ signal double_clicked(path)
 func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
+	var ed_scale = EditorInterface.get_editor_scale()
+	var min_col_size = MIN_COL_SIZE * ed_scale
+	
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll_container = ScrollContainer.new()
 	add_child(scroll_container)
 	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_container.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	
 	var _scroll_hbox = HBoxContainer.new()
 	scroll_container.add_child(_scroll_hbox)
@@ -70,9 +74,9 @@ func _ready() -> void:
 	_scroll_hbox.add_child(column_spacer)
 	_scroll_hbox.add_theme_constant_override("separation", 0)
 	column_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	column_spacer.custom_minimum_size = Vector2(MIN_COL_SIZE, 0) * 2
+	column_spacer.custom_minimum_size = Vector2(min_col_size, 0) * 2
 	
-	scroll_container.resized.connect(func(): column_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, MIN_COL_SIZE))
+	scroll_container.resized.connect(func(): column_spacer.custom_minimum_size.x = min(scroll_container.size.x / 2, min_col_size))
 
 func set_active(active_state:bool):
 	active = active_state
@@ -122,6 +126,8 @@ func _build_columns(force_show_current:=false):
 
 func _build_normal_columns():
 	var path_to_display = _current_dir
+	if _current_dir == "":
+		return
 	
 	var force_rebuild = not FSUtil.paths_have_same_root(_history_path, _current_dir)
 	var path_is_ancestor = UFile.is_dir_in_or_equal_to_dir(_history_path, _current_dir)
@@ -444,7 +450,7 @@ class FileColumn extends HBoxContainer:
 		size_flags_vertical = Control.SIZE_EXPAND_FILL
 		var vbox = VBoxContainer.new()
 		add_child(vbox)
-		vbox.custom_minimum_size = Vector2(MIN_COL_SIZE, 0)
+		vbox.custom_minimum_size = Vector2(MIN_COL_SIZE * EditorInterface.get_editor_scale(), 0)
 		vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		
 		var dragger = ColumnDragger.new()

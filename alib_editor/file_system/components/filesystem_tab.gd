@@ -137,6 +137,8 @@ var _view_data:Dictionary = {}
 var plugin_tab_container
 var _dock_data:Dictionary = {}
 
+var _initialized:=false
+
 signal new_plugin_tab(control)
 
 func can_be_freed() -> bool:
@@ -170,10 +172,12 @@ func _ready() -> void:
 	_update_history_buttons()
 	_set_view_data() #^ must ensure root dir is set before calling
 	visibility_changed.connect(_on_visibilty_changed, 1)
-	
 	_set_current_path(self, current_path)
 	
 	tree.scroll_to_path(current_path)
+	
+	# used to stop filter text signal from firing
+	_initialized = true
 	
 	#_check_toolbar_elements() #^ this doesn't set the search label?
 
@@ -333,6 +337,8 @@ func _on_filter_text_changed(_new_text:String):
 	_start_filter_debounce()
 
 func _start_filter_debounce():
+	if not _initialized:
+		return
 	_filter_timer.start(FILTER_DELAY)
 
 func _restart_search():
