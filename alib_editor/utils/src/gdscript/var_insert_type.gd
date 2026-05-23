@@ -49,12 +49,8 @@ static func format_script(parser:GDScriptParser, script_editor:CodeEdit):
 		i = end_i + 1
 	
 	#print(untyped_lines)
-	
-	
-	
 	insert_types(parser, script_editor, untyped_lines)
-	
-	
+
 
 static func check_type_in_line(code_edit_parser:GDScriptParser.CodeEditParser, line_i:int) -> Dictionary:
 	var context_data:Dictionary = code_edit_parser.get_line_context(line_i)
@@ -190,7 +186,7 @@ static func _insert_types(parser:GDScriptParser, script_editor:CodeEdit, untyped
 static func get_type_access_path(parser:GDScriptParser, expression:String, line:int) -> String: # preserve comments
 	var type_rich:Dictionary = parser.resolve_expression_to_type_rich(expression, line)
 	var inferred_type:String = type_rich.type
-	print("HERE::",expression, "->", inferred_type)
+	#print("HERE::",expression, "->", inferred_type)
 	
 	# these ones operate on the member line dec itself, not the next up
 	var type_data:Dictionary = parser.get_code_edit_parser().get_type_from_line(line - 1)
@@ -205,7 +201,7 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 				inferred_type = parser.resolve_expression_to_type(adjusted_string, line - 1)
 				#print("ADJ STRING::TYPE", "::", adjusted_string, " -> ", inferred_type)
 	
-	print("HERE::",inferred_type)
+	#print("HERE::",inferred_type)
 	if inferred_type == "":
 		return ""
 	
@@ -239,7 +235,12 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 			#print(access_options.global)
 			
 			if access_options.standard != "":
-				access_string = access_options.standard
+				var access_check:String = parser.resolve_expression_to_type(access_options.standard, line)
+				if access_check == inferred_type:
+					access_string = access_options.standard
+			
+			if access_string != "":
+				pass
 			elif access_options.script_alias != "":
 				access_string = access_options.script_alias
 			elif access_options.global != "":
@@ -247,9 +248,7 @@ static func get_type_access_path(parser:GDScriptParser, expression:String, line:
 			else:
 				return ""
 			
-			var access_check:String = parser.resolve_expression_to_type(access_string, line)
-			if access_check != inferred_type:
-				return ""
+			
 			
 		return access_string
 	

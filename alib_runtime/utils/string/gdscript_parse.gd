@@ -302,8 +302,13 @@ static func safe_split_args(args_str: String) -> Array[String]:
 				current_arg += c
 
 	if not current_arg.strip_edges().is_empty():
-		args.append(current_arg.strip_edges())
-
+		current_arg = current_arg.strip_edges()
+		#TEST
+		if current_arg.begins_with("..."):
+			current_arg = current_arg.trim_prefix("...").strip_edges()
+		#TEST
+		args.append(current_arg)
+	
 	return args
 
 

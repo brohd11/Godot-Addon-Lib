@@ -111,12 +111,12 @@ static func _copy_popup(new_popup:PopupMenu, popup_to_copy:PopupMenu, wrapper_pa
 			new_popup.set_item_icon_modulate(new_popup_index, mod)
 	
 	## add custom post
-	if not post_items_dict.is_empty():
+	if not post_items_dict.is_empty() and not new_popup.is_item_separator(new_popup.item_count - 1):
 		new_popup.add_separator()
 	
 	for item_path in post_items_dict:
 		var item_data = post_items_dict.get(item_path)
-		_add_custom_item(new_popup, item_path, item_data, {})
+		_add_custom_item(new_popup, item_path, item_data, wrapper_params.existing_item_dict)
 	##
 
 
