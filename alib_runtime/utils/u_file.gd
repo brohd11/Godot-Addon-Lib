@@ -453,6 +453,9 @@ static func path_is_root(path:String):
 		return true
 	return false
 
+static func path_in_res(path:String):
+	return ProjectSettings.localize_path(path).begins_with("res://")
+
 static func get_file_size(path: String, format:=true) -> String:
 	var file = FileAccess.open(path, FileAccess.READ)
 	if not file:

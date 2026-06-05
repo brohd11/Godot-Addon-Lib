@@ -216,6 +216,8 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 			item.visible = true
 	
 	var root_item = tree_node.get_root()
+	if not is_instance_valid(root_item):
+		return true
 	root_item.visible = true
 	root_item.set_collapsed_recursive(false)
 	updating = false

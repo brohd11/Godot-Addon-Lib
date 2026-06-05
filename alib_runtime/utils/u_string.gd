@@ -208,6 +208,56 @@ static func string_safe_rfind(text:String, find:String, start:=-1, string_map=nu
 			return -1
 	return idx
 
+static func string_safe_split(text:String, delim:String, allow_empty:=false, string_map:StringMap=null):
+	if string_map == null:
+		string_map = StringMap.new(text)
+	
+	var simple_delim = delim.length() == 1
+	var delim_check_char = delim[0]
+	
+	var parts = []
+	var working_part_text = ""
+	var count = 0
+	while count < text.length():
+		if string_map.bracket_map.has(count):
+			var next = string_map.bracket_map[count]
+			if next > count:
+				for i in range(count, next + 1):
+					working_part_text += text[i]
+				count = next + 1
+				continue
+		
+		var _char = text[count]
+		
+		if _char == delim_check_char and string_map.string_mask[count] == 0:
+			var valid_delim = true
+			if not simple_delim:
+				for i in range(delim.length()):
+					if count + i >= text.length() or text[count + i] != delim[i]:
+						valid_delim = false
+						break 
+			
+			if valid_delim:
+				parts.append(working_part_text)
+				working_part_text = ""
+				count += 1
+				continue
+		
+		working_part_text += _char
+		count += 1
+	
+	if working_part_text != "":
+		parts.append(working_part_text)
+	
+	if allow_empty:
+		return parts
+	var valid_parts = []
+	for part in parts:
+		if part != "":
+			valid_parts.append(part)
+	return valid_parts
+
+
 static func remove_comment(text:String, string_safe:=false, string_map=null):
 	if not string_safe:
 		return text.get_slice("#", 0)

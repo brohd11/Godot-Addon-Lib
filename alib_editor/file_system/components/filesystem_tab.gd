@@ -1164,7 +1164,7 @@ func _check_toolbar_elements():
 		search_hbox.visible = _show_search
 	
 	var show_buttons = true
-	if size.x < 500:
+	if size.x < 500 * EditorInterface.get_editor_scale():
 		show_buttons = false
 	
 	_toggle_element_respect_meta(_toggle_places_button, show_buttons)

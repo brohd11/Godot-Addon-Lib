@@ -42,11 +42,19 @@ func get_longest_line():
 		return _raw_string
 	return _raw_string.substr(_longest_line_start, _longest_line_end)
 
-func get_raw_string():
-	return _raw_string
+func get_raw_string(clear_string:=false):
+	if not clear_string:
+		return _raw_string
+	var tmp = _raw_string
+	clear()
+	return tmp
 
-func get_string():
-	return _string
+func get_string(clear_string:=false):
+	if not clear_string:
+		return _string
+	var tmp = _string
+	clear()
+	return tmp
 
 func display(clear_string:=true):
 	print_rich(_string)

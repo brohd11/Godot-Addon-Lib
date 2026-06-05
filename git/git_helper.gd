@@ -36,22 +36,24 @@ static func list_submodules(only_dirty:=false):
 		if not path.is_empty():
 			submodule_paths.append(path)
 	
+	var result = []
 	var to_show = []
 	if only_dirty:
-		print("=== Dirty Submodules ===")
+		result.append("=== Dirty Submodules ===")
 		for path in submodule_paths:
 			if get_git_status(path):
 				to_show.append(path)
 	else:
-		print("=== All Submodules ===")
+		result.append("=== All Submodules ===")
 		to_show = submodule_paths
 	
 	
 	if to_show.is_empty():
-		print("(None to show)")
+		result.append("(None to show)")
 	else:
 		for p in to_show:
-			print(" - ", p)
+			result.append(" - " + p)
+	return "\n".join(result)
 
 
 static func get_git_status(dir):
