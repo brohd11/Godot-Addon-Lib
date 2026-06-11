@@ -146,8 +146,8 @@ static func scan_for_dirs(dir:String,seperate_stacks:bool=false, include_hidden:
 		var dir_array = []
 		var current_dir = dir.path_join(f)
 		dir_array.append(current_dir)
-		var next_dir_path = dir.path_join(f)
-		var recur_dirs = scan_for_dirs(next_dir_path)
+		var next_dir_path = dir.path_join(f) # should separate stacks be passed? not sure
+		var recur_dirs = scan_for_dirs(next_dir_path, false, include_hidden)
 		dir_array.append_array(recur_dirs)
 		if seperate_stacks:
 			dir_stacks.append(dir_array)

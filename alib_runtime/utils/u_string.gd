@@ -208,7 +208,7 @@ static func string_safe_rfind(text:String, find:String, start:=-1, string_map=nu
 			return -1
 	return idx
 
-static func string_safe_split(text:String, delim:String, allow_empty:=false, string_map:StringMap=null):
+static func string_safe_split(text:String, delim:String, allow_empty:=false, skip_brackets:=false, string_map:StringMap=null):
 	if string_map == null:
 		string_map = StringMap.new(text)
 	
@@ -219,7 +219,7 @@ static func string_safe_split(text:String, delim:String, allow_empty:=false, str
 	var working_part_text = ""
 	var count = 0
 	while count < text.length():
-		if string_map.bracket_map.has(count):
+		if skip_brackets and string_map.bracket_map.has(count):
 			var next = string_map.bracket_map[count]
 			if next > count:
 				for i in range(count, next + 1):
@@ -236,6 +236,65 @@ static func string_safe_split(text:String, delim:String, allow_empty:=false, str
 					if count + i >= text.length() or text[count + i] != delim[i]:
 						valid_delim = false
 						break 
+			
+			if valid_delim:
+				parts.append(working_part_text)
+				working_part_text = ""
+				count += delim.length()
+				continue
+		
+		working_part_text += _char
+		count += 1
+	
+	if working_part_text != "":
+		parts.append(working_part_text)
+	
+	if allow_empty:
+		return parts
+	var valid_parts = []
+	for part in parts:
+		if part != "":
+			valid_parts.append(part)
+	return valid_parts
+
+
+static func string_safe_split_multi(text:String, delims:Array, allow_empty:=false, skip_brackets:=false, string_map:StringMap=null):
+	if string_map == null:
+		string_map = StringMap.new(text)
+	
+	var simple_delim = delims.size() == 1 and delims[0].length() == 1
+	var simple_delims = []
+	var delim_check_chars = []
+	for d in delims:
+		var _char = d[0]
+		if not _char in delim_check_chars:
+			delim_check_chars.append(_char)
+		if d.length() == 1:
+			simple_delims.append(d)
+	
+	var parts = []
+	var working_part_text = ""
+	var count = 0
+	while count < text.length():
+		if skip_brackets and string_map.bracket_map.has(count):
+			var next = string_map.bracket_map[count]
+			if next > count:
+				for i in range(count, next + 1):
+					working_part_text += text[i]
+				count = next + 1
+				continue
+		
+		var _char = text[count]
+		if string_map.string_mask[count] == 0 and _char in delim_check_chars:
+			var valid_delim = true
+			if simple_delim or _char in simple_delims:
+				pass
+			else:
+				for delim in delims:
+					for i in range(delim.length()):
+						if count + i >= text.length() or text[count + i] != delim[i]:
+							valid_delim = false
+							break 
 			
 			if valid_delim:
 				parts.append(working_part_text)
@@ -327,10 +386,19 @@ static func quote(text:String, string_name:=false):
 
 static func unquote(text:String):
 	#return text.trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
-	return text.trim_prefix("&").trim_prefix('"').trim_prefix("'").trim_suffix('"').trim_suffix("'")
+	if text.begins_with("&") and is_string_or_string_name(text):
+		text = text.trim_prefix("&")
+	
+	if text.begins_with("'") and text.ends_with("'"):
+		return text.trim_prefix("'").trim_suffix("'")
+	elif text.begins_with('"') and text.ends_with('"'):
+		return text.trim_prefix('"').trim_suffix('"')
+	return text
 
 static func is_string_or_string_name(text:String):
-	if text.begins_with("&"):
+	if text.begins_with("r"):
+		text = text.trim_prefix("r")
+	elif text.begins_with("&"):
 		text = text.trim_prefix("&")
 	return (text.begins_with("'") and text.ends_with("'")) or (text.begins_with('"') and text.ends_with('"'))
 
