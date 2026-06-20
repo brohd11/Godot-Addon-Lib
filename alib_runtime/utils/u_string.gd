@@ -323,7 +323,7 @@ static func remove_comment(text:String, string_safe:=false, string_map=null):
 	else:
 		if string_map == null:
 			string_map = get_string_map(text)
-		var comment_index = string_safe_find(text, "#")
+		var comment_index = string_safe_find(text, "#", 0, string_map)
 		if comment_index > -1:
 			text = text.substr(0, comment_index)
 	return text
