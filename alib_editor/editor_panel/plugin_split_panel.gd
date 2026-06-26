@@ -5,6 +5,9 @@ const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/edito
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const ClickState = preload("res://addons/addon_lib/brohd/gui_click_handler/click_state.gd")
 const UFile = ALibRuntime.Utils.UFile
+const Margin = ALibEditor.UIHelpers.Margin
+
+const ThemeColor = ALibEditor.Utils.UEditorTheme.ThemeColor
 #const ButtonDetector = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/button_detector.gd")
 
 const DogEarButton = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dog_ear/dog_ear_button.gd")
@@ -52,7 +55,7 @@ func _ready():
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
 	#main_container = MarginContainer.new()
-	main_container = ALibEditor.UIHelpers.Margin.new_plugin_margin_container()
+	main_container = Margin.new_plugin_margin_container()
 	vbox.add_child(main_container)
 	main_container.name = "MainContainer"
 	main_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -73,7 +76,7 @@ func _ready():
 	var buttons_bg = ColorRect.new()
 	add_child(buttons_bg)
 	buttons_bg.mouse_filter = Control.MOUSE_FILTER_PASS
-	buttons_bg.color = ALibEditor.Utils.UEditorTheme.ThemeColor.get_theme_color(ALibEditor.Utils.UEditorTheme.ThemeColor.Type.BACKGROUND)
+	buttons_bg.color = ThemeColor.get_theme_color(ThemeColor.Type.BACKGROUND)
 	buttons_bg.hide()
 	
 	var margin = MarginContainer.new()
