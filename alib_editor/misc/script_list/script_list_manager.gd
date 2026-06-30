@@ -4,6 +4,8 @@ const SingletonBase = Singletons.Base
 
 const TEXT_FILE_TYPES = ["gd", "json", "cfg", "txt", "ini", "md"]
 
+var text_file_types:= []
+
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/misc/script_list/script_list_manager.gd")
 static func get_singleton_name() -> String:
 	return "ScriptListManager"
@@ -44,6 +46,10 @@ func _ready() -> void:
 	EditorNodeRef.call_on_ready(_on_enr_ready)
 	tool_color = EditorInterface.get_editor_theme().get_color(&"accent_color", &"Editor")
 	tool_color.s = min(tool_color.s * 1.5, 1.0)
+	
+	EditorInterface.get_editor_settings().settings_changed.connect(_on_editor_settings_changed)
+	_get_text_file_types()
+	
 
 func _on_enr_ready():
 	var side_bar = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_SIDEBAR_V_SPLIT)
@@ -67,6 +73,9 @@ func _on_enr_ready():
 	_update_timer.start()
 	
 	_initialized = true
+
+func _on_editor_settings_changed():
+	_get_text_file_types()
 
 func _on_update_timer_timeout(): # quick check for differences
 	if _update_debounce:
@@ -96,6 +105,7 @@ func _on_script_editor_validate():
 
 func _on_filesystem_changed():
 	_update_debounce = false
+	text_file_types = get_text_file_types() # should really be editor settings changed
 	update_cache()
 
 
@@ -263,6 +273,23 @@ func clear_script_list_filter():
 
 func script_list_filtering():
 	return filter_line_edit.text != ""
+
+
+static func get_text_file_types(include_script:bool=true):
+	var arr = get_instance()._get_text_file_types().duplicate()
+	if include_script:
+		arr.append("gd")
+		#arr.append("cs")
+	return arr
+
+func _get_text_file_types():
+	if not text_file_types.is_empty():
+		return text_file_types
+	var types:String = EditorInterface.get_editor_settings().get_setting("docks/filesystem/textfile_extensions")
+	text_file_types = types.split(",", false)
+	for i in text_file_types.size():
+		text_file_types[i] = text_file_types[i].strip_edges()
+	return text_file_types
 
 class Keys:
 	const ITEM_IDX = &"item_idx"
