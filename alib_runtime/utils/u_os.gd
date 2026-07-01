@@ -4,6 +4,21 @@ const LINUX = "Linux"
 const MAC = "macOS"
 const WIN = "Windows"
 
+enum OSType {
+	UNKNOWN,
+	LINUX,
+	MAC,
+	WINDOWS
+}
+
+static func get_os() -> OSType:
+	var system = OS.get_name()
+	match system:
+		"Windows": return OSType.WINDOWS
+		"Linux": return OSType.LINUX
+		"macOS": return OSType.MAC
+		_: return OSType.UNKNOWN
+
 static func get_user():
 	var system = OS.get_name()
 	if system == LINUX:
@@ -50,3 +65,36 @@ static func get_home_dir():
 	elif system == WIN:
 		var home = OS.get_environment("USERPROFILE")
 		return home
+
+static func launch_term(commands:String, dir:String="res://"):
+	var os:= get_os()
+	dir = ProjectSettings.globalize_path(dir)
+	var command_tail = ""
+	if commands != "":
+		command_tail = " && " + commands
+	match os:
+		OSType.WINDOWS:
+			# Windows - /K runs the command and Keeps the window open. cd /d
+			# switches drive+dir, then run commands (if any) in that folder.
+			var command_string = 'cd /d "%s"%s' % [dir, command_tail]
+			var exec:String = "cmd.exe"
+			var args:Array = ["/K", command_string]
+			OS.create_process(exec, args)
+			
+			# Alternative for PowerShell:
+			# OS.create_process("powershell.exe", ["-NoExit", "-Command", "echo 'Hello from Godot'"])
+		OSType.LINUX:
+			# TODO Linux - have to call a specific terminal emulator. 
+			var command_string = "cd %s%s" % [dir, command_tail]
+			command_string += "; exec bash"
+			
+			var exec:String = "gnome-terminal"
+			var args:Array = ["--", "bash", "-c", command_string]
+			OS.create_process(exec, args)
+		
+		OSType.MAC:
+			var command_string = "cd %s%s" % [dir, command_tail]
+			var exec:String = "osascript"
+			var apple_script:String = 'tell application "Terminal" to do script "%s"' % command_string
+			var args:Array = ["-e", apple_script]
+			OS.create_process(exec, args)
