@@ -297,6 +297,8 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 	if fs_popup != null and fs_popup is not PopupMenu:
 		printerr("POPUP WRAPPER - FSPOPUP NOT POPUP MENU")
 		printerr(fs_popup)
+		EditorNodeRef.refresh_dynamic_refs()
+		return
 	
 	var meta_dict = {}
 	var count = 0

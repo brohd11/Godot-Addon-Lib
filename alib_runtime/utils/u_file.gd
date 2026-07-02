@@ -202,12 +202,12 @@ static func sort_file_paths_dirs_first(a: String, b: String) -> int:
 		return a < b  # Sort alphabetically if both are files or both are directories
 
 
-static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> void:
+static func write_to_json(data:Variant,path:String,access=FileAccess.WRITE) -> bool:
 	if not DirAccess.dir_exists_absolute(path.get_base_dir()):
 		DirAccess.make_dir_recursive_absolute(path.get_base_dir())
 	var data_string = JSON.stringify(data,"\t")
 	var json_file = FileAccess.open(path, access)
-	json_file.store_string(data_string)
+	return json_file.store_string(data_string)
 
 
 static func read_from_json(path:String,access=FileAccess.READ) -> Dictionary:
