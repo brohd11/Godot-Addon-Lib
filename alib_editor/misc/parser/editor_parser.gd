@@ -3,6 +3,7 @@ extends SingletonRefCount
 const SingletonRefCount = Singletons.RefCount
 
 const GDScriptParser = preload("uid://c4465kdwgj042") #! resolve ALibRuntime.Utils.UGDScript.Parser
+const ParserWarmup = preload("res://addons/addon_lib/brohd/alib_editor/misc/parser/editor_parser/warmup.gd")
 
 # Use 'PE_STRIP_CAST_SCRIPT' to auto strip type casts with plugin exporter, if the class is not a global name
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/misc/parser/editor_parser.gd")
@@ -41,6 +42,8 @@ var _script_change_debounce:=false
 var _current_script
 
 var valid_script:= true
+
+var _warmup:ParserWarmup
 
 
 func _init(node):
@@ -155,6 +158,24 @@ func _parse(force:=false):
 	parse_completed.emit()
 	await get_tree().process_frame
 	_parse_queued = false
+
+
+## Warm the project into the disk parse cache (shallow: members/constants/return types).
+## Console: script call <this> warmup_project
+static func warmup_project():
+	get_instance()._start_warmup(false)
+
+## Full warmup: shallow surface plus mapped function locals + argument types. Heavier.
+## Console: script call <this> warmup_project_full
+static func warmup_project_full():
+	get_instance()._start_warmup(true)
+
+func _start_warmup(full:bool):
+	if is_instance_valid(_warmup) and _warmup.running:
+		print("ParserWarmup: already running")
+		return
+	_warmup = ParserWarmup.new()
+	_warmup.run(gdscript_parser._parse_cache_dir, get_tree(), full)
 
 
 static func get_parser(script_path:String="") -> GDScriptParser:

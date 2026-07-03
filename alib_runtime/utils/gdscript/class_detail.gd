@@ -27,6 +27,8 @@ static func connect_fs_signal():
 	if initialized:
 		return
 	initialized = true
+	if not Engine.is_editor_hint():
+		return
 	var editor_interface = Engine.get_singleton("EditorInterface")
 	if not is_instance_valid(editor_interface):
 		return
