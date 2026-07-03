@@ -14,6 +14,17 @@ static func get_file_access(path:String, flag:=FileAccess.ModeFlags.READ, print_
 		printerr("Could not open FileAccess: %s" % path)
 	return file_access
 
+static func store_data_bin(data:Variant, path:String, allow_obj:bool=false) -> bool:
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var f = FileAccess.open(path, FileAccess.WRITE)
+	return f.store_var(data, allow_obj)
+
+static func get_data_bin(path:String, allow_obj:bool=false) -> Variant:
+	if FileAccess.file_exists(path):
+		var f = FileAccess.open(path, FileAccess.READ)
+		return f.get_var(allow_obj)
+	return null
+
 static func get_files(dir:String, include_dirs=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
 	if not DirAccess.dir_exists_absolute(dir):
 		return PackedStringArray()
