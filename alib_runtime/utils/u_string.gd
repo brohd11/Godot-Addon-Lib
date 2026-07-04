@@ -37,6 +37,12 @@ static func strip_comment(line:String):
 	
 	return valid
 
+static func path_joinv(parts:Array):
+	var string = ""
+	for p in parts:
+		string = string.path_join(p)
+	return string
+
 static func dot_join(text:String, to_join:String):
 	if text == "" or to_join == "":
 		return text + to_join

@@ -162,7 +162,7 @@ func _parse(force:=false):
 
 ## Warm the project into the disk parse cache (shallow: members/constants/return types).
 ## Console: script call <this> warmup_project
-static func warmup_project():
+static func warmup_project() -> void:
 	get_instance()._start_warmup(false)
 
 ## Full warmup: shallow surface plus mapped function locals + argument types. Heavier.
@@ -177,6 +177,13 @@ func _start_warmup(full:bool):
 	_warmup = ParserWarmup.new()
 	_warmup.run(gdscript_parser._parse_cache_dir, get_tree(), full)
 
+static func clear_persistent_cache():
+	if not DirAccess.dir_exists_absolute(GDScriptParser.PARSE_CACHE_DIR):
+		return
+	var files = DirAccess.get_files_at(GDScriptParser.PARSE_CACHE_DIR)
+	for f in files:
+		var path = GDScriptParser.PARSE_CACHE_DIR.path_join(f)
+		DirAccess.remove_absolute(f)
 
 static func get_parser(script_path:String="") -> GDScriptParser:
 	var ins = get_instance()
@@ -190,7 +197,7 @@ static func get_parser(script_path:String="") -> GDScriptParser:
 func get_caret_context() -> GDScriptParser.CaretContext:
 	return gdscript_parser.get_caret_context()
 
-static func clear_cache():
+static func clear_cache() -> void:
 	var ins = get_instance()
 	ins._parser_cache.clear()
 	ins._set_parser_cache()

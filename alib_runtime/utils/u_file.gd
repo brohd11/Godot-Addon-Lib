@@ -32,6 +32,8 @@ static func get_files(dir:String, include_dirs=false, file_types:Array=[], show_
 
 static func _get_files_recur(dir:String, include_dirs:=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
 	var found_files = PackedStringArray()
+	if not show_hidden and FileAccess.file_exists(dir.path_join(".gdignore")):
+		return found_files
 	var dir_access = DirAccess.open(dir)
 	if not dir_access:
 		return found_files
@@ -97,6 +99,8 @@ static func _fs_scan_for_files(fs:EditorFileSystem, dir:String, file_types:Array
 static func _scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
 	var file_array:PackedStringArray = []
 	var files:PackedStringArray = []
+	if not show_ignore and FileAccess.file_exists(dir.path_join(".gdignore")):
+		return file_array
 	
 	var dir_access:DirAccess = DirAccess.open(dir)
 	if not dir_access:
@@ -106,9 +110,9 @@ static func _scan_for_files(dir:String,file_types:Array, include_dirs=false, ign
 	if dir_access.dir_exists_absolute(dir):
 		files = dir_access.get_files()
 	
-	if ".gdignore" in files:
-		if not show_ignore:
-			return file_array
+	#if ".gdignore" in files:
+		#if not show_ignore:
+			#return file_array
 	
 	if include_dirs:
 		file_array.append(dir)

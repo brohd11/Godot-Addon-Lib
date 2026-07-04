@@ -508,6 +508,15 @@ func get_folder_color(file_path:String=""):
 
 ## Recursive get files in directory.
 func get_files_in_dir(dir:String, include_dirs:bool=false):
+	#^ alternate method, quicker on large array, slower on small
+	#if not dir.ends_with("/"):
+		#dir += "/"
+	#var p_arr = file_and_dir_paths if include_dirs else file_paths
+	#var valid = []
+	#for p in p_arr:
+		#if p.begins_with(dir):
+			#valid.append(p)
+	
 	var first_item = file_system_dock_item_dict.get(dir)
 	if get_fs_dock_split_mode() != 0 or first_item == null:
 		return recursive_scan_for_file_paths(dir, include_dirs)
@@ -727,7 +736,7 @@ static func _move_dialog_create_file_list():
 	var file_list_root = VBoxContainer.new()
 	dialog_tree.get_parent().add_child(file_list_root)
 	#file_list_root.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	file_list_root.custom_minimum_size = Vector2(0, 100)
+	file_list_root.custom_minimum_size = Vector2(0, 100) * EditorInterface.get_editor_scale()
 	var title_bar = HBoxContainer.new()
 	file_list_root.add_child(title_bar)
 	title_bar.add_spacer(true)
