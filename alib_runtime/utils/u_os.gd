@@ -95,6 +95,7 @@ static func launch_term(commands:String, dir:String="res://"):
 		OSType.MAC:
 			var command_string = "cd %s%s" % [dir, command_tail]
 			var exec:String = "osascript"
-			var apple_script:String = 'tell application "Terminal" to do script "%s"' % command_string
-			var args:Array = ["-e", apple_script]
+			var do_script:String = 'tell application "Terminal" to do script "%s"' % command_string
+			var activate:String = 'tell application "Terminal" to activate'
+			var args:Array = ["-e", do_script, "-e", activate]
 			OS.create_process(exec, args)
