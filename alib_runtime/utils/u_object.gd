@@ -1,6 +1,7 @@
 #! namespace ALibRuntime.Utils class UObject
 
-const PRINT_ERR = true
+const PLUGIN_EXPORTED = false
+const PRINT_ERR = not PLUGIN_EXPORTED
 
 static func disconnect_signals_of_name(object:Object, signal_name:String) -> Array[Dictionary]:
 	var signal_list:Array[Dictionary] = object.get_signal_connection_list(signal_name)
