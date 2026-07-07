@@ -120,6 +120,8 @@ func get_script_metadata(path:String):
 			return cached_data
 	
 	var parser:GDScriptParser = EditorGDScriptParser.get_parser(path)
+	if not is_instance_valid(parser):
+		return {}
 	var metadata = parse_script_metadata(parser)
 	CacheHelper.store_data(path, metadata, _cache, [path])
 	return metadata
