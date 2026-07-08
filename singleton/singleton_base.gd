@@ -126,6 +126,8 @@ static func _get_latest_version(script:Script, dir_to_check:String="res://addons
 			continue
 		var path = dict.get("path")
 		var global_script = load(path)
+		if not global_script.has_method("get_singleton_name"):
+			continue # check that script actually is a singleton, in case of name collision
 		return global_script
 	
 	if not DirAccess.dir_exists_absolute(dir_to_check):
