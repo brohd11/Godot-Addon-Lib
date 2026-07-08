@@ -59,7 +59,8 @@ static func _get_files_recur(dir:String, include_dirs:=false, file_types:Array=[
 	return found_files
 
 
-
+static func scan_for_files_no_fs(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
+	return _scan_for_files(dir, file_types, include_dirs, ignore_dirs, show_ignore)
 
 static func scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
 	if show_ignore or not Engine.is_editor_hint():
