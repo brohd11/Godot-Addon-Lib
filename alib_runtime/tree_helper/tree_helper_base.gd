@@ -14,8 +14,6 @@ var filtered_item_paths:= []
 
 var updating:= false
 var multi_selected_flag:= false
-var edit_on_double_click:= true # can probably remove for cleanness
-var popup_on_right_click:= true # can probably remove for cleanness
 
 var show_item_preview := true
 
@@ -59,8 +57,18 @@ func get_tree_item(path:String):
 		if item_dict.has(check):
 			return item_dict.get(check)
 
+func select_paths(paths:Array, deselect_current:=true):
+	if deselect_current:
+		tree_node.deselect_all()
+	
+	for path in paths:
+		var item = item_dict.get(path) as TreeItem
+		if item:
+			item.select(0)
+
 func get_selected_paths():
 	return _get_selected(false)
+
 
 func get_selected_tree_items(): # possibly use get_selected and get_next_selected to get items instead of caching
 	return _get_selected()
@@ -71,15 +79,19 @@ func _get_selected(items:=true):
 	var _selected_paths = []
 	var sel = tree_node.get_selected()
 	if is_instance_valid(sel):
-		_selected_paths.append(get_path_from_item(sel))
+		var first_path = get_path_from_item(sel)
+		if first_path:
+			_selected_items.append(sel)
+			_selected_paths.append(first_path)
 		sel = tree_node.get_next_selected(null) # this selects the first selected in tree to iterate over all
 		while is_instance_valid(sel):
 			var sel_path = get_path_from_item(sel)
-			if not sel_path in _selected_paths:
+			if sel_path and not sel_path in _selected_paths:
 				_selected_items.append(sel)
 				_selected_paths.append(sel_path)
 			sel = tree_node.get_next_selected(sel)
 	
+	#print(_selected_items, _selected_paths)
 	if items:
 		return _selected_items
 	else:
@@ -88,10 +100,7 @@ func _get_selected(items:=true):
 func get_filtered_paths():
 	return filtered_item_paths
 
-func get_path_from_item(item:TreeItem):
-	var meta = item.get_metadata(0)
-	if meta is Dictionary:
-		return meta.get(Keys.METADATA_PATH)
+
 
 func connect_mouse_signals():
 	tree_node.multi_selected.connect(_on_multi_selected)
@@ -142,7 +151,7 @@ func new_file_path(file_path, root_dir="", file_data=null):
 			slice_item.set_text(0,current_slice)
 			
 			var item_metadata = {Keys.METADATA_PATH: path_key}
-			slice_item.set_metadata(0,item_metadata)
+			slice_item.set_metadata(0, item_metadata)
 			_set_folder_icon(path_key, slice_item)
 			if data_dict != null: # not sure how to implement without a ton of args
 				var collapsed = true
@@ -180,23 +189,7 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	updating = true
 	
 	
-	var vis_files = []
-	for path:String in item_dict.keys():
-		var item = item_dict.get(path) as TreeItem
-		if not item:
-			continue
-		if path.get_extension() == "":
-			if DirAccess.dir_exists_absolute(path):
-				item.visible = false
-				continue
-		if not filter_callable.call(path):
-			item.visible = false
-			
-			continue
-		vis_files.append(path)
-	
-	filtered_item_paths = vis_files
-	
+	var vis_files = _get_visible_filter_files(filter_callable)
 	for path:String in vis_files:
 		var is_dir = path.ends_with("/")
 		var path_tail = path.get_slice(root_dir,1)
@@ -222,6 +215,25 @@ func update_tree_items(filtering, filter_callable, root_dir="res://"):
 	root_item.set_collapsed_recursive(false)
 	updating = false
 	return true
+
+func _get_visible_filter_files(filter_callable:Callable):
+	var vis_files = []
+	for path:String in item_dict.keys():
+		var item = item_dict.get(path) as TreeItem
+		if not item:
+			continue
+		if path.get_extension() == "":
+			if DirAccess.dir_exists_absolute(path):
+				item.visible = false
+				continue
+		if not filter_callable.call(path):
+			item.visible = false
+			
+			continue
+		vis_files.append(path)
+	
+	filtered_item_paths = vis_files
+	return vis_files
 
 func _on_item_collapsed(item: TreeItem) -> void:
 	if updating:
@@ -330,13 +342,19 @@ func _mouse_left_clicked():
 
 func _mouse_right_clicked(_data):
 	mouse_right_clicked.emit()
-	if popup_on_right_click:
-		pass
 
 func _mouse_double_clicked():
 	mouse_double_clicked.emit()
-	if edit_on_double_click:
-		pass
+
+static func create_item_meta(file_path:String):
+	return {Keys.METADATA_PATH: file_path}
+
+static func get_path_from_item(item:TreeItem):
+	var meta = item.get_metadata(0)
+	if meta is Dictionary:
+		return meta.get(Keys.METADATA_PATH)
+	elif meta is String:
+		return meta
 
 class Keys:
 	const METADATA_PATH = &"item_path"

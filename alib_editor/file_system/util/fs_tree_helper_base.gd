@@ -58,7 +58,7 @@ func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null
 		item.set_icon_modulate(0, file_color)
 
 
-func update_tree_items(filtering, _filter_callable, root_dir="res://"): # why return bool?
+func update_tree_items(filtering, filter_callable, root_dir="res://"): # why return bool?
 	if not filtering:
 		filtered_item_paths.clear()
 		for path in item_dict.keys():
@@ -92,7 +92,7 @@ func update_tree_items(filtering, _filter_callable, root_dir="res://"): # why re
 		return false
 	updating = true
 	
-	var vis_files = _get_visible_filter_files(Callable())
+	var vis_files = _get_visible_filter_files(filter_callable)
 	for path:String in item_dict.keys():
 		var item = item_dict.get(path) as TreeItem
 		if not item:
@@ -163,8 +163,8 @@ func update_tree_items(filtering, _filter_callable, root_dir="res://"): # why re
 	updating = false
 	return true
 
-func _get_visible_filter_files(_filter_callable:Callable):
-	return filtered_item_paths
+#func _get_visible_filter_files(_filter_callable:Callable):
+	#return filtered_item_paths
 
 func get_favorites_item():
 	var root_children = tree_node.get_root().get_children()

@@ -1,5 +1,11 @@
 #! namespace ALibEditor class Colors
 
+static func get_tool_script_color() -> Color:
+	var tool_color:Color = EditorInterface.get_editor_theme().get_color(&"accent_color", &"Editor")
+	tool_color.s = min(tool_color.s * 1.5, 1.0)
+	return tool_color
+
+
 enum SyntaxColor {
 	TEXT,
 	ENGINE_TYPE,
@@ -23,9 +29,9 @@ enum SyntaxColor {
 	DOC_COMMENT,
 }
 
-static func get_syntax_color(color:SyntaxColor):
-	var ed_settings = EditorInterface.get_editor_settings()
-	var setting = ""
+static func get_syntax_color(color:SyntaxColor) -> Variant:
+	var ed_settings:EditorSettings = EditorInterface.get_editor_settings()
+	var setting:String = ""
 	match color:
 		SyntaxColor.TEXT: setting = &"text_editor/theme/highlighting/text_color"
 		SyntaxColor.ENGINE_TYPE: setting = &"text_editor/theme/highlighting/engine_type_color"
@@ -130,8 +136,8 @@ enum ThemeColor{
 	HIGHLIGHTED_FONT,
 }
 
-static func get_theme_color(color:ThemeColor):
-	var thm = EditorInterface.get_editor_theme()
+static func get_theme_color(color:ThemeColor) -> Color:
+	var thm:Theme = EditorInterface.get_editor_theme()
 	match color:
 		ThemeColor.BASE: return thm.get_color(&"base_color", &"Editor")
 		ThemeColor.ACCENT: return thm.get_color(&"accent_color", &"Editor")
@@ -199,3 +205,4 @@ static func get_theme_color(color:ThemeColor):
 		ThemeColor.READONLY_FONT: return thm.get_color(&"readonly_font_color", &"Editor")
 		ThemeColor.DISABLED_FONT: return thm.get_color(&"disabled_font_color", &"Editor")
 		ThemeColor.HIGHLIGHTED_FONT: return thm.get_color(&"highlighted_font_color", &"Editor")
+	return Color.BLACK

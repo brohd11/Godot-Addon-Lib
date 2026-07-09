@@ -1496,6 +1496,7 @@ func _build_nodes():
 	non_res_helper.places = places
 	
 	fs_popup_handler = FSPopupHandler.new()
+	add_child(fs_popup_handler)
 	fs_popup_handler.filesystem_tab = self
 	fs_popup_handler.tree = tree
 	fs_popup_handler.item_list = item_list

@@ -14,6 +14,7 @@ const ScenePreview = preload("res://addons/addon_lib/brohd/preview_gen/scene_pre
 const FileTypes = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/file_types.gd")
 const FSTooltip = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tooltip.gd")
 const FSRename = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename.gd")
+const FSGenericPopupHandler = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_generic_popup_handler.gd")
 
 const PE_STRIP_CAST_SCRIPT = preload("res://addons/addon_lib/brohd/alib_editor/file_system/filesystem_singleton.gd")
 
@@ -41,6 +42,7 @@ static func clear_caches():
 static var editor_fs:EditorFileSystem
 
 var editor_node_ref:EditorNodeRef
+var popup_handler:FSGenericPopupHandler
 
 var cache:Cache
 
@@ -622,6 +624,22 @@ func select_items_in_fs(selected_item_paths:Array, navigate=false) -> bool:
 		fs_tree.queue_redraw()
 	return true
 
+static func show_right_click_menu(clicked:Node, selected:String, selected_paths:Array, to_hide:=FSGenericPopupHandler.HIDE_HANDLED_ID):
+	var ins = get_instance()
+	if not is_instance_valid(ins):
+		printerr("right_click_menu - Could not get FileSystem instance.")
+		return
+	ins.right_click_menu(clicked, selected, selected_paths, to_hide)
+
+
+func right_click_menu(clicked:Node, selected:String, selected_paths:Array, to_hide:=FSGenericPopupHandler.HIDE_HANDLED_ID):
+	var did_select = ensure_items_selected(selected_paths)
+	if not did_select:
+		printerr("right_click_menu -  Could not select paths: ", selected_paths)
+		return
+	if not is_instance_valid(popup_handler):
+		popup_handler = FSGenericPopupHandler.new()
+	popup_handler.right_clicked(clicked, selected, selected_paths, to_hide)
 
 func _register_dialogs():
 	var fs_dock = EditorInterface.get_file_system_dock()
@@ -1023,22 +1041,31 @@ class FileData:
 	const TYPE = &"file_type"
 	const CUSTOM_ICON = &"file_custom_icon"
 	
+	const FAVORITES_META = "FAVORITES"
+	
 	class Preview:
 		const PREVIEW = &"preview"
 		const THUMBNAIL = &"thumbnail"
 
 class GetDropData:
-	static func files(selected_item_paths, from_node):
+	static func files(selected_item_paths:Array, from_node:Control, remove_invalid:=true) -> Variant:
+		if remove_invalid:
+			selected_item_paths.erase("res://")
+			selected_item_paths.erase(FileData.FAVORITES_META)
+		if selected_item_paths.is_empty():
+			return
+		
+		from_node.set_drag_preview(FileSystemSingleton.get_drag_preview(selected_item_paths))
 		#return UTree.get_drop_data.files(selected_item_paths, from_node)
-		var data_type = "files"
-		var selected_paths = []
+		var data_type:String = "files"
+		var selected_paths:Array = []
 		for path in selected_item_paths:
 			if path.ends_with("/"):
 				data_type = "files_and_dirs"
 				selected_paths.append(path)
 			else:
 				selected_paths.append(path)
-		var data = {"type": data_type, "files": selected_paths, "from": from_node}
+		var data:Dictionary = {"type": data_type, "files": selected_paths, "from": from_node}
 		
 		return data
 

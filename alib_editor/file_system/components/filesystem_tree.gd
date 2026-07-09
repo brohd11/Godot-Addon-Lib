@@ -92,7 +92,7 @@ func set_dir(target_dir:String, build:=false):
 func _new_tree_helper():
 	tree_helper = FSTreeHelper.new(self)
 	tree_helper.filesystem_singleton = filesystem_singleton
-	tree_helper.popup_on_right_click = false
+	
 	tree_helper.mouse_double_clicked.connect(_on_tree_helper_mouse_double_clicked)
 	tree_helper.multi_item_selected.connect(_on_tree_helper_multi_item_selected)
 	tree_helper.mouse_left_clicked.connect(_on_tree_helper_mouse_left_clicked)
@@ -254,6 +254,12 @@ func _select_selected_paths(selected_paths):
 func get_selected_paths():
 	return tree_helper.get_selected_paths()
 
+func get_selected_items():
+	var items = [] # tree_helper.get_selected_items not working..
+	for p in tree_helper.get_selected_paths():
+		items.append(tree_helper.get_tree_item(p))
+	return items
+
 func _scroll_to_selected_and_emit():
 	var selected_paths = get_selected_paths()
 	if not selected_paths.is_empty():
@@ -332,7 +338,8 @@ func _on_tree_helper_mouse_right_clicked():
 
 
 func rc_expand_folder():
-	var items = tree_helper.get_selected_tree_items()
+	var items = get_selected_items()
+	print(items)
 	for item in items:
 		item.collapsed = false
 

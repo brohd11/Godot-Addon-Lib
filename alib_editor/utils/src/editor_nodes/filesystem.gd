@@ -10,7 +10,7 @@ static func get_tree_line_edit():
 	var tree = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_TREE)
 	return NUTree.get_line_edit(tree)
 
-static func populate_popup(calling_node:Control):
+static func populate_popup(calling_node:Node):
 	var popup = EditorNodeRef.get_registered(EditorNodeRef.Nodes.FILESYSTEM_POPUP)
 	if calling_node.get_window() != popup.get_window():
 		popup.reparent(calling_node.get_window().get_child(0))
