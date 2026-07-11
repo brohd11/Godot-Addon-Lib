@@ -9,8 +9,8 @@ const LineSubmit = FSUtil.LineSubmit
 const ThemeColor = FSUtil.ThemeColor
 const NUItemList = FSUtil.NUItemList
 
-const FileSystemPlaces = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_places.gd")
-const PlaceList = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/filesystem_place_list.gd")
+const FileSystemPlaces = FSClasses.FileSystemPlaces
+const PlaceList = FSClasses.FileSystemPlaceList
 
 var places_instance:FileSystemPlaces
 

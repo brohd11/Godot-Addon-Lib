@@ -1,4 +1,5 @@
 @tool
+#! namespace ALibRuntime.UICustom class SplitWrapper
 extends Container
 
 @export var vertical: bool = false:

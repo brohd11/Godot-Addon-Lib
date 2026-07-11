@@ -1,3 +1,4 @@
+#! namespace ALibRuntime.Utils.UMisc class CacheHelper
 
 var _cache = {}
 

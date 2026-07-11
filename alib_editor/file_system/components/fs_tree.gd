@@ -1,3 +1,5 @@
+#! namespace ALibEditor.FileSystem.Component class FSTree
+
 extends VBoxContainer
 
 const TreeHelperBase = preload("uid://bm6fl2iu4jew7") #! resolve ALibRuntime.TreeHelperBase
