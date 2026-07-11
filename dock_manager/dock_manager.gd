@@ -485,8 +485,9 @@ func undock_instance():
 		window_pos = _last_window_pos
 	var window = PanelWindow.new(plugin_control, empty_panel, window_size, window_pos)
 	
-	
 	window.title = window_title
+	if window_title == "":
+		window.title = get_docked_name()
 	window.always_on_top = window_always_on_top
 	window.close_requested.connect(window_close_requested)
 	window.mouse_entered.connect(_on_window_mouse_entered.bind(window))

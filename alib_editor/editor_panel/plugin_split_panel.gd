@@ -4,10 +4,10 @@ extends Control
 const PluginSplitPanel = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/plugin_split_panel.gd")
 const RightClickHandler = preload("res://addons/addon_lib/brohd/gui_click_handler/right_click_handler.gd")
 const ClickState = preload("res://addons/addon_lib/brohd/gui_click_handler/click_state.gd")
-const UFile = ALibRuntime.Utils.UFile
-const Margin = ALibEditor.UIHelpers.Margin
+const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
+const Margin = preload("uid://b5wdpe8qi1pqg") #! resolve ALibEditor.UIHelpers.Margin
 
-const ThemeColor = ALibEditor.Utils.UEditorTheme.ThemeColor
+const ThemeColor = preload("uid://dsukbd2hmebmw") #! resolve ALibEditor.Utils.UEditorTheme.ThemeColor
 #const ButtonDetector = preload("res://addons/addon_lib/brohd/alib_editor/editor_panel/button_detector.gd")
 
 const DogEarButton = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dog_ear/dog_ear_button.gd")
@@ -54,8 +54,9 @@ func _ready():
 	add_child(vbox)
 	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	
-	#main_container = MarginContainer.new()
-	main_container = Margin.new_plugin_margin_container()
+	main_container = MarginContainer.new()
+	# not sure about this, scaling is odd...
+	#main_container = Margin.new_plugin_margin_container()
 	vbox.add_child(main_container)
 	main_container.name = "MainContainer"
 	main_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
