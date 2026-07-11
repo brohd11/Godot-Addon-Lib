@@ -100,11 +100,12 @@ func _set_editor_script_code_edit():
 		_merge_current_with_cache(true) # merge resolved members to data, this is useful if the current script doesn't get polled much
 		gdscript_parser.set_current_script(_current_script) # this clears the current class objects
 		gdscript_parser.set_code_edit(code_edit)
-		editor_script_changed.emit(_current_script)
+		
 		_merge_current_with_cache(false) # merge cached resolve. Before parse, so they can be updated if needed
 		
+		editor_script_changed.emit(_current_script)
 		#print("SCRIPT CHANGE PARSE", _current_script)
-		_parse()
+		_parse() #true)
 	
 
 func _get_or_add_cached_data(script_path:String):

@@ -19,6 +19,11 @@ func set_data(data:Dictionary):
 func get_data():
 	return _collection_data
 
+#! keys metadata:Dictionary path:String uid:String index:int
+func get_file_data(uid_or_path:String) -> Dictionary:
+	var uid = UFile.path_to_uid(uid_or_path)
+	return _collection_data.get(uid, {})
+
 func clear():
 	_collection_data.clear()
 

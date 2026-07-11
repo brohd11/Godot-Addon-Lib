@@ -8,10 +8,8 @@ enum FieldType {
 	OPTION
 }
 
-
 var _form_build_data = {}
 var constructed_data = {}
-
 
 func _init(form_build_data:Dictionary, _root_node=null) -> void:
 	_set_root_node(_root_node)
@@ -30,12 +28,15 @@ func add_bool(_name, icon=null, default:=false, target:TargetSection=TargetSecti
 	}
 
 
-
 func show_dialog():
 	_build_dialog()
 	_build_fields()
 	dialog.initial_position = Window.WINDOW_INITIAL_POSITION_CENTER_SCREEN_WITH_MOUSE_FOCUS
 	Engine.get_main_loop().root.add_child(dialog)
+	
+	var first_field = constructed_data.values()[0]
+	if first_field is Fields.LineEditField:
+		first_field.line_edit.grab_focus()
 	return await handled
 
 
@@ -105,6 +106,28 @@ func _add_field(_name, data):
 	constructed_data[_name] = control
 	return control
 
+static func was_cancelled(result:Variant):
+	return result is String and result == CANCEL_STRING
+
+# builders
+static func construct_and_display(form_data:Dictionary, _root_node=null):
+	var form = new(form_data, _root_node)
+	return await form.show_dialog()
+
+class Data:
+	#! keys title:String size:Vector2
+	static func new_data(params:={}) -> Dictionary:
+		return params
+	
+	#! keys placeholder:String target_section:TargetSection
+	static func line_edit(params:={}):
+		params["type"] = "LineEdit"
+		return params
+	
+	#! keys default:bool icon target_section:TargetSection
+	static func bool(params:={}):
+		params["type"] = "bool"
+		return params
 
 class Keys:
 	const TITLE = &"title"

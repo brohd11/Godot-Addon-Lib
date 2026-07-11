@@ -1,6 +1,8 @@
 @tool
 extends "res://addons/addon_lib/brohd/alib_runtime/dialog/base/handler_base.gd"
 
+const NUMarginContainer = ALibRuntime.NodeUtils.NUMarginContainer
+
 const SUCCESS_STRING = &"SUCCESS_STRING"
 
 enum TargetSection{
@@ -84,15 +86,30 @@ class DialogStructure extends Window:
 	var confirm_button:= Button.new()
 	
 	func _init() -> void:
+		var back_bg = Panel.new()
+		add_child(back_bg)
+		back_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		
+		var scale = 1
+		
+		var marg = MarginContainer.new()
+		back_bg.add_child(marg)
+		marg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		
+		
 		var bg = PanelContainer.new()
-		add_child(bg)
+		marg.add_child(bg)
 		bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		var editor_interface = Engine.get_singleton("EditorInterface")
-		if is_instance_valid(editor_interface): # this gives a not super dark bg
+		if Engine.has_singleton(&"EditorInterface"):
+			var editor_interface = Engine.get_singleton("EditorInterface")
+			scale = editor_interface.get_editor_scale()
 			var bg_sb = bg.get_theme_stylebox("panel").duplicate()
 			bg_sb.set_corner_radius_all(0)
-			bg_sb.set_content_margin_all(4)
+			bg_sb.set_content_margin_all(12 * scale)
+			bg_sb.bg_color = editor_interface.get_editor_theme().get_color("base_color", "Editor")
 			bg.add_theme_stylebox_override("panel", bg_sb)
+		
+		NUMarginContainer.set_margins(marg, 4 * scale, false)
 		
 		var main_vbox := VBoxContainer.new()
 		bg.add_child(main_vbox)

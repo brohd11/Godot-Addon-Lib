@@ -6,7 +6,7 @@ const FSTreeHelperBase = preload("res://addons/addon_lib/brohd/alib_editor/file_
 const FileData = preload("uid://fhnuvnmqrurq").FileData #! resolve FileSystemSingleton.FileData
 const PopupID = preload("uid://co1fsmkihc4cg") #! resolve FileSystemSingleton.FSGenericPopupHandler.PopupID
 const FSRenameContext = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename_ctx.gd")
-
+const NUTree = ALibRuntime.NodeUtils.NUTree
 
 const SET_ROOT = "Set Root"
 const RESET_ROOT = "Reset Root"
@@ -27,13 +27,16 @@ var last_filter_state:bool = false
 var current_files:PackedStringArray = []
 
 var root_dir:= "res://"
+var _persistent_data:= {}
 
 var file_extensions:= []
 
 var multi_select:=true
-var allow_root_pinning:= true
+var allow_root_pinning:=true
 var show_favorites:=true
 var show_empty_dirs:=true
+var filter_full_path:=false
+var draw_alternate_line_colors:=false
 
 var _flat_view:=false
 
@@ -56,6 +59,7 @@ func _ready() -> void:
 	file_tree = MinTree.new()
 	file_tree.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	file_tree.select_mode = Tree.SELECT_SINGLE
+	file_tree.draw.connect(_on_file_tree_draw)
 	
 	file_tree.hide_root = true
 	#file_tree.item_activated.connect(_on_item_activated)
@@ -86,6 +90,7 @@ func _ready() -> void:
 	fs_rename_ctx = FSRenameContext.new()
 	fs_rename_ctx.set_file_tree(file_tree)
 	
+	_set_persistent_on_ready()
 	FileSystemSingleton.call_on_ready(_on_fs_ready)
 
 func _on_fs_ready():
@@ -97,11 +102,17 @@ func _on_fs_ready():
 
 
 func set_persistent_data(data:Dictionary):
+	_persistent_data = data
+	
 	root_dir = data.get(PersistentData.ROOT_DIR, "res://")
 	_flat_view = data.get(PersistentData.FLAT_VIEW, _flat_view)
 	file_extensions = data.get(PersistentData.EXTENSIONS, file_extensions)
 	show_favorites = data.get(PersistentData.SHOW_FAVORITES, show_favorites)
 	show_empty_dirs = data.get(PersistentData.SHOW_EMPTY_DIRS, show_empty_dirs)
+
+func _set_persistent_on_ready():
+	tree_helper.data_dict = _persistent_data.get(PersistentData.TREE_ITEM_META, {})
+	_persistent_data.clear()
 
 ## Get persistent data for the tree
 func get_persistent_data() -> Dictionary:
@@ -112,6 +123,16 @@ func get_persistent_data() -> Dictionary:
 		PersistentData.SHOW_FAVORITES: show_favorites,
 		PersistentData.SHOW_EMPTY_DIRS: show_empty_dirs
 	}
+	var item_meta = {}
+	for path in tree_helper.data_dict.keys():
+		var path_data = tree_helper.data_dict.get(path)
+		var collapsed = path_data.get(tree_helper.Keys.METADATA_COLLAPSED)
+		if collapsed:
+			continue
+		item_meta[path] = {tree_helper.Keys.METADATA_COLLAPSED:false}
+	
+	#data[DataKeys.TREE_SCROLL_OFFSET] = tree.get_scroll()
+	data[PersistentData.TREE_ITEM_META] = item_meta
 	return data
 
 func _set_flat_view(state:bool):
@@ -126,6 +147,18 @@ func _set_show_empty_dirs(state:bool):
 	show_empty_dirs = state
 	_refresh_files_and_tree()
 
+func _set_filter_full_paths(state:bool):
+	filter_full_path = state
+	if _is_filtering():
+		_update_tree_items()
+
+func _set_alt_line_color(state:bool):
+	draw_alternate_line_colors = state
+	file_tree.queue_redraw()
+
+func _on_file_tree_draw() -> void:
+	if draw_alternate_line_colors:
+		NUTree.AltColor.draw_lines(file_tree)
 
 func _on_file_system_changed():
 	#_script_data = {} # why is this clearing?
@@ -272,6 +305,12 @@ func _on_item_activated():
 		FileSystemSingleton.activate_path(selection.selected)
 
 func _on_item_left_clicked():
+	var selection = _get_selection()
+	if selection.is_empty():
+		return
+	#if selection.selected == FileData.FAVORITES_META:
+		#return
+	FileSystemSingleton.ensure_items_selected(selection.selected_paths)
 	return
 
 func _on_item_right_clicked():
@@ -290,10 +329,10 @@ func custom_right_click_menu(items:Dictionary, selected_path:String, selected_pa
 	if _custom_popup_handler_call(&"custom_right_click_menu", [items, selected_path, selected_paths]):
 		return
 	
-	_custom_right_click_menu(items, selected_path, selected_paths)
 	_add_popup_root_items(items, selected_path)
+	_custom_right_click_menu(items, selected_path, selected_paths)
 
-func _custom_right_click_menu(items:Dictionary, selected_path:String, selected_paths:Array):
+func _custom_right_click_menu(_items:Dictionary, _selected_path:String, _selected_paths:Array):
 	return
 
 ## Handles Set/Reset Root items, overide _handle_custom_popup_id for others.
@@ -308,7 +347,7 @@ func handle_custom_popup_id(id:int, popup:PopupMenu):
 		RESET_ROOT: _set_root("res://")
 		_: _handle_custom_popup_id(id, popup)
 
-func _handle_custom_popup_id(id, popup):
+func _handle_custom_popup_id(_id:int, _popup:PopupMenu):
 	pass
 
 ## Handle file system items that are not just popup pass throughs.
@@ -325,7 +364,7 @@ func handle_fs_popup_id(id, fs_popup):
 	elif _custom_popup_handler_call(&"handle_fs_popup_id", [id, fs_popup]):
 		return
 
-func _handle_fs_popup_id(id, fs_popup):
+func _handle_fs_popup_id(_id:int, _fs_popup:PopupMenu):
 	return
 
 #endregion
@@ -357,12 +396,22 @@ func _on_filter_line_text_changed(_new_text:String):
 	_update_tree_items()
 
 func _update_tree_items():
+	
 	var filtering = _is_filtering()
 	var changed_state = last_filter_state != filtering
 	
 	var item_paths = tree_helper.get_selected_paths()
 	
-	tree_helper.update_tree_items(_is_filtering(), _filter_text, root_dir)
+	if not _flat_view:
+		tree_helper.update_tree_items(filtering, _filter_text, root_dir)
+	else:
+		var root = tree_helper.get_tree_item(root_dir)
+		if filtering:
+			for c in root.get_children():
+				c.visible =  _filter_text(c.get_text(0))
+		else:
+			for c in root.get_children():
+				c.visible =  true
 	
 	if changed_state and last_filter_state:
 		if item_paths.size() > 0:
@@ -375,8 +424,7 @@ func _update_tree_items():
 	last_filter_state = filtering
 
 func _filter_text(to_filter:String):
-	var use_file_name = true # should be a setting?
-	if use_file_name:
+	if not filter_full_path:
 		to_filter = to_filter.trim_suffix("/").get_file()
 	return filter_line_edit.text.is_subsequence_of(to_filter)
 
@@ -403,7 +451,6 @@ func _custom_popup_handler_call(method:StringName, args:Array=[]):
 
 func rc_expand_folder():
 	var items = tree_helper.get_selected_tree_items()
-	print(items)
 	for item in items:
 		item.collapsed = false
 
@@ -428,7 +475,7 @@ func _on_file_tree_drop_data(at_position: Vector2, data: Variant) -> void:
 	if meta is String:
 		target_dir = meta
 	if meta is Dictionary:
-		target_dir = tree_helper.get_path_from_item(target_item)
+		target_dir = FSTreeHelper.get_path_from_item(target_item)
 	if not target_dir.ends_with("/"):
 		target_dir = target_dir.get_base_dir() # was using UFile.get_dir, does it matter?
 	
@@ -446,26 +493,6 @@ func set_tree_item_params(path:String, item:TreeItem, file_data:Dictionary):
 
 
 class FSTreeHelper extends FSTreeHelperBase:
-	
-	#func item_set_file_type_icon(item:TreeItem, file_data:Dictionary, file_path=null, show_preview=true):
-		#if not file_path:
-			#file_path = file_data.get(Keys.METADATA_PATH)
-		#var file_icon:Texture2D
-		#var preview_data = FileSystemSingleton.get_preview(file_path)
-		#if preview_data != null:
-			#file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.THUMBNAIL)
-			#if show_preview and file_icon == null:
-				#file_icon = preview_data.get(FileSystemSingleton.FileData.Preview.PREVIEW)
-				#item.set_icon_max_width(0, int(thumbnail_size))
-		#
-		#if file_icon == null:
-			#file_icon = filesystem_singleton.get_type_icon(file_path)
-		#
-		##var file_color:Color = file_data.get("color", Color.WHITE) # this is legacy from old tree system
-		#var file_color:Color = Color.WHITE
-		#item.set_icon(0, file_icon)
-		#if file_path.get_extension() != "":
-			#item.set_icon_modulate(0, file_color)
 	
 	# this should nullify above
 	func _set_item_icon(last_item:TreeItem, file_data:Dictionary):
@@ -498,6 +525,7 @@ class ItemKeys:
 
 class PersistentData:
 	const ROOT_DIR = &"fs_tree.root_dir"
+	const TREE_ITEM_META = &"fs_tree.tree_item_meta"
 	const FLAT_VIEW = &"fs_tree.flat_view"
 	const EXTENSIONS = &"fs_tree.extensions"
 	const MULTI_SELECT = &"fs_tree.multi_select"

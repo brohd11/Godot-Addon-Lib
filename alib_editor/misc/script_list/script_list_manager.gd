@@ -251,21 +251,26 @@ func get_all_script_data_tooltip_key():
 		all_data[data.get(Keys.TOOLTIP)] = data
 	return all_data
 
+func get_script_index(file_path:String):
+	var ext = file_path.get_extension()
+	if not ext in get_text_file_types(): return -1
+	var script_list_data = get_cached_item_data(file_path)
+	if script_list_data == null: return -1
+	return script_list_data.get(Keys.SCRIPT_IDX, -1)
+
 ## Pass FileSystemSingleton instance. This allows ScriptTabs to be used without including the singleton.
 func get_script_index_or_open(file_path:String, filesystem_singleton=null):
 	var ext = file_path.get_extension()
-	if not ext in TEXT_FILE_TYPES: return -1
-	var script_list_data = get_cached_item_data(file_path)
-	#print(file_path, "::DATA::", script_list_data)
-	if script_list_data == null:
-		if filesystem_singleton != null:
-			if filesystem_singleton.instance_valid():
-				filesystem_singleton.activate_path(file_path)
-		elif ext == "gd":
-			EditorInterface.edit_resource(load(file_path))
-		return -1
-	
-	return script_list_data.get(Keys.SCRIPT_IDX)
+	var index = get_script_index(file_path)
+	if index > -1:
+		return index
+	if filesystem_singleton != null:
+		if filesystem_singleton.instance_valid():
+			filesystem_singleton.activate_path(file_path)
+	elif ext == "gd":
+		EditorInterface.edit_resource(load(file_path))
+	return -1
+
 
 func clear_script_list_filter():
 	if is_instance_valid(filter_line_edit) and not filter_line_edit.text.is_empty():

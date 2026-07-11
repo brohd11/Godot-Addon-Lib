@@ -308,7 +308,6 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 	
 	
 	for menu_path:String in menu_items:
-		
 		var slice_count = menu_path.get_slice_count("/")
 		if slice_count > 1:
 			var first_slice = menu_path.get_slice("/", 0)
@@ -338,6 +337,7 @@ static func create_context_plugin_items(plugin:EditorContextMenuPlugin, popup_ar
 		var group_data = multi_popup_groups.get(group)
 		
 		var popup = _get_fs_popup_submenu(fs_popup, group) # this will stop overwrite if the popup has already been added
+		# if this is existing when it shouldn't be, ensure SLOT is set correctly
 		var is_existing:= is_instance_valid(popup)
 		if not is_existing:
 			popup = PopupMenu.new()

@@ -19,7 +19,16 @@ func collection_valid(collection:CollectionBase):
 func get_collections():
 	return collections.values()
 
-func get_collection(collection_name:String):
+func has_collection_object(collection:CollectionBase):
+	for col in collections.values():
+		if col == collection:
+			return true
+	return false
+
+func has_collection(collection_name:String):
+	return collections.has(collection_name)
+
+func get_collection(collection_name:String) -> CollectionBase:
 	return collections.get(collection_name)
 
 func refresh_collection(collection:CollectionBase):
@@ -40,16 +49,21 @@ func load_all_collections():
 		var collection = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_REPLACE) as CollectionBase
 		collections[collection.get_collection_name()] = collection
 
-func new_collection(_name:=""):
+func new_collection(_name:="", add_to_manager:=true):
 	var collection = CollectionBase.new()
 	if _name != "":
 		collection.set_collection_name(_name)
+	if not add_to_manager:
+		return collection
+	add_collection(collection)
+	return collection
+
+func add_collection(collection:CollectionBase):
 	if collection.get_collection_name() in collections.keys():
 		print("Collection already exists: %s" % collection.get_collection_name())
 		return
 	collections[collection.get_collection_name()] = collection
 	save_all_collections()
-	return collection
 
 
 func save_collection(collection, update:=true):
@@ -58,12 +72,14 @@ func save_collection(collection, update:=true):
 	ResourceSaver.save(collection, _get_collection_path(collection))
 	if update:
 		_update_collections()
-	
+
+
 
 func save_all_collections():
 	for collection in collections.values():
 		save_collection(collection, false)
 	_update_collections()
+
 
 func erase_collection(collection:CollectionBase):
 	var collection_name = collection.get_collection_name()
@@ -75,6 +91,23 @@ func erase_collection(collection:CollectionBase):
 	collections.erase(collection_name)
 	_update_collections()
 
+func rename_collection(collection:CollectionBase, new_name:String):
+	if collection.get_collection_name() == new_name:
+		print("Collection name equals new name: %s" % new_name)
+		return false
+	if collections.has(new_name):
+		printerr("Collection name already used: %s" % new_name)
+		return false
+	
+	var old_name = collection.get_collection_name()
+	collections.erase(old_name)
+	var old_file_path = _get_collection_path(collection)
+	collection.set_collection_name(new_name)
+	collections[new_name] = collection
+	save_collection(collection, false)
+	DirAccess.remove_absolute(old_file_path)
+	collections_updated.emit()
+	return true
 
 func _get_collection_path(collection:CollectionBase):
 	var save_name = collection.get_collection_name().replace("/", "_")

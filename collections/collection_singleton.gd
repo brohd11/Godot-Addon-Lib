@@ -26,6 +26,7 @@ func _get_ready_bool() -> bool:
 
 
 const CollectionManager = preload("res://addons/addon_lib/brohd/collections/class/collection_manager.gd")
+const CollectionBase = CollectionManager.CollectionBase
 
 const COLLECTIONS_DIR = "user://addons/collections/"
 
@@ -55,6 +56,29 @@ func _get_manager(collection_type:CollectionType):
 		return
 	return manager
 
+#! keys manager_name:String storage_dir:Dictionary
+static func get_named_manager(manager_data:Dictionary) -> CollectionManager:
+	return get_instance()._get_named_manager(manager_data)
+
+#! keys i-get_named_manager;
+func _get_named_manager(manager_data:Dictionary):
+	var man_name:String = manager_data.get(&"manager_name", "un-named")
+	if man_name == "un-named" or not man_name.is_valid_filename():
+		printerr("Invalid collection manager name::", man_name)
+	var storage_dir = manager_data.get(&"storage_dir", COLLECTIONS_DIR.path_join(man_name))
+	var manager = collection_managers.get(man_name)
+	if not is_instance_valid(manager):
+		manager = CollectionManager.new()
+		manager.collections_dir = storage_dir
+		manager.collections_updated.connect(_on_manager_updated)
+		manager.load_all_collections()
+		collection_managers[man_name] = manager
+	
+	if not manager.collections_dir == storage_dir:
+		printerr("Requested manager does not match existing signature:")
+		printerr("Requested: %s Existing: %s" % [storage_dir, manager.collections_dir])
+	
+	return manager
 
 func _update_collections():
 	print("UPDATING")
@@ -78,7 +102,7 @@ func _new_collection_dialog(collection_type:CollectionType):
 	
 	var form = Form.new({
 		"title": "New Collection",
-		"size": Vector2(400,100),
+		"size": Vector2(400,100) * EditorInterface.get_editor_scale(),
 		"New Collection Name":{
 			"type":"LineEdit",
 			"placeholder":"Enter name..."
