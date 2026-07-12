@@ -336,8 +336,9 @@ static func remove_comment(text:String, string_safe:=false, string_map=null):
 
 
 static func get_script_path_and_suffix(script_path:String):
+	var array:Array[String] = []
 	if not script_path.is_absolute_path():
-		return []
+		return array
 	#if not script_path.begins_with("res://"):
 		#return []
 	var path = script_path
@@ -346,7 +347,7 @@ static func get_script_path_and_suffix(script_path:String):
 	if gd_idx > -1:
 		path = script_path.substr(0, gd_idx + 3)
 		suffix = script_path.substr(gd_idx + 4)
-	var array:Array[String] = [path, suffix]
+	array = [path, suffix]
 	return array
 
 
