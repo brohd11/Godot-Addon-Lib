@@ -184,7 +184,7 @@ static func clear_persistent_cache():
 	var files = DirAccess.get_files_at(GDScriptParser.PARSE_CACHE_DIR)
 	for f in files:
 		var path = GDScriptParser.PARSE_CACHE_DIR.path_join(f)
-		DirAccess.remove_absolute(f)
+		DirAccess.remove_absolute(path)
 
 static func get_parser(script_path:String="") -> GDScriptParser:
 	var ins = get_instance()
