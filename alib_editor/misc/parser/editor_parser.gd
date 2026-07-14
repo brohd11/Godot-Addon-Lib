@@ -187,8 +187,8 @@ static func clear_persistent_cache():
 		DirAccess.remove_absolute(path)
 
 static func get_parser(script_path:String="") -> GDScriptParser:
-	var ins = get_instance()
-	if not ins.valid_script:
+	var ins = _get_instance(PE_STRIP_CAST_SCRIPT, false)
+	if not is_instance_valid(ins) or not ins.valid_script:
 		return null
 	if script_path == "" or script_path == ins.gdscript_parser.get_script_path():
 		return ins.gdscript_parser
