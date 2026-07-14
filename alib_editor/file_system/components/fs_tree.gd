@@ -8,7 +8,7 @@ const FSTreeHelperBase = preload("res://addons/addon_lib/brohd/alib_editor/file_
 const FileData = preload("uid://fhnuvnmqrurq").FileData #! resolve FileSystemSingleton.FileData
 const PopupID = preload("uid://co1fsmkihc4cg") #! resolve FileSystemSingleton.FSGenericPopupHandler.PopupID
 const FSRenameContext = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_rename_ctx.gd")
-const NUTree = ALibRuntime.NodeUtils.NUTree
+const NUTree = preload("uid://coqq638olix8k") #! resolve ALibRuntime.NodeUtils.NUTree
 
 const SET_ROOT = "Set Root"
 const RESET_ROOT = "Reset Root"
