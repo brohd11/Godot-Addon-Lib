@@ -1,5 +1,12 @@
 #! namespace ALibRuntime.Utils class URegex
 
+## Token that _prepare_line_for_safe_regex() swaps each string literal for; the %d is the
+## literal's index. Callers that regex the sanitized output can match a masked string with
+## STRING_PLACEHOLDER_PATTERN.
+const STRING_PLACEHOLDER_FMT := "__STRING_PLACEHOLDER_%d__"
+const STRING_PLACEHOLDER_PATTERN := "__STRING_PLACEHOLDER_\\d+__"
+
+
 static func escape_regex_meta_characters(text: String) -> String:
 	var output: PackedStringArray = []
 	for char_str in text:
@@ -36,7 +43,7 @@ static func _prepare_line_for_safe_regex(line: String, string_regex: RegEx) -> D
 	var line_with_placeholders = line
 	for i in range(string_matches.size() - 1, -1, -1):
 		var _match = string_matches[i]
-		var placeholder = "__STRING_PLACEHOLDER_%d__" % i
+		var placeholder = STRING_PLACEHOLDER_FMT % i
 		line_with_placeholders = line_with_placeholders.left(_match.get_start()) + placeholder + line_with_placeholders.substr(_match.get_end())
 	
 	var sanitized_code: String
@@ -73,7 +80,7 @@ static func string_safe_regex_sub(line: String, processor: Callable, string_rege
 	# Restore strings into the converted code
 	var final_code = converted_code + comment_part
 	for i in range(string_literals.size()):
-		var placeholder = "__STRING_PLACEHOLDER_%d__" % i
+		var placeholder = STRING_PLACEHOLDER_FMT % i
 		final_code = final_code.replace(placeholder, string_literals[i])
 	
 	return final_code
