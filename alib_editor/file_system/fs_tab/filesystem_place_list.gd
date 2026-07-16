@@ -72,9 +72,7 @@ func _ready() -> void:
 	
 	item_list = ItemList.new()
 	content_vbox.add_child(item_list)
-	var sb = item_list.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
-	sb.set_content_margin_all(0)
-	item_list.add_theme_stylebox_override("panel", sb)
+	NUItemList.replace_panel_stylebox_margin(item_list, 0, false)
 	item_list.draw.connect(_item_list_draw)
 	item_list.allow_reselect = true
 	#item_list.allow_rmb_select = true

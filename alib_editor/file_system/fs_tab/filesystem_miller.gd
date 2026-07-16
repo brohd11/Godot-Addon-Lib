@@ -37,7 +37,7 @@ var draw_alt_color:=false
 
 var path_in_res:=true
 var current_path := ""
-var _current_dir := ""
+var _current_dir := "res://" # set default so it builds at least
 var _history_path := ""
 
 var multi_select_dir:=""

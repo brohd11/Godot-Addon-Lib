@@ -59,6 +59,7 @@ func _ready() -> void:
 	file_type_icon_size = Vector2(16, 16) * EditorInterface.get_editor_scale()
 	file_type_icon_margin = Vector2(4, 4) * EditorInterface.get_editor_scale()
 	
+	NUItemList.replace_panel_stylebox_margin(self)
 	
 	
 	#allow_rmb_select = true
