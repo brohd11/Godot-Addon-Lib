@@ -92,6 +92,7 @@ func _ready() -> void:
 	fs_rename_ctx = FSRenameContext.new()
 	fs_rename_ctx.set_file_tree(file_tree)
 	
+	EditorInterface.get_file_system_dock().folder_moved.connect(_on_fs_folder_moved)
 	_set_persistent_on_ready()
 	FileSystemSingleton.call_on_ready(_on_fs_ready)
 
@@ -161,6 +162,12 @@ func _set_alt_line_color(state:bool):
 func _on_file_tree_draw() -> void:
 	if draw_alternate_line_colors:
 		NUTree.AltColor.draw_lines(file_tree)
+
+func _on_fs_folder_moved(old_path:String, new_path:String):
+	var rename = FSTreeHelperBase.update_root(root_dir, old_path, new_path)
+	if rename != "":
+		root_dir = rename
+
 
 func _on_file_system_changed():
 	#_script_data = {} # why is this clearing?

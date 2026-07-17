@@ -198,3 +198,15 @@ func set_tree_item_params(path:String, item:TreeItem):
 	#var bg_color = filesystem_singleton.get_background_color(path)
 	#if bg_color:
 		#item.set_custom_bg_color(0, bg_color)
+
+
+#^ static
+
+static func update_root(root_dir:String, old_path:String, new_path:String):
+	if not new_path.begins_with("/"):
+		new_path += "/"
+	if root_dir == old_path:
+		return new_path
+	if root_dir.begins_with(old_path):
+		return new_path.path_join(root_dir.trim_prefix(old_path))
+	return ""

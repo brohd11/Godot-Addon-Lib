@@ -158,6 +158,8 @@ func set_dir(target_dir:String):
 func _ready() -> void:
 	if is_part_of_edited_scene():
 		return
+	
+	EditorInterface.get_file_system_dock().folder_moved.connect(_on_folder_moved)
 	filesystem_singleton = FileSystemSingleton.get_instance()
 	filesystem_singleton.filesystem_changed.connect(_on_scan_files_complete, 1)
 	
@@ -289,6 +291,14 @@ func _on_scan_files_complete():
 	_set_filesystem_dirty_flag()
 	_set_current_path(self, current_path, false)
 	refresh()
+
+func _on_folder_moved(old_path:String, new_path:String):
+	pass # needs tree helper refactor to new base
+	#var rename = FSTreeHelper.update_root(root_dir, old_path, new_path)
+	#if rename != "":
+		#root_dir = rename
+	#if tree.root_dir == old_path:
+		#pass
 
 func _set_filesystem_dirty_flag():
 	tree.filesystem_dirty = true
