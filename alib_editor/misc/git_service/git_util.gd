@@ -382,12 +382,15 @@ static func _merge_patch(repo_dir:String, files:Dictionary, extra_args:Array, hu
 ## go blank the moment you staged.
 const REV_HEAD = "HEAD"
 
-## Whether a committed version of a file could be read, and if not, why not — the two want opposite
-## things drawn. ABSENT means every line is new, so paint them all; ERROR means paint nothing.
+## Whether a committed version of a file could be read, and if not, why not — each wants something
+## different drawn. ABSENT means every line is new, so paint them all; ERROR means paint nothing;
+## IGNORED means git is not watching the file at all, so a diff against it says nothing. Appended to,
+## never reordered: the ordinals travel.
 enum Head {
 	OK,
 	ABSENT,
 	ERROR,
+	IGNORED,
 }
 
 ## The argv for reading one file out of a rev, split from the spawn so it can be tested.
@@ -398,11 +401,33 @@ static func build_show_args(rev:String, repo_dir:String, res_path:String) -> Arr
 	return ["show", "%s:%s" % [rev, to_repo_path(repo_dir, res_path)]]
 
 
+## The argv for asking whether one file is ignored, split from the spawn so it can be tested.
+##
+## check-ignore takes pathnames and not pathspecs, so PATHSPEC_LITERAL must not be prefixed here —
+## the same trap as build_show_args. `-q` because only the exit code is read, `--` so a path that
+## looks like a flag is still read as a path.
+static func build_check_ignore_args(repo_dir:String, res_path:String) -> Array:
+	return ["check-ignore", "-q", "--", to_repo_path(repo_dir, res_path)]
+
+
+## Whether .gitignore excludes a file from its repo. Blocking — run it off the main thread.
+##
+## Exit 0 is ignored, 1 is not, 128 is git refusing to answer — the last two are the same answer here.
+## check-ignore does not report a *tracked* path as ignored even when a pattern matches it, so this
+## cannot misfire on a file git is already watching.
+static func is_ignored(repo_dir:String, res_path:String) -> bool:
+	return run_git(repo_dir, build_check_ignore_args(repo_dir, res_path))[Keys.EXIT] == 0
+
+
 ## One file's committed content, as text. Blocking — run it off the main thread.
 ##
 ## `git show` answers 128 both for a path not in HEAD and for a directory that is not a repo, with
 ## only git's localized prose to separate them, so the failure path re-asks with rev-parse. A repo
 ## with no commits falls out as ABSENT, which is the truth: nothing in it is committed yet.
+##
+## The ignore check rides on that same failure path and so costs nothing for a tracked file: not in
+## HEAD is the only way to reach it. It separates "git has not seen this yet" from "git will never
+## see this", which `git show` alone answers identically.
 #! keys head:Head text:String
 static func get_file_at_head(repo_dir:String, res_path:String) -> Dictionary:
 	var result = run_git(repo_dir, build_show_args(REV_HEAD, repo_dir, res_path))
@@ -412,7 +437,8 @@ static func get_file_at_head(repo_dir:String, res_path:String) -> Dictionary:
 		return {Keys.HEAD: Head.OK, Keys.TEXT: String(output[0]) if not output.is_empty() else ""}
 
 	if run_git(repo_dir, ["rev-parse", "--git-dir"])[Keys.EXIT] == 0:
-		return {Keys.HEAD: Head.ABSENT, Keys.TEXT: ""}
+		var head:Head = Head.IGNORED if is_ignored(repo_dir, res_path) else Head.ABSENT
+		return {Keys.HEAD: head, Keys.TEXT: ""}
 
 	return {Keys.HEAD: Head.ERROR, Keys.TEXT: ""}
 
@@ -1007,3 +1033,6 @@ class Colors:
 	const L_YELLOW = Color(0.74, 0.69, 0.466, 1.0)
 	const YELLOW = Color(0.741, 0.608, 0.0, 1.0)
 	const RED = Color(0.573, 0.0, 0.0, 1.0)
+	## For what git is not watching — present enough to read as deliberate, faint enough not to
+	## compete with the colors that mean an actual change
+	const DIM = Color(0.5, 0.5, 0.5, 0.5)

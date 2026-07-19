@@ -283,7 +283,21 @@ enum Marker {
 	DELETED_ABOVE = 1 << 2, ## lines were removed immediately before this one
 	DELETED_BELOW = 1 << 3, ## ...and this is what that looks like at the end of the file, where there
 							## is no line after the deletion to hang the mark on
+	NO_BASELINE   = 1 << 4, ## nothing to diff against — a whole file state rather than anything a
+							## hunk describes, so hunks_to_markers() never emits it. Set by
+							## fill_markers() for a file git is not watching
 }
+
+
+## Every line of a buffer marked the same, for the whole file states a hunk cannot express. Same
+## shape and same empty-file guard as hunks_to_markers(), so the draw side cannot tell them apart.
+static func fill_markers(line_count:int, mask:int) -> PackedByteArray:
+	var markers = PackedByteArray()
+	if line_count <= 0:
+		return markers
+	markers.resize(line_count)
+	markers.fill(mask)
+	return markers
 
 
 ## Hunks, resolved to one byte per line of the new text — a lookup a draw callback can do without
