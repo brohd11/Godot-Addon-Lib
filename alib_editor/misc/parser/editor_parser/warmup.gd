@@ -29,7 +29,7 @@ func run(cache_dir:String, tree:SceneTree, full:bool = false) -> void:
 	running = true
 
 	var cache:Dictionary = {} # shared across the sweep so dependency sub-parsers are reused
-	var paths:Array = UFile.scan_for_files("res://", ["gd"])
+	var paths:Array = UFile.GetFiles.scan("res://", ["gd"])
 	print("ParserWarmup: sweeping %d scripts (%s) -> %s" % [paths.size(), "full" if full else "shallow", cache_dir])
 
 	var warmed := 0

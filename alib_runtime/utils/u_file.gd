@@ -26,42 +26,23 @@ static func get_data_bin(path:String, allow_obj:bool=false) -> Variant:
 		return f.get_var(allow_obj)
 	return null
 
-
+static func temp_file_arr_comp(a, b):
+	var a_missing = []
+	var b_missing = []
+	for f in a:
+		if not f in b:
+			b_missing.append(f)
+	for f in b:
+		if not f in a:
+			a_missing.append(f)
+	
+	if not (a_missing.is_empty() and b_missing.is_empty()):
+		print("FILE MISMATCH:", a_missing)
+		print(b_missing)
 
 static func scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
-	if show_ignore or not Engine.is_editor_hint():
-		return _scan_for_files(dir, file_types, include_dirs, ignore_dirs, show_ignore)
-	else:
-		var fs = Engine.get_singleton("EditorInterface").get_resource_filesystem()
-		var fs_dir = fs.get_filesystem_path(dir)
-		if fs_dir == null:
-			return _scan_for_files(dir, file_types, include_dirs, ignore_dirs, show_ignore)
-		return _fs_scan_for_files(fs, dir, file_types, include_dirs, ignore_dirs)
-	
+	return _scan_for_files(dir, file_types, include_dirs, ignore_dirs, show_ignore)
 
-static func _fs_scan_for_files(fs:EditorFileSystem, dir:String, file_types:Array, include_dirs=false, ignore_dirs:Array=[]) -> PackedStringArray:
-	var files:= PackedStringArray()
-	if include_dirs:
-		files.append(dir)
-	var fs_dir:EditorFileSystemDirectory = fs.get_filesystem_path(dir)
-	for i in fs_dir.get_subdir_count():
-		var sub_dir = fs_dir.get_subdir(i)
-		var path = sub_dir.get_path()
-		if path in ignore_dirs:
-			continue
-		var recur_files = _fs_scan_for_files(fs, path, file_types, include_dirs, ignore_dirs)
-		files.append_array(recur_files)
-		
-	
-	for i in fs_dir.get_file_count():
-		var path = fs_dir.get_file_path(i)
-		if file_types == []:
-			files.append(path)
-			continue
-		if path.to_lower().get_extension() in file_types:
-			files.append(path)
-	
-	return files
 
 static func _scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
 	var file_array:PackedStringArray = []
