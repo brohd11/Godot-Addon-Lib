@@ -2,6 +2,7 @@ extends RefCounted
 #! namespace ALibRuntime.Utils class UFile
 
 const GetFilesAsync = preload("res://addons/addon_lib/brohd/alib_runtime/utils/file/get_files_async.gd")
+const GetFiles = preload("res://addons/addon_lib/brohd/alib_runtime/utils/file/get_files.gd")
 
 const IGNORE_FILES = [".gitignore", ".gitattributes", ".gitmodules", ".git"]
 
@@ -25,42 +26,7 @@ static func get_data_bin(path:String, allow_obj:bool=false) -> Variant:
 		return f.get_var(allow_obj)
 	return null
 
-static func get_files(dir:String, include_dirs=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
-	if not DirAccess.dir_exists_absolute(dir):
-		return PackedStringArray()
-	return _get_files_recur(dir, include_dirs, file_types)
 
-static func _get_files_recur(dir:String, include_dirs:=false, file_types:Array=[], show_hidden:=false) -> PackedStringArray:
-	var found_files = PackedStringArray()
-	if not show_hidden and FileAccess.file_exists(dir.path_join(".gdignore")):
-		return found_files
-	var dir_access = DirAccess.open(dir)
-	if not dir_access:
-		return found_files
-	dir_access.include_hidden = show_hidden
-	var files = dir_access.get_files()
-	var filter = not file_types.is_empty()
-	for f in files:
-		var path = dir.path_join(f)
-		if not filter:
-			found_files.append(path)
-		else:
-			var ext = f.get_extension()
-			if ext in file_types:
-				found_files.append(path)
-	
-	var dirs = dir_access.get_directories()
-	for d in dirs:
-		var path = dir.path_join(d) + "/"
-		if include_dirs:
-			found_files.append(path)
-		found_files.append_array(_get_files_recur(path, include_dirs, file_types, show_hidden))
-	
-	return found_files
-
-
-static func scan_for_files_no_fs(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
-	return _scan_for_files(dir, file_types, include_dirs, ignore_dirs, show_ignore)
 
 static func scan_for_files(dir:String,file_types:Array, include_dirs=false, ignore_dirs:Array=[], show_ignore=false) -> PackedStringArray:
 	if show_ignore or not Engine.is_editor_hint():
@@ -128,7 +94,7 @@ static func _scan_for_files(dir:String,file_types:Array, include_dirs=false, ign
 		var dir_path:String = dir.path_join(d)
 		if dir_path in ignore_dirs:
 			continue
-		var recur_files:Array = scan_for_files(dir_path,file_types,include_dirs,ignore_dirs,show_ignore)
+		var recur_files:Array = _scan_for_files(dir_path,file_types,include_dirs,ignore_dirs,show_ignore)
 		file_array.append_array(recur_files)
 	
 	var ignore_files:Array = IGNORE_FILES
