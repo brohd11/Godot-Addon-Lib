@@ -4,6 +4,8 @@
 
 const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
 
+const GitColors = GitService.GitColors
+
 const MAX_DEPTH = 5
 
 const LOG_LIMIT = 100
@@ -90,6 +92,69 @@ static func get_status_label(file_data:Dictionary) -> String:
 ## The same, abbreviated to git's own single letter for a narrow sidebar.
 static func get_status_letter(file_data:Dictionary) -> String:
 	return _status_display(file_data, STATUS_LETTERS, "?", "U", "")
+
+
+## How much attention a status asks for. Ordered: a higher int wins when a directory has to pick
+## one descendant to speak for (the tree's marker bubble). NONE is "git has no opinion".
+enum Severity {
+	NONE,
+	NESTED,
+	IGNORED,
+	STAGED,
+	UNTRACKED,
+	MODIFIED,
+	CONFLICTED
+}
+
+## The severity of a FILES entry. Kind wins over the staged / unstaged pair deliberately: a
+## conflicted or untracked file must not be shadowed by either.
+static func get_status_severity(file_data:Dictionary) -> int:
+	match file_data.get(Keys.KIND, Kind.ORDINARY):
+		Kind.UNMERGED: return Severity.CONFLICTED
+		Kind.UNTRACKED: return Severity.UNTRACKED
+
+	var staged = file_data.get(Keys.STAGED, false)
+	var unstaged = file_data.get(Keys.UNSTAGED, false)
+	if staged and not unstaged:
+		return Severity.STAGED
+
+	# the worktree side wins for the same reason it does in get_status_label()
+	if file_data.get(Keys.WORKTREE, Status.NONE) == Status.MODIFIED:
+		return Severity.MODIFIED
+
+	return Severity.IGNORED
+
+
+## The color a row should display, from an entry of the FILES dict. Pure lookup over
+## get_status_severity() — the classification lives there, this only dresses it.
+static func get_status_color(file_data:Dictionary, colors:GitColors) -> Color:
+	match get_status_severity(file_data):
+		Severity.CONFLICTED: return colors.conflicted
+		Severity.MODIFIED: return colors.modified
+		Severity.UNTRACKED: return colors.untracked
+		Severity.STAGED: return colors.staged
+	return colors.ignored
+
+
+## Whether one entry of a status IGNORED array covers `path`. A directory entry keeps its trailing
+## slash and covers its whole subtree — git forbids re-including a file under an excluded directory,
+## so a collapsed entry really does mean everything below it. Anything else matches exactly.
+##
+## Both paths are res:// absolute, which is what keeps an unanchored pattern honest: a repo ignoring
+## `addons/` reports it as res://addons/, so res://tools/addons/x correctly does not match.
+static func ignored_covers(entry:String, path:String) -> bool:
+	if entry.ends_with("/"):
+		return path.begins_with(entry)
+	return path == entry
+
+
+## Whether a status IGNORED array covers `path`. Linear, and meant to be — these arrays run to a
+## handful of entries because git collapses whole ignored directories into one.
+static func is_path_ignored(ignored:Array, path:String) -> bool:
+	for entry:String in ignored:
+		if ignored_covers(entry, path):
+			return true
+	return false
 
 
 ## Every character get_status_letter() can return — what a glyph cache has to bake up front.
@@ -314,6 +379,11 @@ static func get_status(repo_dir:String) -> Dictionary:
 	var result = run_git(repo_dir, [
 		"-c", "core.quotepath=false",
 		"status", "--porcelain=v2", "--branch", "--untracked-files=all",
+		# `matching` and not `traditional`: with --untracked-files=all above, traditional stops
+		# collapsing and lists every file inside an ignored directory instead of the directory —
+		# 17k lines rather than 4 on this project. matching reports the pattern match itself, which
+		# is exactly the prefix ignored_covers() wants.
+		"--ignored=matching",
 	])
 
 	var output:Array = result[Keys.OUTPUT]
@@ -330,6 +400,7 @@ static func parse_status(text:String, repo_dir:String) -> Dictionary:
 		Keys.REPO: repo_dir,
 		Keys.BRANCH: _new_branch(),
 		Keys.FILES: {},
+		Keys.IGNORED: [] as Array[String],
 	}
 
 	for raw_line in text.split("\n", false):
@@ -337,7 +408,7 @@ static func parse_status(text:String, repo_dir:String) -> Dictionary:
 		if line.begins_with("# branch."):
 			_parse_branch_header(line, status[Keys.BRANCH])
 		elif not line.begins_with("#"): # ignore headers we don't recognise, as git asks
-			_parse_entry(line, repo_dir, status[Keys.FILES])
+			_parse_entry(line, repo_dir, status[Keys.FILES], status[Keys.IGNORED])
 
 	return status
 
@@ -540,7 +611,7 @@ static func _parse_branch_header(line:String, branch:Dictionary) -> void:
 
 # A single tracked / untracked / ignored entry; the leading token is the line type. Every split is
 # bounded by an explicit maxsplit: a path may contain spaces, so it must take the whole remainder.
-static func _parse_entry(line:String, repo_dir:String, files:Dictionary) -> void:
+static func _parse_entry(line:String, repo_dir:String, files:Dictionary, ignored:Array) -> void:
 	match line.substr(0, 2):
 		"1 ":
 			# 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
@@ -582,7 +653,9 @@ static func _parse_entry(line:String, repo_dir:String, files:Dictionary) -> void
 			files[_to_res_path(repo_dir, line.substr(2))] = _new_entry(Kind.UNTRACKED, "..")
 
 		"! ":
-			files[_to_res_path(repo_dir, line.substr(2))] = _new_entry(Kind.IGNORED, "..")
+			# a path, not an entry: git reports the matching directory rather than its contents under
+			# --ignored=matching, so this is a prefix to test against, not a file to list
+			ignored.append(_to_res_path(repo_dir, line.substr(2)))
 
 
 static func _new_entry(kind:Kind, xy:String) -> Dictionary:
@@ -971,6 +1044,9 @@ class Keys:
 	const REPO = &"repo"
 	const BRANCH = &"branch"
 	const FILES = &"files"
+	## repo-relative ignore matches, as res:// paths. Deliberately not folded into FILES: these are
+	## mostly whole directories, and every FILES consumer treats its keys as changed files.
+	const IGNORED = &"ignored"
 	## a Head enum value — why get_file_at_head() answered the way it did
 	const HEAD = &"head"
 	const COUNTS = &"counts"
@@ -1028,6 +1104,8 @@ class Keys:
 
 
 class Colors:
+	const REPO = Color(0.384, 0.719, 0.705, 1.0)
+	
 	const L_GREEN = Color(0.57, 0.92, 0.57, 1.0)
 	const GREEN = Color(0.0, 0.454, 0.0, 1.0)
 	const L_YELLOW = Color(0.74, 0.69, 0.466, 1.0)

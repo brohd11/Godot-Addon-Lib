@@ -274,6 +274,7 @@ func _build_tree():
 			item.set_metadata(0, FSTreeHelper.create_item_meta(file_path))
 			tree_helper.set_item_icon(item, file_data)
 			item.set_text(0, file_path.get_file())
+			_process_custom_item(file_path, item)
 		else:
 			var last_item:TreeItem = tree_helper.new_file_path(file_path, target_dir, file_data)
 			last_item.set_metadata(0, FSTreeHelper.create_item_meta(file_path))
@@ -281,6 +282,7 @@ func _build_tree():
 				last_item.free()
 				tree_helper.item_dict.erase(file_path)
 				continue
+			_process_custom_item(file_path, last_item)
 	
 	
 	tree_helper.updating = false
@@ -289,6 +291,9 @@ func _build_tree():
 	#if _is_filtering():
 	_update_tree_items()
 
+## Receive the leaf item of the tree.
+func _process_custom_item(file_path:String, tree_item:TreeItem):
+	pass
 
 func _get_file_data(file_path:String):
 	var icon_color = filesystem_singleton.get_icon_color(file_path)
