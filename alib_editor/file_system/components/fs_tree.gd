@@ -472,7 +472,10 @@ func rc_hierarchy(expand:bool):
 	var selected = file_tree.get_selected()
 	selected.set_collapsed_recursive(not expand)
 
-func _on_file_tree_get_drag_data(_at_position: Vector2) -> Variant:
+func _on_file_tree_get_drag_data(at_position: Vector2) -> Variant:
+	var target_item = file_tree.get_item_at_position(at_position)
+	if not is_instance_valid(target_item):
+		return
 	var selection = _get_selection()
 	if selection.is_empty():
 		return
@@ -484,6 +487,8 @@ func _on_file_tree_can_drop_data(at_position, data):
 
 func _on_file_tree_drop_data(at_position: Vector2, data: Variant) -> void:
 	var target_item = file_tree.get_item_at_position(at_position)
+	if not is_instance_valid(target_item):
+		return
 	var meta = target_item.get_metadata(0)
 	var target_dir = ""
 	if meta is String:

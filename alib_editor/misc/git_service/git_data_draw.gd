@@ -1,20 +1,79 @@
 extends RefCounted
 
+const GitUtil = preload("res://addons/addon_lib/brohd/alib_editor/misc/git_service/git_util.gd")
 const NUTree = ALibRuntime.NodeUtils.NUTree
+const NUItemList = ALibRuntime.NodeUtils.NUItemList
 
 class GitItemHelper:
 	var git_service:GitService
 	var _item_list:ItemList
 	
-	func _init(item_list:ItemList) -> void:
-		_item_list = item_list
+	var set_fg_color:= true
 	
+	var color_ignored:=true
+	
+	func _init(item_list:ItemList) -> void:
+		git_service = GitService.get_instance()
+		
+		_item_list = item_list
+		_item_list.draw.connect(_on_item_list_drawn)
+	
+	func _on_item_list_drawn():
+		var list_rect = _item_list.get_rect()
+		var scroll_pos = _item_list.get_v_scroll_bar().value
+		
+		var margin = _item_list.get_theme_constant("h_separation") * 2
+		
+		for i in range(_item_list.item_count):
+			var item_rect = _item_list.get_item_rect(i)
+			item_rect.position.y -= scroll_pos
+			if item_rect.position.y + item_rect.size.y < 0 or item_rect.position.y > list_rect.size.y:
+				continue 
+			
+			var item_path = _get_path_from_item(i)
+			
+			var color = git_service.get_file_color(item_path)
+			if color == null:
+				continue
+			var icon = git_service.get_file_icon(item_path)
+			if icon == null:
+				continue
+			
+			if NUItemList.item_text_overflows(_item_list, i, icon):
+				var sq_sz = item_rect.size.y * 0.25
+				var trip_x = item_rect.position.x + item_rect.size.x + (icon.get_width() / 2.0) - margin
+				var trip_y = item_rect.position.y + item_rect.size.y * 0.25
+				var tri = [
+					Vector2(trip_x - sq_sz, trip_y),
+					Vector2(trip_x, trip_y),
+					Vector2(trip_x, trip_y + sq_sz),
+				]
+				_item_list.draw_colored_polygon(tri, color)
+				continue
+			
+			var icon_rect = Util.get_icon_rect(item_rect, icon, margin)
+			_item_list.draw_texture_rect(icon, icon_rect, false, color)
+	
+	func set_item_fg_color(idx:int, path:String):
+		var color = git_service.get_file_color(path)
+		if color == null:
+			return
+		if not color_ignored and git_service.get_file_severity(path) == GitService.GitUtil.Severity.IGNORED:
+			return
+		_item_list.set_item_custom_fg_color(idx, color)
+	
+	func _get_path_from_item(idx:int):
+		var meta = _item_list.get_item_metadata(idx)
+		if meta is String:
+			return meta
+		else:
+			return _item_list.get_item_tooltip(idx)
+		return meta
 	pass
 
 
 class GitTreeHelper:
 	
-	const GitUtil = preload("res://addons/addon_lib/brohd/alib_editor/misc/git_service/git_util.gd")
 	
 	var git_service:GitService
 	var _tree:Tree
@@ -81,7 +140,7 @@ class GitTreeHelper:
 			return
 		
 		var tree_rect = _tree.get_rect()
-		var icon_margin = _tree.get_theme_constant(&"icon_h_separation")
+		var icon_margin = _tree.get_theme_constant(&"icon_h_separation") * 2
 		
 		var next_item = root.get_next_visible()
 		while is_instance_valid(next_item):
@@ -102,13 +161,8 @@ class GitTreeHelper:
 			if NUTree.item_text_overflows(_tree, current_item, icon):
 				continue
 			
-			current_rect.position.x += current_rect.size.x - icon.get_size().x - icon_margin
-			# centre against the row height, not a fraction of the icon: the marker and the
-			# glyph squares are different sizes, so one fixed fraction cannot centre both
-			current_rect.position.y += (current_rect.size.y - icon.get_size().y) / 2.0
-			current_rect.size = icon.get_size()
 			_overlay_icons.append({
-				Keys.RECT: current_rect,
+				Keys.RECT: Util.get_icon_rect(current_rect, icon, icon_margin),
 				Keys.ICON: icon,
 				Keys.COLOR: meta.color
 			})
@@ -136,6 +190,15 @@ class GitTreeHelper:
 			Keys.SEVERITY: severity,
 		})
 		return true
+
+class Util:
+	static func get_icon_rect(rect:Rect2, icon:Texture2D, margin:int):
+		#rect.position.x += rect.size.x - icon.get_size().x - margin
+		rect.position.x += rect.size.x - (icon.get_size().x / 2.0) - margin
+		rect.position.y += (rect.size.y - icon.get_size().y) / 2.0
+		rect.size = icon.get_size()
+		return rect
+	pass
 
 class Keys:
 	const GIT_ICON = &"git_icon"

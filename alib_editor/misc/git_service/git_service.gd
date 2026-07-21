@@ -221,6 +221,8 @@ func get_file_color(file_path:String):
 func get_file_severity(file_path:String) -> int:
 	var file_data = get_file_status(file_path)
 	if file_data.is_empty():
+		if is_path_ignored(file_path):
+			return GitUtil.Severity.IGNORED
 		return GitUtil.Severity.NONE
 	return GitUtil.get_status_severity(file_data)
 
