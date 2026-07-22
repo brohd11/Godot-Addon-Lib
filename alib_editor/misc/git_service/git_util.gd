@@ -624,7 +624,7 @@ static func _parse_entry(line:String, repo_dir:String, files:Dictionary, ignored
 			entry[Keys.OID_INDEX] = parts[7]
 			files[_to_res_path(repo_dir, parts[8])] = entry
 
-		"2 ":
+		"2 ": 
 			# 2 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <X><score> <path><TAB><origPath>
 			var parts = line.split(" ", true, 9)
 			if parts.size() < 10:
@@ -905,6 +905,7 @@ enum Command {
 	DISCARD,
 	DELETE,
 }
+const COMMAND_DESTRUCTIVE = [Command.DISCARD, Command.DELETE]
 
 ## STAGE accepts CONFLICTED because staging is how git marks a conflict resolved. DISCARD takes
 ## UNSTAGED and not UNTRACKED: `git restore` does not touch a file git has never seen, and removing
@@ -999,8 +1000,26 @@ static func to_pathspec(repo_dir:String, path:String) -> String:
 	return PATHSPEC_LITERAL + to_repo_path(repo_dir, path)
 
 
+## Whether a path names something git can be pointed at, rather than the repo root itself. The root
+## trims to "", and a bare `:(literal)` matches every file in the repo — a DISCARD built from one
+## takes the whole worktree with it.
+static func is_commandable_path(repo_dir:String, path:String) -> bool:
+	var rel = to_repo_path(repo_dir, path)
+	return not (rel.is_empty() or rel == "." or rel == "/")
+
+
 ## The full argv for a command. `--` keeps a path that looks like a rev from being read as one.
+##
+## Returns [] when no path survives is_commandable_path(): an argv ending at `--` is a command over
+## the entire repo, so there is nothing safe to hand back.
 static func build_command_args(command:Command, repo_dir:String, paths:Array, initial:=false) -> Array:
+	var pathspecs:Array = []
+	for path:String in paths:
+		if is_commandable_path(repo_dir, path):
+			pathspecs.append(to_pathspec(repo_dir, path))
+	if pathspecs.is_empty():
+		return []
+
 	var args:Array = []
 	if command == Command.UNSTAGE and initial:
 		args.append_array(ARGS_UNSTAGE_INITIAL)
@@ -1008,8 +1027,7 @@ static func build_command_args(command:Command, repo_dir:String, paths:Array, in
 		args.append_array(COMMANDS[command][Keys.CMD_ARGS])
 
 	args.append("--")
-	for path:String in paths:
-		args.append(to_pathspec(repo_dir, path))
+	args.append_array(pathspecs)
 	return args
 
 
@@ -1021,7 +1039,13 @@ static func build_command_args(command:Command, repo_dir:String, paths:Array, in
 static func run_command(repo_dir:String, command:Command, paths:Array, initial:=false) -> Dictionary:
 	if paths.is_empty():
 		return {Keys.EXIT: 0, Keys.OUTPUT: []}
-	return run_git(repo_dir, build_command_args(command, repo_dir, paths, initial), true)
+
+	# a repo-wide command is never what a row click meant — no-op rather than run it
+	var args = build_command_args(command, repo_dir, paths, initial)
+	if args.is_empty():
+		return {Keys.EXIT: 0, Keys.OUTPUT: []}
+
+	return run_git(repo_dir, args, true)
 
 #endregion
 

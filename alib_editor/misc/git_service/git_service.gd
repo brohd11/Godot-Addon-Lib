@@ -67,6 +67,11 @@ signal repos_updated
 
 var colors:GitColors
 
+## Echo the argv of every destructive command. Off by default: it is a diagnostic for "that discard
+## did something I did not expect", which is otherwise unanswerable — a wrong-but-successful command
+## exits 0 and looks exactly like a right one.
+var log_commands:bool = false
+
 var setting_helper:SettingHelper
 
 ## res:// paths of every repo found under the project
@@ -118,8 +123,9 @@ func _ready() -> void:
 	setting_helper = SettingHelper.new()
 	colors = GitColors.new()
 	colors.connect_settings(setting_helper)
-	
-	
+	setting_helper.subscribe_property(self, &"log_commands", EditorSet.LOG_COMMANDS, false)
+
+
 	setting_helper.initialize()
 	
 	# Baking the status letters costs one rendered frame, so it starts here — the earliest point there
@@ -152,6 +158,7 @@ func refresh_repos() -> void:
 func set_repo(repo_dir:String) -> void:
 	if current_repo == repo_dir:
 		return
+	var previous_repo = current_repo
 	current_repo = repo_dir
 
 	# _repo_status deliberately survives the switch: another repo's status is no less true for the
@@ -160,7 +167,14 @@ func set_repo(repo_dir:String) -> void:
 	# full pass below lands, so a row click can come up empty for one cycle.
 	commits = []
 	# a command queued against the old repo must not drain against the new one: its paths are res://
-	# paths under the *old* root, so they would not even resolve here
+	# paths under the *old* root, so they would not even resolve here. Say so — a discard confirmed
+	# and then dropped by a repo switch is otherwise indistinguishable from one that ran.
+	if not _pending_commands.is_empty():
+		var dropped:Array = []
+		for entry in _pending_commands:
+			dropped.append(GitUtil.COMMANDS[entry[0]][GitUtil.Keys.CMD_LABEL])
+		push_warning("GitService dropped %d queued command(s) on the switch away from %s: %s" % [
+			dropped.size(), previous_repo, ", ".join(dropped)])
 	_pending_commands.clear()
 	refresh_status()
 
@@ -354,6 +368,12 @@ func _status_task(repo_dir:String, queued:Array, initial:bool, full:bool) -> voi
 
 	for entry in queued:
 		var command:GitUtil.Command = entry[0]
+		if log_commands and GitUtil.COMMANDS[command][GitUtil.Keys.CMD_DESTRUCTIVE]:
+			# the argv git actually receives, not the paths that were asked for — the gap between the
+			# two is the only place a "that discarded the wrong thing" report can be settled
+			print("[GitService] %s: git %s" % [repo_dir,
+				" ".join(GitUtil.build_command_args(command, repo_dir, entry[1], initial))])
+ 
 		var result = GitUtil.run_command(repo_dir, command, entry[1], initial)
 
 		if result[GitUtil.Keys.EXIT] != 0:
@@ -394,17 +414,18 @@ func _on_status_ready(repo_dir:String, status_result:Dictionary, log_result:Arra
 	if repo_dir in repos:
 		_repo_status[repo_dir] = status_result
 		status_updated.emit(repo_dir)
-
+	
 		# the log is the one half a mid flight switch really does strip, since only the panel reads it
 		# and it only ever means current_repo
 		if full and repo_dir == current_repo:
 			commits.assign(log_result)
 			commits_updated.emit(repo_dir)
-
+	 
 	# discard and delete rewrite files behind the editor's back and nothing else will tell it: a script
 	# still open on the old contents would write them straight back on the next save
 	if wrote_worktree:
-		EditorInterface.get_resource_filesystem().scan()
+		# like grabbing focus from none, one of the most thorough scans.
+		EditorInterface.get_script_editor().notification(NOTIFICATION_APPLICATION_FOCUS_IN)
 
 	_pump()
 
@@ -445,3 +466,5 @@ class EditorSet:
 	const UNTRACKED = &"plugin/git_view/color/untracked"
 	const IGNORED = &"plugin/git_view/color/ignored"
 	const REPO = &"plugin/git_view/color/repo"
+
+	const LOG_COMMANDS = &"plugin/git_view/log_destructive_commands"

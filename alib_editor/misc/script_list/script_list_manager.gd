@@ -269,6 +269,8 @@ func get_script_index_or_open(file_path:String, filesystem_singleton=null):
 			filesystem_singleton.activate_path(file_path)
 	elif ext == "gd":
 		EditorInterface.edit_resource(load(file_path))
+	else:
+		printerr("ScriptListManager - Can't open file, no resource loader:", file_path)
 	return -1
 
 
