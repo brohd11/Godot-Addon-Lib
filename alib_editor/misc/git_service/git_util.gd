@@ -103,7 +103,8 @@ enum Severity {
 	STAGED,
 	UNTRACKED,
 	MODIFIED,
-	CONFLICTED
+	DELETED,
+	CONFLICTED,
 }
 
 ## The severity of a FILES entry. Kind wins over the staged / unstaged pair deliberately: a
@@ -121,7 +122,8 @@ static func get_status_severity(file_data:Dictionary) -> int:
 	# the worktree side wins for the same reason it does in get_status_label()
 	if file_data.get(Keys.WORKTREE, Status.NONE) == Status.MODIFIED:
 		return Severity.MODIFIED
-
+	if file_data.get(Keys.WORKTREE, Status.NONE) == Status.DELETED:
+		return Severity.DELETED
 	return Severity.IGNORED
 
 
@@ -130,6 +132,7 @@ static func get_status_severity(file_data:Dictionary) -> int:
 static func get_status_color(file_data:Dictionary, colors:GitColors) -> Color:
 	match get_status_severity(file_data):
 		Severity.CONFLICTED: return colors.conflicted
+		Severity.DELETED: return colors.conflicted
 		Severity.MODIFIED: return colors.modified
 		Severity.UNTRACKED: return colors.untracked
 		Severity.STAGED: return colors.staged
