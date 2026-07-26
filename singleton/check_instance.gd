@@ -2,9 +2,16 @@
 
 const DEFAULT_PATH = "EditorNode<t>/EditorSingletons"
 
-static func check_valid(singleton_name:String, path:="") -> bool:
+static func check_valid(singleton_name:String, path:=DEFAULT_PATH) -> bool:
 	var node:Variant = get_instance(singleton_name, path)
 	return is_instance_valid(node)
+
+static func call_on_ready(singleton_name:String, callable:Callable, path:=DEFAULT_PATH):
+	var node:Variant = get_instance(singleton_name, path)
+	if is_instance_valid(node):
+		node.call_on_ready(callable)
+	else:
+		callable.call()
 
 static func get_instance(singleton_name:String, path:=DEFAULT_PATH) -> Variant:
 	var root = Engine.get_main_loop().root
@@ -25,4 +32,3 @@ static func _get_node_of_type(node:Node, type:String) -> Variant:
 		if c.get_class() == type:
 			return c
 	return null
-	

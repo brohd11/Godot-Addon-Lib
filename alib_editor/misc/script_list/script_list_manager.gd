@@ -2,6 +2,9 @@
 extends SingletonBase
 const SingletonBase = Singletons.Base
 
+const _STABLE_TARGET := 8
+const _TIMEOUT_MS := 5000
+
 const TEXT_FILE_TYPES = ["gd", "json", "cfg", "txt", "ini", "md"]
 
 var text_file_types:= []
@@ -55,16 +58,14 @@ func _on_enr_ready():
 	var side_bar = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_SIDEBAR_V_SPLIT)
 	filter_line_edit = side_bar.get_child(0).get_child(0)
 	script_list = side_bar.get_child(0).get_child(1)
-	
+
 	editor_script_tab_container = EditorNodeRef.get_node_ref(EditorNodeRef.Nodes.SCRIPT_EDITOR_TAB_CONTAINER)
-	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
-	editor_script_tab_container.child_order_changed.connect(_on_editor_tab_child_order_changed)
+
+	# item_list must be populated to be populated
+	await _await_script_list_settled()
+	
 	current_script_editor = editor_script_tab_container.get_current_tab_control()
-	
-	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
-	
-	update_cache()
-	EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed, 1)
+	update_cache(true)
 	
 	_update_timer = Timer.new()
 	add_child(_update_timer)
@@ -73,6 +74,44 @@ func _on_enr_ready():
 	_update_timer.start()
 	
 	_initialized = true
+	_connect_signals_def.call_deferred()
+
+# check if item_list is populated, check at least x frames before returning
+func _await_script_list_settled():
+	
+	var expected := _get_expected_open_count()
+	var stable_frames := 0
+	var last_count := -1
+	var start_ms := Time.get_ticks_msec()
+	while true:
+		var count := script_list.item_count
+		if count == last_count:
+			stable_frames += 1
+		else:
+			stable_frames = 0
+			last_count = count
+
+		var is_ready := (count > 0 or expected == 0) and stable_frames >= _STABLE_TARGET
+		if is_ready or Time.get_ticks_msec() - start_ms >= _TIMEOUT_MS:
+			return
+		await get_tree().process_frame
+
+# Count of scripts/help the editor is about to restore, read from its saved layout.
+func _get_expected_open_count() -> int:
+	var path = EditorInterface.get_editor_paths().get_project_settings_dir().path_join("editor_layout.cfg")
+	var cfg = ConfigFile.new()
+	if cfg.load(path) != OK:
+		return 0
+	var open_scripts = cfg.get_value("ScriptEditor", "open_scripts", [])
+	var open_help = cfg.get_value("ScriptEditor", "open_help", [])
+	return open_scripts.size() + open_help.size()
+
+func _connect_signals_def():
+	editor_script_tab_container.tab_changed.connect(_on_editor_tab_changed)
+	editor_script_tab_container.child_order_changed.connect(_on_editor_tab_child_order_changed)
+	ScriptEditorRef.subscribe(ScriptEditorRef.Event.VALIDATE_SCRIPT, _on_script_editor_validate, 1)
+	EditorInterface.get_resource_filesystem().filesystem_changed.connect(_on_filesystem_changed, 1)
+
 
 func _on_editor_settings_changed():
 	_get_text_file_types()
@@ -114,10 +153,13 @@ func update_cache(clear_filter:=false):
 		return
 	
 	_update_debounce = true
+	await _update_cache(clear_filter)
+	_update_debounce = false
+
+func _update_cache(clear_filter:=false):
 	var current_text = filter_line_edit.text
 	if current_text != "":
 		if not clear_filter:
-			_update_debounce = false
 			return
 		filter_line_edit.clear() # option is to return or clear. This should probably just be cleared so it is always accurate, say script editor opened when filtering
 	
@@ -142,8 +184,6 @@ func update_cache(clear_filter:=false):
 	cache_updated.emit()
 	await get_tree().process_frame
 	_update_timer.start()
-	_update_debounce = false
-	
 
 # need to redo
 func get_cached_item_data(tooltip:String):
