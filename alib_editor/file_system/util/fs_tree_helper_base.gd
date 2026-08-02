@@ -202,6 +202,9 @@ func set_tree_item_params(path:String, item:TreeItem):
 
 #^ static
 
+static func get_favorite_key(path:String):
+	return path + "::" + FileSystemSingleton.FileData.FAVORITES_META
+
 static func update_root(root_dir:String, old_path:String, new_path:String):
 	if not new_path.begins_with("/"):
 		new_path += "/"

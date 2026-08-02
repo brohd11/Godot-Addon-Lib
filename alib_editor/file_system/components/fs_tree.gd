@@ -206,7 +206,14 @@ func _set_current_files():
 
 
 func _build_tree():
-	var selected_paths = tree_helper.get_selected_paths().duplicate()
+	#var selected_paths = tree_helper.get_selected_paths().duplicate()
+	var selected_paths = []
+	var selected_items = tree_helper.get_selected_tree_items()
+	for item:TreeItem in selected_items:
+		var path = FSTreeHelper.get_path_from_item(item)
+		if tree_helper.is_item_in_favorites(item):
+			path = FSTreeHelper.get_favorite_key(path)
+		selected_paths.append(path)
 	
 	# settings to impl
 	var show_files = true
@@ -235,11 +242,12 @@ func _build_tree():
 			file_data.erase(ItemKeys.BG_COLOR)
 			var text = path.get_file()
 			if path.ends_with("/"):
+				file_data[ItemKeys.ICON_COLOR] = filesystem_singleton.get_folder_color(path)
 				text = path.trim_suffix("/").get_file()
 			item.set_metadata(0, FSTreeHelper.create_item_meta(path))
 			item.set_text(0, text)
 			tree_helper.set_item_icon(item, file_data)
-			tree_helper.item_dict[text] = item
+			tree_helper.item_dict[FSTreeHelper.get_favorite_key(path)] = item
 	
 	
 	root_item = file_tree.create_item(tree_root) as TreeItem
@@ -296,7 +304,7 @@ func _process_custom_item(file_path:String, tree_item:TreeItem):
 	pass
 
 func _get_file_data(file_path:String):
-	var icon_color = filesystem_singleton.get_icon_color(file_path)
+	var icon_color:Color = filesystem_singleton.get_icon_color(file_path)
 	if not icon_color:
 		icon_color = Color.WHITE
 	return {
@@ -312,9 +320,15 @@ func _on_item_activated():
 	if selection.is_empty():
 		return
 	if selection.selected.ends_with("/"):
-		var item = tree_helper.get_tree_item(selection.selected)
+		var item = tree_helper.get_tree_item(selection.selected) as TreeItem
 		if is_instance_valid(item):
-			item.collapsed = not item.collapsed
+			var clicked_item = tree_helper.get_selected_tree_items().front()
+			if clicked_item and tree_helper.is_item_in_favorites(clicked_item):
+				tree_helper.uncollapse_items([item])
+				file_tree.scroll_to_item(item)
+				file_tree.set_selected(item, 0)
+			else:
+				item.collapsed = not item.collapsed
 	else:
 		FileSystemSingleton.activate_path(selection.selected)
 
@@ -522,6 +536,9 @@ class FSTreeHelper extends FSTreeHelperBase:
 			last_item.set_icon(0, file_data.get(ItemKeys.PREVIEW))
 		else:
 			last_item.set_icon(0, file_data.get(ItemKeys.ICON))
+		#if file_data.get(ItemKeys.PATH).ends_with("/"):
+	
+		#else:
 		last_item.set_icon_modulate(0, file_data.get(ItemKeys.ICON_COLOR, Color.WHITE))
 		last_item.set_icon_max_width(0, int(thumbnail_size))
 
