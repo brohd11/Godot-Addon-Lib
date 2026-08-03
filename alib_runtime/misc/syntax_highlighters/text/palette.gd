@@ -63,7 +63,7 @@ func apply_editor_settings() -> void:
 	tag = _es_color(editor_settings, "base_type_color", tag)
 	attribute = _es_color(editor_settings, "member_variable_color", attribute)
 	heading = _es_color(editor_settings, "function_color", heading)
-	link = _es_color(editor_settings, "global_function_color", link)
+	link = _es_color(editor_settings, "member_variable_color", link)
 	code = _es_color(editor_settings, "member_variable_color", code)
 	
 	control_flow = _es_color(editor_settings, "control_flow_keyword_color", control_flow)
