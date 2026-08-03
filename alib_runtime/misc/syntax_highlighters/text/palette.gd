@@ -27,6 +27,7 @@ var warning := Color("#ffbd5f")
 
 var control_flow := Color("#ff8ccc")
 var function := Color("#57b3ff")
+var function_def := Color("#66e6ff")
 var variable := Color("#bce0ff")
 var string_name := Color("#ffc2a6")
 var node_path := Color("#b8c47d")
@@ -68,6 +69,7 @@ func apply_editor_settings() -> void:
 	
 	control_flow = _es_color(editor_settings, "control_flow_keyword_color", control_flow)
 	function = _es_color(editor_settings, "function_color", function)
+	function_def = _es_color(editor_settings, "function_definition_color", function_def)
 	variable = _es_color(editor_settings, "member_variable_color", variable)
 	string_name = _es_color(editor_settings, "string_name_color", string_name)
 	node_path = _es_color(editor_settings, "node_path_color", node_path)

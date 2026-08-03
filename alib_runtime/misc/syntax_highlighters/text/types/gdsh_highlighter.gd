@@ -132,8 +132,8 @@ func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 		var two := text.substr(i, 2)
 		if two == "&&" or two == "||" or two == ";;" or two == "==" \
 				or two == "!=" or two == ">>" or two == "<<":
-			colors[i] = palette.symbol
-			colors[i + 1] = palette.symbol
+			colors[i] = palette.string_name
+			colors[i + 1] = palette.string_name
 			i += 2
 			if two == "&&" or two == "||" or two == ";;":
 				f[_EXPECT] = true
@@ -141,12 +141,12 @@ func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 		
 		# single-char operators
 		if c == "|" or c == ";" or c == "&":
-			colors[i] = palette.symbol
+			colors[i] = palette.string_name
 			i += 1
 			f[_EXPECT] = true
 			continue
 		if c == "=" or c == "<" or c == ">" or c == "!":
-			colors[i] = palette.symbol
+			colors[i] = palette.string_name
 			i += 1
 			continue
 		
@@ -159,7 +159,7 @@ func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 		
 		# brackets
 		if c == "[" or c == "]":
-			colors[i] = palette.tag
+			colors[i] = palette.function
 			i += 1
 			f[_EXPECT] = false
 			continue
@@ -194,7 +194,7 @@ func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 			var next_expect := false
 
 			if after_function:
-				col = palette.function           # `function foo` style
+				col = palette.function_def           # `function foo` style
 				after_function = false
 			elif word in KEYWORDS:
 				col = palette.control_flow
@@ -207,9 +207,9 @@ func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 						and not (i + 1 < n and text[i + 1] == "="):
 					col = palette.variable       # NAME=value assignment
 				elif _is_function_def(text, i):
-					col = palette.function       # name() { ... }
+					col = palette.function_def   # name() { ... }
 				else:
-					col = palette.tag            # command position
+					col = palette.function       # command position
 
 			for k in range(ws, i):
 				colors[k] = col

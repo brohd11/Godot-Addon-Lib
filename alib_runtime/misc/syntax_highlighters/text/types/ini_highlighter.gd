@@ -5,6 +5,10 @@ extends "res://addons/addon_lib/brohd/alib_runtime/misc/syntax_highlighters/text
 ## Godot's own .cfg values are covered too: constructor calls such as [code]Color(1, 0, 0, 1)[/code]
 ## or [code]PackedStringArray("a")[/code] take the tag color, and [code]&"name"[/code] /
 ## [code]^"path"[/code] are treated as strings.
+##
+## Multiline: values that span lines, which is how Godot writes input maps. The state is just
+## the open container depth, so a line arriving with depth > 0 is a value continuation rather
+## than a new [code]key=value[/code] pair.
 
 const _LITERALS := {
 	"true": true, "false": true, "null": true, "nan": true, "inf": true, "inf_neg": true,
@@ -12,9 +16,19 @@ const _LITERALS := {
 }
 
 
-func _tokenize(line:int, _entry_state:int, map:Dictionary) -> int:
+func _init() -> void:
+	multiline = true
+
+
+func _tokenize(line:int, entry_state:int, map:Dictionary) -> int:
 	var text := text_edit.get_line(line)
 	var length := text.length()
+
+	# Still inside a multi-line value, so the whole line is value content. Blank lines included,
+	# since a dict body may contain them.
+	if entry_state > STATE_NORMAL:
+		return _tokenize_value(text, 0, map, entry_state)
+
 	var start := indent_of(text)
 	if start >= length:
 		return STATE_NORMAL
@@ -30,7 +44,7 @@ func _tokenize(line:int, _entry_state:int, map:Dictionary) -> int:
 		var close := text.rfind("]")
 		if close > start:
 			push(map, close + 1, palette.text)
-			_tokenize_value(text, close + 1, map)
+			return _tokenize_value(text, close + 1, map, STATE_NORMAL)
 		return STATE_NORMAL
 
 	var equals := text.find("=")
@@ -41,11 +55,12 @@ func _tokenize(line:int, _entry_state:int, map:Dictionary) -> int:
 	push(map, start, palette.key)
 	push(map, equals, palette.symbol)
 	push(map, equals + 1, palette.text)
-	_tokenize_value(text, equals + 1, map)
-	return STATE_NORMAL
+	return _tokenize_value(text, equals + 1, map, STATE_NORMAL)
 
 
-func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
+## Colors a value from [param from] to end of line. [param depth] is the open container depth
+## on entry, and the return value is the depth at end of line.
+func _tokenize_value(text:String, from:int, map:Dictionary, depth:int) -> int:
 	var length := text.length()
 	var i := from
 
@@ -55,7 +70,7 @@ func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
 		# Only ";" opens an inline comment. A bare "#" is far more likely to be a hex color.
 		if c == ";":
 			push(map, i, palette.comment)
-			return
+			return depth
 
 		if c == "#":
 			var hex_end := i + 1
@@ -68,7 +83,7 @@ func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
 				i = hex_end
 			else:
 				push(map, i, palette.comment)
-				return
+				return depth
 			continue
 
 		if c == "\"" or c == "'":
@@ -92,7 +107,7 @@ func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
 			continue
 
 		if is_digit(c) or ((c == "-" or c == "+") and i + 1 < length and is_digit(text[i + 1])):
-			var number_end := scan_number(text, i)
+			var number_end := scan_number(text, i, true)
 			if number_end > i:
 				push(map, i, palette.number)
 				push(map, number_end, palette.text)
@@ -112,9 +127,18 @@ func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
 			i = word_end
 			continue
 
-		if "()[]{}".contains(c):
+		# Strings are consumed above, so braces inside quotes cannot corrupt the count.
+		if "([{".contains(c):
 			push(map, i, palette.bracket)
 			push(map, i + 1, palette.text)
+			depth += 1
+			i += 1
+			continue
+
+		if ")]}".contains(c):
+			push(map, i, palette.bracket)
+			push(map, i + 1, palette.text)
+			depth = maxi(depth - 1, STATE_NORMAL)
 			i += 1
 			continue
 
@@ -125,3 +149,5 @@ func _tokenize_value(text:String, from:int, map:Dictionary) -> void:
 			continue
 
 		i += 1
+
+	return depth

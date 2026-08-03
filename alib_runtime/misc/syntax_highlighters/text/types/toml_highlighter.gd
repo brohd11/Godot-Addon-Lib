@@ -121,10 +121,19 @@ func _is_key(text:String, word_end:int) -> bool:
 ## the token into pieces.
 func _scan_date_or_number(text:String, from:int) -> int:
 	var length := text.length()
+
+	# 0x / 0o / 0b integers belong to the plain scanner: the date character set has no notion
+	# of a radix prefix and would stop dead on the "x".
+	if text[from] == "0" and from + 1 < length and "xXoObB".contains(text[from + 1]):
+		return scan_number(text, from, true)
+
 	var i := from
 	while i < length and (is_digit(text[i]) or "-+.:TZtz_eE".contains(text[i])):
 		i += 1
 	# Guard against swallowing a trailing separator.
 	while i > from and "-+.:".contains(text[i - 1]):
 		i -= 1
-	return i if i > from else scan_number(text, from)
+	if i > from:
+		# Glued to a letter the date set does not cover, so the whole token is malformed.
+		return from if _glued_to_identifier(text, i) else i
+	return scan_number(text, from, true)

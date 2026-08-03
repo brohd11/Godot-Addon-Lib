@@ -33,7 +33,7 @@ func _tokenize(line:int, _entry_state:int, map:Dictionary) -> int:
 			continue
 
 		if is_digit(c) or (c == "-" and i + 1 < length and is_digit(text[i + 1])):
-			var number_end := scan_number(text, i)
+			var number_end := scan_number(text, i, true)
 			if number_end > i:
 				push(map, i, palette.number)
 				push(map, number_end, palette.text)

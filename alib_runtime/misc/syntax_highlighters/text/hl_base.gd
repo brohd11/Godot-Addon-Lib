@@ -133,7 +133,11 @@ static func scan_quoted(text:String, from:int, quote:String, escapes:=true) -> i
 
 
 ## Returns the index just past the number, or [param from] when no number starts there.
-static func scan_number(text:String, from:int) -> int:
+##
+## With [param strict], a digit run glued directly to identifier characters is not a number at
+## all: "5d" in a config value is one malformed token, whereas "222ms" in a log line is a
+## number followed by a unit and should keep the digits lit.
+static func scan_number(text:String, from:int, strict:=false) -> int:
 	var length := text.length()
 	var i := from
 	if i < length and (text[i] == "-" or text[i] == "+"):
@@ -145,7 +149,7 @@ static func scan_number(text:String, from:int) -> int:
 		i += 2
 		while i < length and (is_hex_digit(text[i]) or text[i] == "_"):
 			i += 1
-		return i
+		return from if strict and _glued_to_identifier(text, i) else i
 
 	while i < length:
 		var c := text[i]
@@ -157,7 +161,11 @@ static func scan_number(text:String, from:int) -> int:
 				i += 1
 		else:
 			break
-	return i
+	return from if strict and _glued_to_identifier(text, i) else i
+
+
+static func _glued_to_identifier(text:String, at:int) -> bool:
+	return at < text.length() and is_identifier_start(text[at])
 
 
 ## Returns the index just past the identifier, or [param from] when none starts there.
