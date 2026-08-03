@@ -15,4 +15,6 @@ const FSTreeHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_syst
 const FSFilter = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_filter.gd")
 const FSUtil = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_util.gd")
 
+const PreviewPanel = preload("res://addons/addon_lib/brohd/alib_editor/file_system/components/preview/preview_panel.gd")
+
 const NonResHelper = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/non_res_helper.gd")

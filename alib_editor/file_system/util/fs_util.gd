@@ -20,6 +20,7 @@ const UOs = preload("uid://cnuejrhrodgbx") #! resolve ALibRuntime.Utils.UOs
 const UTree = preload("uid://byxrrav3r3afw") #! resolve ALibRuntime.Utils.UTree
 const UString = preload("uid://cwootkivqiwq1") #! resolve ALibRuntime.Utils.UString
 const UWindow = preload("uid://q2lbynew21er") #! resolve ALibRuntime.Utils.UWindow
+const UControl = preload("uid://brio73mirr5e6") #! resolve ALibRuntime.Utils.UControl
 
 const NUItemList = preload("uid://cjls86v1v4242") #! resolve ALibRuntime.NodeUtils.NUItemList
 const NUTree = preload("uid://coqq638olix8k") #! resolve ALibRuntime.NodeUtils.NUTree

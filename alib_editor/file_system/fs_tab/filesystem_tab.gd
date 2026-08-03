@@ -1,12 +1,13 @@
 @tool
 extends VBoxContainer
 
-#! import_p DataKeys,
+#! import_p DataKeys,UControl
 
 const ATTEMPT_RENAME = true
 
 const RightClickHandler = FSUtil.RightClickHandler
 const UFile = FSUtil.UFile
+const UControl = FSUtil.UControl
 const EditorIcons = FSUtil.EditorIcons
 const CacheHelper = FSUtil.CacheHelper
 
@@ -73,13 +74,15 @@ var tool_bar_spacer:Control
 
 var search_hbox:HBoxContainer
 var main_split_container:SplitContainer
-var left_split:SplitContainer
+var tree_item_split:SplitContainer
 var tree: FileSystemTree
 var places:FileSystemPlaces
 
 var right_side_vbox:VBoxContainer
 var miller:FileSystemMiller
 var item_list:FileSystemItemList
+
+var preview_panel:FSClasses.PreviewPanel
 
 var _history_back_button:Button
 var _history_forward_button:Button
@@ -465,7 +468,7 @@ func _set_search_view_item_list():
 		_set_split_mode(SplitMode.HORIZONTAL)
 	item_list.show()
 	if places.visible and _current_view_mode == ViewMode.TREE:
-		main_split_container.split_offset = int(places.size.x)
+		tree_item_split.split_offset = int(places.size.x)
 	tree.hide()
 	miller.hide()
 	_check_main_split_vis()
@@ -637,6 +640,11 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	
 	_path_in_res = FSUtil.is_path_valid_res(current_path)
 	_set_path_in_res()
+	
+	if true: # preview bool, TODO
+		if is_instance_valid(preview_panel):
+			preview_panel.preview_file(current_path)
+			preview_panel.show()
 	
 	miller.current_path = current_path
 	var item_list_refresh = _current_browser_state == BrowserState.BROWSE and not _who_is_node(who, [self, item_list])
@@ -998,8 +1006,8 @@ func _set_split_mode(split_mode:SplitMode=_current_split_mode, set_active:=true)
 	tree.show_files = false
 	match split_mode:
 		SplitMode.NONE: tree.show_files = true
-		SplitMode.HORIZONTAL: main_split_container.vertical = false
-		SplitMode.VERTICAL: main_split_container.vertical = true
+		SplitMode.HORIZONTAL: tree_item_split.vertical = false
+		SplitMode.VERTICAL: tree_item_split.vertical = true
 	
 	tree.queue_force_refresh()
 	if split_mode != SplitMode.NONE:
@@ -1027,7 +1035,7 @@ func _change_view_mode(view_mode:ViewMode):
 
 func _get_view_data():
 	var data = {
-		DataKeys.SPLIT_OFFSET: main_split_container.split_offset,
+		DataKeys.SPLIT_OFFSET: tree_item_split.split_offset,
 		DataKeys.SPLIT_MODE:_current_split_mode,
 		DataKeys.ITEM_DISPLAY_LIST: item_list.display_as_list,
 		DataKeys.PLACES_TOGGLED: _places_toggled,
@@ -1055,7 +1063,7 @@ func _write_view_data_var(key, val):
 func _set_view_data():
 	var data = _get_current_view_data()
 	
-	main_split_container.split_offset = data.get(DataKeys.SPLIT_OFFSET, 0)
+	tree_item_split.split_offset = data.get(DataKeys.SPLIT_OFFSET, 0)
 	_current_split_mode = data.get(DataKeys.SPLIT_MODE, SplitMode.NONE)
 	if _current_view_mode != ViewMode.TREE:
 		if _current_split_mode == SplitMode.NONE:
@@ -1334,7 +1342,7 @@ func _get_hidden_element_names():
 	return elements
 
 func _check_main_split_vis():
-	left_split.visible = tree.visible or places.visible
+	tree_item_split.visible = tree.visible or places.visible
 	right_side_vbox.visible = item_list.visible or miller.visible
 
 func _build_nodes():
@@ -1475,23 +1483,23 @@ func _build_nodes():
 	add_child(main_split_container)
 	main_split_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	
-	#^ tree side
-	left_split = SplitContainer.new()
-	left_split.vertical = false
-	main_split_container.add_child(left_split)
-	left_split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	
 	places = FileSystemPlaces.new()
-	left_split.add_child(places)
+	main_split_container.add_child(places)
+	
+	#^ tree side
+	tree_item_split = SplitContainer.new()
+	tree_item_split.vertical = false
+	main_split_container.add_child(tree_item_split)
+	UControl.expand(tree_item_split)
+	
 	
 	tree = FileSystemTree.new()
-	left_split.add_child(tree)
+	tree_item_split.add_child(tree)
 	
 	#^ split side
 	right_side_vbox = VBoxContainer.new()
-	main_split_container.add_child(right_side_vbox)
-	right_side_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right_side_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tree_item_split.add_child(right_side_vbox)
+	UControl.expand(right_side_vbox)
 	
 	item_list = FileSystemItemList.new()
 	right_side_vbox.add_child(item_list)
@@ -1501,6 +1509,8 @@ func _build_nodes():
 	miller = FileSystemMiller.new()
 	right_side_vbox.add_child(miller)
 	
+	preview_panel = FSClasses.PreviewPanel.new()
+	main_split_container.add_child(preview_panel)
 	
 	non_res_helper = NonResHelper.new()
 	non_res_helper.places = places
