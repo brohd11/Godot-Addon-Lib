@@ -2,9 +2,11 @@ extends VBoxContainer
 
 #! import_p Keys,
 
-const PluginButton = ALibEditor.UIHelpers.Buttons.PluginButton
-const EditorIcons = ALibEditor.Singleton.EditorIcons
-const SettingHelperJson = ALibRuntime.Settings.SettingHelperJson
+const PluginButton = preload("uid://cwiqk1fttu0sy").PluginButton #! resolve ALibEditor.UIHelpers.Buttons.PluginButton
+const EditorIcons = preload("uid://viocyrti6wce") #! resolve ALibEditor.Singleton.EditorIcons
+const SettingHelperSingleton = preload("uid://b6jyhs240r0hm") #! resolve ALibRuntime.Settings.SettingHelperSingleton
+const SettingHelperJson = preload("uid://byo18jbf0wwbt") #! resolve ALibRuntime.Settings.SettingHelperJson
+const Options = preload("uid://c61qxuau2v0pb") #! resolve ALibRuntime.Popups.Options
 
 const MeshManager = preload("res://addons/addon_lib/brohd/alib_editor/misc/scene_viewer/components/mesh_manager.gd")
 const NodeTree = preload("res://addons/addon_lib/brohd/alib_editor/misc/scene_viewer/components/node_tree.gd")
@@ -16,6 +18,10 @@ const LONGEST_SLIDER_LAB = "Camera Rotate Sens"
 
 const SETTING_FILE_PATH = "user://addons/config/scene_viewer/config.json"
 
+enum PanelMode {
+	FULL,
+	SINGLE,
+}
 
 var _dock_data:Dictionary = {}
 
@@ -25,6 +31,8 @@ var right_click_handler:ClickHandlers.RightClickHandler
 
 var toolbar:HBoxContainer
 
+var next_mesh_button:Button
+var prev_mesh_button:Button
 var list_scene_button:Button
 var options_button:Button
 
@@ -57,11 +65,12 @@ var node_tree:NodeTree
 #^ settings
 var _global_settings = {}
 
+var panel_mode:PanelMode
 
 func _ready() -> void:
 	_build_nodes()
 	
-	setting_helper = ALibRuntime.Settings.SettingHelperSingleton.get_file_helper(SETTING_FILE_PATH)
+	setting_helper = SettingHelperSingleton.get_file_helper(SETTING_FILE_PATH)
 	setting_helper.subscribe_property(self, "_global_settings", "global_settings", {})
 	setting_helper.settings_changed.connect(_on_global_settings_changed)
 	setting_helper.object_initialize(self)
@@ -98,6 +107,23 @@ func get_dock_data() -> Dictionary:
 func get_tab_title():
 	return "Scene Viewer"
 
+func set_panel_mode(mode:PanelMode):
+	panel_mode = mode
+	if panel_mode == PanelMode.FULL:
+		list_scene_button.show()
+		prev_mesh_button.show()
+		next_mesh_button.show()
+	elif panel_mode == PanelMode.SINGLE:
+		list_scene_button.hide()
+		prev_mesh_button.hide()
+		next_mesh_button.hide()
+
+func set_scene_paths(scene_paths:Array):
+	mesh_manager.load_scenes(scene_paths)
+	
+
+func clear_scenes():
+	_on_clear_pressed()
 
 func _on_active_scene_set(_scene_path:String, data:Dictionary):
 	var active_scene = mesh_manager.get_active_scene_instance()
@@ -109,7 +135,7 @@ func _on_active_scene_set(_scene_path:String, data:Dictionary):
 
 
 func _on_options_button_clicked():
-	var options = ALibRuntime.Popups.Options.new()
+	var options = Options.new()
 	
 	options.add_option("Toggle SceneTree", _on_node_tree_button_pressed, ["FileTree"])
 	var col_icon = EditorIcons.get_icon_white("CollisionShape3D")
@@ -117,7 +143,8 @@ func _on_options_button_clicked():
 	options.add_option("Toggle Camera Controls", func():camera_panel.visible = not camera_panel.visible, ["Camera"])
 	var light_icon = EditorIcons.get_icon_white("DirectionalLight3D")
 	options.add_option("Toggle Light Controls", func():light_panel.visible = not light_panel.visible, [light_icon])
-	options.add_option("Clear Scenes", _on_clear_pressed, ["Clear"])
+	if panel_mode == PanelMode.FULL:
+		options.add_option("Clear Scenes", _on_clear_pressed, ["Clear"])
 	
 	right_click_handler.display_on_control(options, options_button)
 
@@ -136,7 +163,7 @@ func _on_toggle_collision():
 	node_tree.refresh()
 
 func _list_loaded_scenes():
-	var options = ALibRuntime.Popups.Options.new()
+	var options = Options.new()
 	
 	var show_icon = EditorIcons.get_visibility_icon(not mesh_manager.show_only_active)
 	var show_text = "Show only active scene"
@@ -159,7 +186,7 @@ func _list_loaded_scenes():
 
 
 func _on_node_tree_right_clicked(path:String):
-	var options = ALibRuntime.Popups.Options.new()
+	var options = Options.new()
 	var fs_singleton = FileSystemSingleton.get_instance()
 	var file_type = fs_singleton.get_file_type(path)
 	if ClassDB.is_parent_class("Resource", file_type):
@@ -417,10 +444,10 @@ func _build_nodes():
 	var reset_button = PluginButton.new("Camera", null, "Reset camera").get_button()
 	toolbar.add_child(reset_button)
 	
-	var prev_mesh_button = PluginButton.new("PagePrevious", null, "Make next scene active.").get_button()
+	prev_mesh_button = PluginButton.new("PagePrevious", null, "Make next scene active.").get_button()
 	toolbar.add_child(prev_mesh_button)
 	
-	var next_mesh_button = PluginButton.new("PageNext", null, "Make next scene active.").get_button()
+	next_mesh_button = PluginButton.new("PageNext", null, "Make next scene active.").get_button()
 	toolbar.add_child(next_mesh_button)
 	
 	list_scene_button = PluginButton.new("PackedScene", null, "Make scene active.").get_button()

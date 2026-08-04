@@ -1,11 +1,16 @@
 extends Node3D
 
+## Camera controller, similar to Godot 3D Viewport
+## Use a control overlay over the viewport to forward mouse imput to controller.
+## mouse_detector.gui_input.connect(controller.mouse_input)
+
 var main_root_node:Node3D
 var camera:Camera3D
 
 var cam_dot:float
 
 var cam_zoom_close_limit:float = 0.2
+var cam_zoom_far_limit:float = 100000
 var cam_dist:float
 
 var mouse_zoom_sens: float = 5 # 0.1
@@ -22,6 +27,11 @@ var last_reset_cam_distance:float = 10
 var reset_view_flag:bool = false
 
 var viewport_size_mul = 1
+
+# behaviour
+var allow_pan:bool = true
+var allow_orbit:bool = true
+var allow_zoom:bool = true
 
 
 func _ready() -> void:
@@ -54,12 +64,12 @@ func _process(delta: float) -> void:
 func mouse_input(event: InputEvent) -> void:
 	cam_dist = abs(camera.position.z)
 	
-	if event is InputEventMouseButton:
+	if allow_zoom and event is InputEventMouseButton:
 		if event.button_index == 4:
 			camera.position.z -= 1 * mouse_zoom_sens * mouse_zoom_sens_trim * cam_dist
 		elif event.button_index == 5:
 			camera.position.z += 1 * mouse_zoom_sens * mouse_zoom_sens_trim *  cam_dist
-		camera.position.z = clampf(camera.position.z,cam_zoom_close_limit,100000)
+		camera.position.z = clampf(camera.position.z, cam_zoom_close_limit, cam_zoom_far_limit)
 	
 	
 	var cam_basis:Basis = camera.global_transform.basis
@@ -71,12 +81,12 @@ func mouse_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion:
 		screen_rel_norm = event.screen_relative * mouse_basis_vec_mul
 		if event.button_mask == 4:
-			if Input.is_key_pressed(KEY_SHIFT):
+			if allow_pan and Input.is_key_pressed(KEY_SHIFT):
 				target_pos -= right_vec * screen_rel_norm.x * mouse_pan_sens * mouse_pan_sens_trim * cam_dist
 				target_pos += up_vec * screen_rel_norm.y * mouse_pan_sens * mouse_pan_sens_trim * cam_dist
-			elif Input.is_key_pressed(KEY_CTRL):
+			elif allow_zoom and Input.is_key_pressed(KEY_CTRL):
 				camera.position.z += screen_rel_norm.y * mouse_zoom_sens * mouse_zoom_sens_trim *  cam_dist
-			else:
+			elif allow_orbit:
 				var main_root_basis = main_root_node.global_transform.basis
 				cam_dot = main_root_basis.z.dot(cam_basis.z)
 				rotation_degrees.x -= event.screen_relative.y * mouse_rot_sens * mouse_rot_sens_trim * viewport_size_mul

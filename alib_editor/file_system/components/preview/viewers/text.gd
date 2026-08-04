@@ -9,6 +9,7 @@ func set_path(path:String):
 	else:
 		if not syntax_highlighter is TextSyntaxHighlighter:
 			syntax_highlighter = TextSyntaxHighlighter.new()
+			syntax_highlighter.palette.apply_editor_settings()
 		syntax_highlighter.extension = path.get_extension()
 	
 	text = FileAccess.get_file_as_string(path)

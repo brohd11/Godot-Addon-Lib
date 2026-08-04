@@ -134,6 +134,8 @@ var _current_split_mode:SplitMode = SplitMode.NONE #^ setting - dd
 
 var _signal_busses:Array[StringName] = [&"rt_send_asset"] # default for ray tool
 
+var _show_preview:=false
+
 var _view_data:Dictionary = {}
 
 
@@ -222,6 +224,7 @@ func set_dock_data(data:Dictionary):
 	_set_signal_busses(_dock_data.get(DataKeys.SIGNAL_BUSSES, PackedStringArray()))
 	
 	_search_tree_list_dir = _dock_data.get(DataKeys.TREE_SEARCH_LIST_DIR, false)
+
 
 func _set_data_on_ready():
 	
@@ -611,7 +614,7 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 		#return
 	#print(dir)
 	if _who_is_node(who, [tree, item_list, miller]):
-		_emit_global_signals(path)
+		_item_path_selection(path)
 	
 	var navigation_selection = who != self and _who_is_node(who, [path_bar, places, _navigate_up_button, _history_back_button, _history_forward_button])
 	if _current_view_mode == ViewMode.TREE:
@@ -640,11 +643,6 @@ func _set_current_path(who:Control, path:String, _refresh:=true, force_navigate:
 	
 	_path_in_res = FSUtil.is_path_valid_res(current_path)
 	_set_path_in_res()
-	
-	if true: # preview bool, TODO
-		if is_instance_valid(preview_panel):
-			preview_panel.preview_file(current_path)
-			preview_panel.show()
 	
 	miller.current_path = current_path
 	var item_list_refresh = _current_browser_state == BrowserState.BROWSE and not _who_is_node(who, [self, item_list])
@@ -757,15 +755,30 @@ func _on_item_list_item_selected(path:String, selected_paths:Array):
 	if _current_browser_state == BrowserState.BROWSE:
 		_add_to_history(path)
 		_select_current_paths_in_fs()
-		_emit_global_signals(path)
+		_item_path_selection(path)
 	elif _current_browser_state == BrowserState.SEARCH:
 		if path.ends_with("/") and _tree_view_dir_search():
 			var dir = UFile.get_dir(path)
 			_set_current_path(item_list, dir) #^ stops dirs from 1 click navigating in search, but also sets the current dir
 		else:
 			_set_current_path(item_list, path) #^ any other situation or for files just set the path
-	
 
+func _item_path_selection(path:String):
+	_send_to_preview_panel(path)
+	_emit_global_signals(path)
+
+func _send_to_preview_panel(path:String):
+	if not Debounce.start_debounce(&"fs_tree_preview"):
+		return
+	
+	var show_preview = true
+	if show_preview and is_instance_valid(preview_panel):
+		preview_panel.preview_file(path)
+		preview_panel.show()
+
+
+#^r Note: This causes noticable lag when selecting a folder that houses many files/assets
+#^r This lag is present in the Editor's own dock, unavoidable without complicating when to call
 func _select_paths_in_fs():
 	return FileSystemSingleton.ensure_items_selected(current_selected_paths)
 
@@ -856,6 +869,7 @@ func _on_double_clicked(selected_path:String):
 func _on_item_right_clicked(clicked_node:Node, selected_item_path:String, selected_paths:Array):
 	current_selected_paths = selected_paths
 	if FSUtil.is_path_valid_res(selected_item_path):
+		_send_to_preview_panel(selected_item_path) # handles tree/miller as well
 		if not _select_paths_in_fs():
 			return
 		fs_popup_handler.right_clicked(clicked_node, selected_item_path, selected_paths)
@@ -909,9 +923,10 @@ func _on_rc_new_tab(path:String): #^ new window is in fs_popup_id_handler
 func _on_options_button_pressed():
 	var options = RightClickHandler.Options.new()
 	
+	options.add_option("Preview", _toggle_preview_panel, ["Info"])
+	
 	var view_icon = EditorInterface.get_editor_theme().get_icon("TexturePreviewChannels", "EditorIcons")
 	var place_bar_icon = EditorInterface.get_editor_theme().get_icon("Favorites", "EditorIcons")
-	
 	#^ mode specific
 	if _current_view_mode == ViewMode.TREE:
 		options.add_option("Split Mode", _change_split_mode, [_get_split_icon()])
@@ -994,6 +1009,14 @@ func _set_signal_busses(new_busses:PackedStringArray):
 	for bus_name in new_busses:
 		_signal_busses.append(StringName(bus_name))
 
+
+func _toggle_preview_panel():
+	_show_preview = not _show_preview
+	if _show_preview:
+		_send_to_preview_panel(current_path)
+	else:
+		preview_panel.hide()
+		preview_panel.clear()
 
 func _change_split_mode():
 	_current_split_mode += 1
@@ -1511,6 +1534,8 @@ func _build_nodes():
 	
 	preview_panel = FSClasses.PreviewPanel.new()
 	main_split_container.add_child(preview_panel)
+	preview_panel.hide()
+	preview_panel.custom_minimum_size = Vector2(64 * EditorInterface.get_editor_scale(), 0)
 	
 	non_res_helper = NonResHelper.new()
 	non_res_helper.places = places

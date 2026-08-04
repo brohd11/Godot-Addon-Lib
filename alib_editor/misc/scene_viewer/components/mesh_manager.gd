@@ -69,7 +69,12 @@ func _get_or_inst_scenes(current_paths:PackedStringArray):
 			var pck:PackedScene = ResourceLoader.load(path)
 			scn = pck.instantiate()
 		else:
-			continue
+			var res = load(path)
+			if res is Mesh:
+				scn = MeshInstance3D.new()
+				scn.mesh = res
+			else:
+				continue
 		
 		if scn == null:
 			continue
@@ -123,7 +128,7 @@ func _show_scenes(current_scene_path:String, scns_to_show:Array):
 	
 	var current_scn_data = _scene_cache[current_scene_path]
 	var current_scn_ins = current_scn_data.get(Keys.INSTANCE)
-	var current_scn_pos = current_scn_data.get(Keys.POS_OFFSET)
+	var current_scn_pos = current_scn_data.get(Keys.POS_OFFSET, Vector3.ZERO)
 	var adjusted_offset = Vector3.ZERO - current_scn_pos
 	_set_label_settings(current_scene_path, true)
 	
@@ -205,6 +210,7 @@ func add_debug_shape(collision_node: CollisionShape3D):
 func _set_label_settings(path:String, is_current:=false):
 	var scene_data = _scene_cache[path]
 	
+	
 	var ins = scene_data.get(Keys.INSTANCE)
 	var scn_label = ALibRuntime.Utils.UNode.find_first_node_of_type(ins, Label3D)
 	if scn_label is Label3D:
@@ -217,8 +223,11 @@ func _set_label_settings(path:String, is_current:=false):
 		else:
 			scn_label.modulate = Color.WHITE
 		
-		var aabb = scene_data[Keys.SCN_AABB]
-		if aabb:
+		var aabb:AABB = scene_data.get(Keys.SCN_AABB, AABB())
+		if aabb.size == Vector3.ZERO:
+			if not scn_label.text.ends_with(" (Empty AABB)"):
+				scn_label.text = scn_label.text + " (Empty AABB)"
+		else:
 			scn_label.position = Vector3(0, aabb.size.y * label_height + 0.25, 0)
 			#if HelperInst.ABConfig.label_adaptive_size:
 				#current_scn_label.pixel_size = 0.005 * aabb.x * label_size
@@ -279,6 +288,8 @@ func get_current_scene_stats(scene:Node3D):
 	if not m:
 		return {}
 	var mesh:MeshInstance3D = m
+	if not mesh.mesh is ArrayMesh:
+		return {}
 	var mesh_surf_count = mesh.mesh.get_surface_count()
 	var m_tool = MeshDataTool.new()
 	#print("mtool ",mesh)
@@ -286,7 +297,7 @@ func get_current_scene_stats(scene:Node3D):
 	var vert_count = 0
 	var edge_count = 0
 	for ms in mesh_surf_count:
-		var err = m_tool.create_from_surface(mesh.mesh,ms)
+		var err = m_tool.create_from_surface(mesh.mesh, ms)
 		#print("errr ",err)
 		if not err == OK:
 			continue
