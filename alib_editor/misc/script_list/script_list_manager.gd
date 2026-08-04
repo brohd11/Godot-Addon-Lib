@@ -199,15 +199,18 @@ func get_current_script_editor_index():
 	return current_script_editor.get_index()
 
 func get_current_item():
+	# script list can be subject to lag, index maps to the script list items. Should be valid
+	if is_instance_valid(current_script_editor):
+		return get_current_script_editor_index()
 	var sel = -1
 	var items = script_list.get_selected_items()
 	if not items.is_empty():
 		sel = items[0]
 	return sel
 
-# need to redo
+
 func get_item_by_tooltip(tooltip:String):
-	var data = item_cache.get(tooltip)
+	var data = get_cached_item_data(tooltip)
 	if data == null:
 		return -1
 	return data.get(Keys.ITEM_IDX, -1)
