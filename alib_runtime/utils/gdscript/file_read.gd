@@ -41,11 +41,3 @@ static func check_file_for(file:FileAccess, string:String, lines:=5, return_code
 			else:
 				return line
 	return ""
-
-static func get_dependencies(path:String):
-	var file = UFile.get_file_access(path)
-	if file:
-		
-		
-		pass
-	pass

@@ -2,8 +2,6 @@
 
 extends VBoxContainer
 
-const TreeHelperBase = preload("uid://bm6fl2iu4jew7") #! resolve ALibRuntime.TreeHelperBase
-
 const FSTreeHelperBase = preload("res://addons/addon_lib/brohd/alib_editor/file_system/util/fs_tree_helper_base.gd")
 const FileData = preload("uid://fhnuvnmqrurq").FileData #! resolve FileSystemSingleton.FileData
 const PopupID = preload("uid://co1fsmkihc4cg") #! resolve FileSystemSingleton.FSGenericPopupHandler.PopupID
@@ -317,7 +315,7 @@ func _refresh_tree():
 	while is_instance_valid(item):
 		var meta = item.get_metadata(0)
 		if meta != null:
-			var path = meta.get(TreeHelperBase.Keys.METADATA_PATH)
+			var path = meta.get(FSTreeHelperBase.Keys.METADATA_PATH)
 			if path != FileData.FAVORITES_META:
 				var file_data = _get_folder_data(path) if path.ends_with("/") else _get_file_data(path)
 				tree_helper.set_item_icon(item, file_data)

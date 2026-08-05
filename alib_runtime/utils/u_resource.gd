@@ -7,6 +7,7 @@ const UFile = preload("uid://gs632l1nhxaf") #! resolve ALibRuntime.Utils.UFile
 const Audio = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/audio.gd")
 const ImageSize = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/image_size.gd")
 const UPackedScene = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/packed_scene.gd")
+const Dependencies = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies.gd")
 
 static func save_resource_to_path(res:Resource,path:String, name_overide:String="") -> void:
 	if name_overide == "":
