@@ -771,8 +771,7 @@ func _send_to_preview_panel(path:String):
 	if not Debounce.start_debounce(&"fs_tree_preview"):
 		return
 	
-	var show_preview = true
-	if show_preview and is_instance_valid(preview_panel):
+	if _show_preview and is_instance_valid(preview_panel):
 		preview_panel.preview_file(path)
 		preview_panel.show()
 

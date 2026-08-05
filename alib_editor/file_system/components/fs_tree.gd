@@ -97,7 +97,7 @@ func _ready() -> void:
 	FileSystemSingleton.call_on_ready(_on_fs_ready)
 
 func _on_fs_ready():
-	filesystem_singleton.filesystem_changed.connect(_on_file_system_changed, 1)
+	filesystem_singleton.filesystem_paths_changed.connect(_on_file_system_changed, 1)
 	_refresh_files_and_tree()
 	
 	_build_tree() # shouldn't be needed...
@@ -169,14 +169,19 @@ func _on_fs_folder_moved(old_path:String, new_path:String):
 		root_dir = rename
 
 
-func _on_file_system_changed():
-	#_script_data = {} # why is this clearing?
+func _on_file_system_changed(paths_changed:bool):
+	if not paths_changed:
+		_stagger_call(_refresh_tree)
+	else:
+		_stagger_call(_refresh_files_and_tree)
+
+func _stagger_call(callable:Callable):
 	if visible:
-		_refresh_files_and_tree()
+		callable.call()
 		return
 	for i in range(get_index() * 2):
 		await get_tree().process_frame
-	_refresh_files_and_tree()
+	callable.call()
 
 func refresh():
 	_refresh_files_and_tree()
@@ -299,8 +304,32 @@ func _build_tree():
 	#if _is_filtering():
 	_update_tree_items()
 
-## Receive the leaf item of the tree.
+## Receive the leaf item of the tree. Custom processing on build.
 func _process_custom_item(file_path:String, tree_item:TreeItem):
+	pass
+	
+
+func _refresh_tree():
+	var t = ALibRuntime.Utils.UProfile.TimeFunction.new("refresh tree--" + root_dir)
+	var item:TreeItem = file_tree.get_root()
+	if not is_instance_valid(item):
+		return
+	while is_instance_valid(item):
+		var meta = item.get_metadata(0)
+		if meta != null:
+			var path = meta.get(TreeHelperBase.Keys.METADATA_PATH)
+			if path != FileData.FAVORITES_META:
+				var file_data = _get_folder_data(path) if path.ends_with("/") else _get_file_data(path)
+				tree_helper.set_item_icon(item, file_data)
+				_process_custom_item_refresh(path, item)
+		
+		item = item.get_next_in_tree()
+	
+	
+	t.stop()
+
+## Receive the leaf item of the tree. Custom processing on a refresh
+func _process_custom_item_refresh(file_path:String, tree_item:TreeItem):
 	pass
 
 func _get_file_data(file_path:String):
@@ -314,6 +343,13 @@ func _get_file_data(file_path:String):
 		ItemKeys.BG_COLOR: filesystem_singleton.get_folder_color(file_path),
 	}
 
+func _get_folder_data(file_path:String):
+	return {
+		ItemKeys.PATH: file_path,
+		ItemKeys.ICON: tree_helper.folder_icon,
+		ItemKeys.ICON_COLOR: filesystem_singleton.get_folder_color(file_path),
+		ItemKeys.BG_COLOR: filesystem_singleton.get_background_color(file_path)
+	}
 
 func _on_item_activated():
 	var selection = _get_selection()

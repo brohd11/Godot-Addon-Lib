@@ -83,5 +83,5 @@ func _set_light_pos():
 	var light_pos = Vector3(1.5, 2, 1) * 10
 	light.position = light_pos
 	light.look_at(-light_pos)
-	print(light.rotation_degrees)
+	#print(light.rotation_degrees)
 	

@@ -1,8 +1,12 @@
 extends RefCounted
 
+const NUTree = preload("uid://coqq638olix8k") #! resolve ALibRuntime.NodeUtils.NUTree
+const NUItemList = preload("uid://cjls86v1v4242") #! resolve ALibRuntime.NodeUtils.NUItemList
+const TreeHelperBase = preload("uid://bm6fl2iu4jew7") #! resolve ALibRuntime.TreeHelperBase
+const FAVORITES_META = "FAVORITES" #! resolve FileSystemSingleton.FileData.FAVORITES_META
+
 const GitUtil = preload("res://addons/addon_lib/brohd/alib_editor/misc/git_service/git_util.gd")
-const NUTree = ALibRuntime.NodeUtils.NUTree
-const NUItemList = ALibRuntime.NodeUtils.NUItemList
+
 
 class GitItemHelper:
 	var git_service:GitService
@@ -68,8 +72,6 @@ class GitItemHelper:
 			return meta
 		else:
 			return _item_list.get_item_tooltip(idx)
-		return meta
-	pass
 
 
 class GitTreeHelper:
@@ -95,6 +97,20 @@ class GitTreeHelper:
 		
 		marker_icon = EditorInterface.get_editor_theme().get_icon(&"Breakpoint", &"EditorIcons")
 	
+	func reprocess_tree():
+		var item:TreeItem = _tree.get_root()
+		while is_instance_valid(item):
+			for key in [Keys.GIT_ICON, Keys.OWN_COLOR, Keys.IS_REPO]:
+				if item.has_meta(key): # remove_meta errors on a key that is not there
+					item.remove_meta(key)
+				item.clear_custom_color(0)
+			var meta = item.get_metadata(0)
+			if meta != null and meta.has(TreeHelperBase.Keys.METADATA_PATH):
+				var path = meta.get(TreeHelperBase.Keys.METADATA_PATH)
+				if path != FAVORITES_META:
+					process_tree_item(path, item)
+			
+			item = item.get_next_in_tree()
 	
 	func process_tree_item(file_path:String, tree_item:TreeItem):
 		var color = git_service.get_file_color(file_path)
@@ -129,7 +145,6 @@ class GitTreeHelper:
 				severity = GitUtil.Severity.NESTED
 			
 			par = par.get_parent()
-	
 	
 	# first tree must calculate visible rects then queue the overlay to draw them
 	func _on_tree_draw():
@@ -209,4 +224,3 @@ class Keys:
 	const ICON = &"icon"
 	const COLOR = &"color"
 	const SEVERITY = &"severity"
-	

@@ -7,7 +7,7 @@ const SingletonRefCount = Singletons.RefCount
 ##
 ## Owns the repo list, the current selection, a per-repo status dict and the commit log. Every git
 ## call runs off the main thread and is published through `status_updated` / `commits_updated` /
-## `repos_updated`. This node holds no UI: it wraps the static GitUtil library and is the piece
+## `refresh_finished`. This node holds no UI: it wraps the static GitUtil library and is the piece
 ## destined to migrate into addon_lib once the API settles.
 ##
 ## Status is held for *every* repo, because this project nests ~25 of them and the file tree renders
@@ -63,7 +63,10 @@ const REFRESH_DEBOUNCE = 1.0
 
 signal status_updated(repo_dir:String)
 signal commits_updated(repo_dir:String)
-signal repos_updated
+## The queue has drained: the repo set has been re-scanned and every repo that was due has been
+## re-read. One emission per drain, where status_updated is one per repo — for consumers that repaint
+## against the whole picture rather than a single repo. Covers run_command() and set_repo() too
+signal refresh_finished
 
 var colors:GitColors
 
@@ -128,10 +131,7 @@ func _ready() -> void:
 
 	setting_helper.initialize()
 	
-	# Baking the status letters costs one rendered frame, so it starts here — the earliest point there
-	# is a tree to render in, and a long way ahead of the first `git status`, which is a process spawn
-	# on a worker thread. Nothing blocks on it: a row built before the bake lands draws its letter as
-	# a string and is rebuilt when GlyphIcons reports in.
+	# Baking the status letters costs one rendered frame, so it starts here
 	_get_glyph_icons_node().warm(GitUtil.get_letter_set())
 
 	refresh_repos()
@@ -142,7 +142,13 @@ func _ready() -> void:
 
 
 func refresh_repos() -> void:
-	repos = GitUtil.find_repos()
+	var found:Array[String] = GitUtil.find_repos()
+
+	# an unchanged set has to cost nothing, since refresh_all() runs this on every focus in.
+	# _repo_for_path is only invalidated by the set moving
+	if found == repos:
+		return
+	repos = found
 
 	# a repo that has gone away must stop answering: its paths now belong to whichever repo contains
 	# them next, and a stale entry would keep winning find_repo_for() on length alone
@@ -152,8 +158,6 @@ func refresh_repos() -> void:
 
 	_repo_for_path.clear()
 
-	repos_updated.emit()
-
 
 func set_repo(repo_dir:String) -> void:
 	if current_repo == repo_dir:
@@ -161,14 +165,9 @@ func set_repo(repo_dir:String) -> void:
 	var previous_repo = current_repo
 	current_repo = repo_dir
 
-	# _repo_status deliberately survives the switch: another repo's status is no less true for the
-	# panel having looked away, and the tree is still rendering it. Only the log is dropped, because
-	# only the log is current-repo data. The new repo's cached status has no hunks attached until the
-	# full pass below lands, so a row click can come up empty for one cycle.
+	# _repo_status deliberately survives the switch: for use with tree
 	commits = []
-	# a command queued against the old repo must not drain against the new one: its paths are res://
-	# paths under the *old* root, so they would not even resolve here. Say so — a discard confirmed
-	# and then dropped by a repo switch is otherwise indistinguishable from one that ran.
+	# a command queued against the old repo must not drain against the new one
 	if not _pending_commands.is_empty():
 		var dropped:Array = []
 		for entry in _pending_commands:
@@ -298,6 +297,9 @@ func refresh_status() -> void:
 ## Also the hook for anything that changes git state behind the editor's back — a commit made in a
 ## terminal never reaches filesystem_changed, so nothing else will notice it.
 func refresh_all() -> void:
+	# a repo cloned or deleted behind the editor's back is the same class of event as a commit, and
+	# nothing else picks it up
+	refresh_repos()
 	for repo_dir:String in repos:
 		_enqueue(repo_dir)
 	_pump()
@@ -354,11 +356,6 @@ func _pump() -> void:
 
 	_thread = Thread.new()
 	_thread.start(_status_task.bind(repo_dir, queued, _is_initial(), full))
-
-
-# Whether the repo has no commits yet, which changes how a file is unstaged — see GitUtil.
-func _is_initial() -> bool:
-	return get_branch().get(GitUtil.Keys.BRANCH_INITIAL, false)
 
 
 func _status_task(repo_dir:String, queued:Array, initial:bool, full:bool) -> void:
@@ -429,6 +426,10 @@ func _on_status_ready(repo_dir:String, status_result:Dictionary, log_result:Arra
 
 	_pump()
 
+	# _pump() leaves _thread null only when it found nothing left to start, so that is the drain test
+	if not is_instance_valid(_thread):
+		refresh_finished.emit()
+
 
 func _join_thread() -> void:
 	if not is_instance_valid(_thread):
@@ -436,10 +437,16 @@ func _join_thread() -> void:
 	_thread.wait_to_finish()
 	_thread = null
 
+# Whether the repo has no commits yet, which changes how a file is unstaged — see GitUtil.
+func _is_initial() -> bool:
+	return get_branch().get(GitUtil.Keys.BRANCH_INITIAL, false)
 
 func _on_filesystem_changed() -> void:
 	_debounce_timer.start()
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_debounce_timer.start()
 
 class GitColors:
 	var conflicted:Color = GitUtil.Colors.RED

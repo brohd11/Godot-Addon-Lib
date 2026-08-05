@@ -66,6 +66,7 @@ var _init_complete:=false
 var _scene_preview:ScenePreview
 
 signal filesystem_changed
+signal filesystem_paths_changed(changed:bool)
 
 func _init(_node):
 	cache = Cache.new()
@@ -158,13 +159,17 @@ func _on_filesystem_changed():
 	_file_scan()
 	#ALibRuntime.Utils.UProfile.TimeFunction.time_func(_file_scan, "FS SCAN")
 	
+	var new_paths = PackedStringArray(_file_and_dir_paths_dict.keys())
+	var paths_changed = new_paths != file_and_dir_paths
+	file_and_dir_paths = new_paths
 	file_paths = PackedStringArray(_file_paths_dict.keys())
-	file_and_dir_paths = PackedStringArray(_file_and_dir_paths_dict.keys())
+	
 	
 	if not _previews_generated:
 		_generate_previews()
 	
 	filesystem_changed.emit() # own signal
+	filesystem_paths_changed.emit(paths_changed)
 
 
 
