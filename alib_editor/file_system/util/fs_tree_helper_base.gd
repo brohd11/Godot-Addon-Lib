@@ -1,7 +1,7 @@
 extends "res://addons/addon_lib/brohd/alib_runtime/tree_helper/tree_helper_base.gd"
 
 var filesystem_singleton:FileSystemSingleton
-var thumbnail_size:float = 16
+var thumbnail_size:float = 16 * EditorInterface.get_editor_scale()
 var show_files:bool = true
 
 func set_thumbnail_size():

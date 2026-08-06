@@ -369,11 +369,13 @@ func _get_type_icon(file_path):
 	if Keys.VALID_FILE_TYPES.has(file_type):
 		return cache.editor_icons[Keys.VALID_FILE_TYPES.get(file_type)]
 	var fs_dir = EditorInterface.get_resource_filesystem().get_filesystem_path(file_path.get_base_dir())
+	if fs_dir == null:
+		return EditorInterface.get_editor_theme().get_icon(&"FileBroken", &"EditorIcons")
 	var idx = fs_dir.find_file_index(file_path.get_file())
 	if idx > -1:
 		if fs_dir.get_file_import_is_valid(idx):
 			return cache.file_icon
-	return EditorInterface.get_editor_theme().get_icon("FileBroken", "EditorIcons")
+	return EditorInterface.get_editor_theme().get_icon(&"FileBroken", &"EditorIcons")
 
 static func get_preview(path:String):
 	if instance_valid():

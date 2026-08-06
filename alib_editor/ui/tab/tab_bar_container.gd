@@ -7,6 +7,8 @@ var _tab_bar:TabBar
 var _tab_bar_hbox:HBoxContainer
 var _tab_vbox:VBoxContainer
 
+var _setting_current_tab:bool=false
+
 var _current_tab_idx:int = 0
 
 var _tab_meta:= {}
@@ -69,10 +71,14 @@ func add_tab(control:Control, icon=null):
 	_tab_bar.set_tab_metadata(_tab_bar.tab_count - 1, {_TAB_CONTROL:control})
 	control.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_on_tab_changed(_tab_bar.tab_count - 1)
+	control.visibility_changed.connect(_on_tab_visibility_changed.bind(control))
 
 func remove_tab(tab:int, free_tab:=true):
+	var control = get_tab_control(tab)
+	if control.visibility_changed.is_connected(_on_tab_visibility_changed):
+		control.visibility_changed.disconnect(_on_tab_visibility_changed)
+	
 	if free_tab:
-		var control = get_tab_control(tab)
 		control.queue_free()
 	_tab_bar.remove_tab(tab)
 
@@ -83,11 +89,24 @@ func get_tab_control(tab:int):
 	return _tab_vbox.get_child(tab)
 
 func _on_tab_changed(tab:int):
+	_setting_current_tab = true
 	var current_tab = get_current_tab_control()
 	for i in range(_tab_bar.tab_count):
 		var control = get_tab_control(i)
 		control.visible = control == current_tab
+	
+	_setting_current_tab = false
 	tab_changed.emit(tab)
+	
+
+# this allows a child to simply show() to force visibility
+func _on_tab_visibility_changed(control:Control):
+	if _setting_current_tab:
+		return
+	var new_i = control.get_index()
+	if control.get_index() == _current_tab_idx:
+		return
+	_tab_bar.current_tab = new_i
 
 func _on_child_exiting_tree(node:Node):
 	if node.is_queued_for_deletion():

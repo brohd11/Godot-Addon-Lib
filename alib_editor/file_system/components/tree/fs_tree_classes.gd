@@ -43,6 +43,8 @@ class MinTree extends Tree:
 		var item = get_item_at_position(get_local_mouse_position())
 		if item:
 			var path = FSTreeHelper.get_path_from_item(item)
+			if path == null:
+				return null
 			if not path in ["res://", FileData.FAVORITES_META]:
 				return FileSystemSingleton.get_custom_tooltip(path)
 		return null
@@ -82,6 +84,26 @@ class MinTree extends Tree:
 		
 		FileSystemSingleton.DropData.move_dialog(data, target_dir, self)
 
+
+class Utils:
+	static func get_file_data(file_path:String, fs_sing:FileSystemSingleton):
+		var icon_color:Color = fs_sing.get_icon_color(file_path)
+		if not icon_color:
+			icon_color = Color.WHITE
+		return {
+			ItemKeys.PATH: file_path,
+			ItemKeys.ICON: fs_sing.get_type_icon(file_path),
+			ItemKeys.ICON_COLOR: icon_color,
+			ItemKeys.BG_COLOR: fs_sing.get_folder_color(file_path),
+		}
+
+	static func get_folder_data(file_path:String, fs_sing:FileSystemSingleton):
+		return {
+			ItemKeys.PATH: file_path,
+			ItemKeys.ICON: fs_sing.cache.folder_icon,
+			ItemKeys.ICON_COLOR: fs_sing.get_folder_color(file_path),
+			ItemKeys.BG_COLOR: fs_sing.get_background_color(file_path)
+		}
 
 class ItemKeys:
 	const PATH = &"path"

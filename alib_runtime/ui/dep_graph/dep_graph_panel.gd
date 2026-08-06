@@ -244,7 +244,7 @@ func reset_view() -> void:
 	_fit_to_graph()
 	# GraphEdit clamps scroll_offset against content bounds it has not measured on the frame
 	# the nodes are added, so the fit has to be applied again once layout has run
-	if is_inside_tree():
+	if is_inside_tree() and not get_tree().process_frame.is_connected(_fit_to_graph):
 		get_tree().process_frame.connect(_fit_to_graph, CONNECT_ONE_SHOT | CONNECT_DEFERRED)
 
 
