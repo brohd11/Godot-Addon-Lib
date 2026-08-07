@@ -12,6 +12,9 @@ extends GraphEdit
 ##     # or render a graph the caller already scanned
 ##     panel.set_graph(UResource.Dependencies.scan(path))
 ##
+##     # or centre on one file: only its neighbourhood is drawn, out to focus_depth hops
+##     panel.set_focus("res://addons/foo/plugin.gd", 2)
+##
 ## This is a viewer: connections cannot be made or broken, so connection_request and
 ## disconnect_node_request are deliberately left unwired.
 
@@ -21,7 +24,6 @@ const KindStyle = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dep_grap
 const Layout = preload("res://addons/addon_lib/brohd/alib_runtime/ui/dep_graph/layout.gd")
 
 const Kind = Dependencies.Kind
-const Tags = Dependencies.Tags
 
 ## Which connections get drawn. Orthogonal to the layout - either mode works with either.
 enum EdgeMode {
@@ -133,6 +135,13 @@ var show_missing:bool = true
 ## Upper bound on GraphNodes. Nodes nearest the roots win; graph_built reports truncation.
 var max_nodes:int = 400
 
+## Files the neighbourhood view centres on. Empty = full view. While set, only nodes within
+## focus_depth hops of a focus file - in EITHER direction - are drawn: dependencies fan out
+## to the right of the focus, dependents to its left. Change via set_focus()/clear_focus().
+var focus_paths:PackedStringArray = []
+## Hops each way the neighbourhood view reaches. 1 = direct connections only.
+var focus_depth:int = 1
+
 var _graph = null
 var _nodes_by_path:Dictionary = {}       # {path: DepFileNode}
 var _path_by_name:Dictionary = {}        # {StringName: path}
@@ -218,6 +227,27 @@ func relayout() -> void:
 	_manual_positions.clear()
 	if _graph != null:
 		_apply_layout()
+
+
+## Restrict the view to the neighbourhood of `paths`: everything within focus_depth hops,
+## both directions. `depth` of -1 keeps the current focus_depth. Empty paths restores the
+## full view. Manual positions are dropped - they mean nothing across a node-set change.
+func set_focus(paths, depth:int = -1) -> void:
+	focus_paths = PackedStringArray(_as_path_array(paths))
+	if depth >= 0:
+		focus_depth = depth
+	_manual_positions.clear()
+	if _graph != null:
+		_rebuild()
+
+
+func clear_focus() -> void:
+	set_focus([])
+
+
+## Centre the neighbourhood view on the current GraphEdit selection.
+func focus_on_selection(depth:int = -1) -> void:
+	set_focus(get_selected_paths(), depth)
 
 
 ## [] shows every kind. Rebuilds rather than just reconnecting: a node's rows ARE its ports,
@@ -313,6 +343,12 @@ func _rebuild() -> void:
 	var paths = _paths_to_show()
 	var shown = _prune_unreachable(paths)
 	var truncated = shown.size() < _graph.nodes.size()
+	if not focus_paths.is_empty():
+		# neighbourhood view: keep only what lies within focus_depth hops of a focus file
+		var near = Layout.neighborhood_dist(_graph, focus_paths, focus_depth)
+		for path in shown.keys():
+			if not near.has(path):
+				shown.erase(path)
 
 	_primary_edges = _select_edges(shown)
 	_secondary_edges = [] if edge_mode == EdgeMode.ALL else _select_secondary(shown, _primary_edges)
@@ -428,6 +464,8 @@ func _compare_by_depth(a:String, b:String) -> bool:
 
 func _add_file_node(path:String, dep_node, in_kinds:Dictionary, out_kinds:Dictionary) -> void:
 	var node = DepFileNode.create(path, dep_node, "", in_kinds, out_kinds)
+	if path in focus_paths:
+		node.mark_focused()
 	var node_name = StringName("n%d" % _next_id)
 	_next_id += 1
 	node.name = node_name
@@ -486,7 +524,11 @@ func _apply_layout() -> void:
 		_dir_by_path = result.dirs
 		_build_frames(result.folders, result.titles)
 	else:
-		positions = Layout.compute(_layout_source(), sizes, {"h_gap": h_gap * scale, "v_gap": v_gap * scale})
+		if not focus_paths.is_empty():
+			# neighbourhood view: focus at column 0, dependents left, dependencies right
+			positions = Layout.compute_neighborhood(_layout_source(), focus_paths, focus_depth, sizes, {"h_gap": h_gap * scale, "v_gap": v_gap * scale})
+		else:
+			positions = Layout.compute(_layout_source(), sizes, {"h_gap": h_gap * scale, "v_gap": v_gap * scale})
 
 	for path:String in _nodes_by_path:
 		if _manual_positions.has(path):

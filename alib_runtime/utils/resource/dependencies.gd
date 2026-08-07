@@ -13,7 +13,7 @@
 ##
 ##     var d = UDep.open("res://addons/foo/plugin.gd")
 ##     d.ignore_dir_paths = ["res://addons/foo/export_ignore"]
-##     d.add_tag_handler("dependency", UDep.Tags.dependency_dir())
+##     d.add_tag_handler("asset", func(ctx): return {"dir": ctx.value})
 ##     var graph = d.get_graph()
 ##
 ## open()/scan()/get_graph() mirror UFile.GetFiles, which pairs a static one-shot with an
@@ -26,7 +26,6 @@ const DepNode = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resourc
 const DepEdge = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/dep_edge.gd")
 const Resolve = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/resolve.gd")
 const ResolveAccess = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/resolve_access.gd")
-const Tags = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/tags.gd")
 const ScanGD = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/scan_gd.gd")
 const ScanSer = preload("res://addons/addon_lib/brohd/alib_runtime/utils/resource/dependencies/scan_ser.gd")
 
@@ -69,8 +68,7 @@ var class_map:Dictionary = {}
 var use_project_classes:bool = true
 ## Walk dotted access paths - `Singletons.Base` names singleton_base.gd, not the namespace
 ## file its head resolves to. Purely additive: the head's own GLOBAL_CLASS edge is emitted
-## either way, so turning this off can never lose a dependency, only precision. Off gives the
-## exact pre-resolution behaviour, which is the safe starting point for the exporter tie-in.
+## either way, so turning this off can never lose a dependency, only precision.
 var resolve_access_paths:bool = true
 ## {tag_name_without_prefix: Callable}. Empty means every "#!" tag is an ordinary comment.
 var tag_handlers:Dictionary = {}
@@ -109,6 +107,19 @@ static func scan_many(_roots:Array) -> DepGraph:
 	return open_many(_roots).get_graph()
 
 
+## Registers a handler for the `#! <tag>` directive. Nothing here is built in - a tag with no
+## handler is an ordinary comment - so the tags a project uses stay with the project.
+##
+## `handler` is a Callable taking one context dict:
+##     {"file_path", "line", "line_no", "tag", "value", "raws"}
+## `value` is the text after the tag, `raws` the path-looking string literals on the line.
+## Return a Dictionary to emit one TAG edge per entry in `raws` carrying it as edge.meta, or
+## null to emit nothing. A returned "paths" key replaces `raws` as the edge targets and is
+## stripped from the metadata.
+##
+##     d.add_tag_handler("asset", func(ctx):
+##         return null if ctx.raws.is_empty() else {"dir": ctx.value})
+##
 ## Chainable so a scan can be configured in one expression.
 func add_tag_handler(tag:String, handler:Callable) -> SELF:
 	tag_handlers[tag.trim_prefix("#!").strip_edges()] = handler

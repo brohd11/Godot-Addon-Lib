@@ -1,10 +1,6 @@
 ## Result of a dependency scan: every file reached, and every reference that reached it.
 ## Built by dependencies.gd - callers only read it.
 
-## Legacy plugin_exporter key names, kept so to_flat_dict() is a drop-in there.
-const KEY_DEPENDENT = "dependent"
-const KEY_DEPENDENCY_DIR = "dependency_dir"
-
 ## Paths the scan was seeded with.
 var roots:PackedStringArray = PackedStringArray()
 ## {path: DepNode}, insertion-ordered by first discovery.
@@ -163,26 +159,6 @@ func get_path_to(path:String) -> PackedStringArray:
 		current = edge.from
 	chain.reverse()
 	return chain
-
-
-## The legacy plugin_exporter shape: {path: {"dependent": ..., "dependency_dir"?: ...}}.
-## Lossy by definition - one dependent per file - so prefer the graph itself.
-func to_flat_dict(include_roots:bool=false) -> Dictionary:
-	var out = {}
-	for path:String in nodes:
-		var node = nodes[path]
-		if node.is_root and not include_roots:
-			continue
-		if node.in_edges.is_empty():
-			continue
-		var edge = node.in_edges[0]
-		var entry = {KEY_DEPENDENT: edge.from}
-		for e in node.in_edges:
-			if e.meta.has(KEY_DEPENDENCY_DIR):
-				entry[KEY_DEPENDENCY_DIR] = e.meta[KEY_DEPENDENCY_DIR]
-				break
-		out[path] = entry
-	return out
 
 
 func to_dict() -> Dictionary:

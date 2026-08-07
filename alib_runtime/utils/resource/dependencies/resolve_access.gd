@@ -81,7 +81,7 @@ static func get_const_paths(file_path:String, cache:Dictionary) -> Dictionary:
 
 
 ## Generated pseudo-namespace files announce themselves in their header. Marking edges into
-## them lets a viewer skip the detour while the exporter keeps the file it still has to copy.
+## them lets a viewer skip the detour while a caller collecting files still keeps the file.
 static func is_generated_namespace_file(file_path:String, cache:Dictionary) -> bool:
 	var key = "autogen:" + file_path
 	if cache.has(key):

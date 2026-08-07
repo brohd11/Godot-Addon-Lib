@@ -1,15 +1,19 @@
 ## Layered layout for a DepGraph. Pure - no Control is touched, which is what makes it
 ## testable headless.
 ##
-## Column is DepNode.depth, which the scanner already computed as the shortest hop count from
-## a root, so the left-to-right reading is "what depends on what". Row order inside a column
-## comes from the barycentre of each node's parents - the cheap half of Sugiyama - which is
-## what stops the connection lines turning into a hairball.
+## Column is the node's LONGEST path from a root (depth_mode "max", the default): every edge
+## then satisfies depth(to) > depth(from), so dependencies flow strictly left to right and no
+## line ever doubles back. The scanner's DepNode.depth - the SHORTEST hop count - is still
+## available as depth_mode "min"; it reads shallower, but a node reached both directly and
+## via a long chain drags its deep incoming edges back across the graph. Row order inside a
+## column comes from the barycentre of each node's parents - the cheap half of Sugiyama -
+## which is what stops the connection lines turning into a hairball.
 
 const DEFAULTS = {
 	"h_gap": 90.0,   # between columns
 	"v_gap": 24.0,   # between nodes in a column
 	"sweeps": 2,     # barycentre refinement passes, each one down then up
+	"depth_mode": "max", # "max" layers by longest path, "min" by the scanner's depth
 }
 
 const FOLDER_DEFAULTS = {
@@ -37,7 +41,11 @@ static func compute(dep_graph, sizes:Dictionary, opts:Dictionary = {}) -> Dictio
 	var v_gap:float = opts.get("v_gap", DEFAULTS.v_gap)
 	var sweeps:int = opts.get("sweeps", DEFAULTS.sweeps)
 
-	var columns = _build_columns(dep_graph)
+	var columns:Array
+	if opts.get("depth_mode", DEFAULTS.depth_mode) == "min":
+		columns = _build_columns(dep_graph)
+	else:
+		columns = _build_columns_max(dep_graph)
 	if columns.is_empty():
 		return {}
 
@@ -64,6 +72,166 @@ static func _build_columns(dep_graph) -> Array:
 		col.sort() # deterministic starting order; the barycentre passes take it from here
 		columns.append(col)
 	return columns
+
+
+## Column index per node, keyed by the LONGEST path from a source. Longest path is only
+## defined on a DAG, and dependency cycles are legal (mutual preloads), so strongly
+## connected components are condensed first and every node in a cycle shares one column.
+## Computed from the edges alone, so it works on the panel's view graph, stubs included.
+static func _build_columns_max(dep_graph) -> Array:
+	if dep_graph.nodes.is_empty():
+		return []
+
+	var comp = _strongly_connected(dep_graph) # {path: component id}
+	var comp_count := 0
+	for path in comp:
+		comp_count = maxi(comp_count, comp[path] + 1)
+
+	var preds:Array = [] # per component, the set of components feeding it
+	for i in comp_count:
+		preds.append({})
+	for path:String in dep_graph.nodes:
+		for edge in dep_graph.nodes[path].in_edges:
+			if comp.has(edge.from) and comp[edge.from] != comp[path]:
+				preds[comp[path]][comp[edge.from]] = true
+
+	var memo = {}
+	var by_depth = {}
+	var max_depth := 0
+	for path:String in dep_graph.nodes:
+		var depth := _component_depth(comp[path], preds, memo)
+		max_depth = maxi(max_depth, depth)
+		if not by_depth.has(depth):
+			by_depth[depth] = []
+		by_depth[depth].append(path)
+
+	var columns:Array = []
+	for i in max_depth + 1:
+		var col:Array = by_depth.get(i, [])
+		col.sort()
+		columns.append(col)
+	return columns
+
+
+## depth[c] = 0 for sources, else 1 + max(depth of its predecessors). The condensed graph
+## is a DAG by construction, so the memoized walk cannot re-enter a component.
+static func _component_depth(c:int, preds:Array, memo:Dictionary) -> int:
+	if memo.has(c):
+		return memo[c]
+	var depth := 0
+	for p in preds[c]:
+		depth = maxi(depth, _component_depth(p, preds, memo) + 1)
+	memo[c] = depth
+	return depth
+
+
+## Tarjan's algorithm. Returns {path: component id}. Edges to nodes outside the graph -
+## pruned away by the panel, or unresolved targets - are not part of any cycle here.
+static func _strongly_connected(dep_graph) -> Dictionary:
+	var state = {
+		"index_of": {}, "low": {}, "on_stack": {}, "stack": [],
+		"comp": {}, "next": 0, "comp_next": 0,
+	}
+	for path:String in dep_graph.nodes:
+		if not state.index_of.has(path):
+			_tarjan_visit(path, dep_graph, state)
+	return state.comp
+
+
+static func _tarjan_visit(path:String, dep_graph, state:Dictionary) -> void:
+	state.index_of[path] = state.next
+	state.low[path] = state.next
+	state.next += 1
+	state.stack.append(path)
+	state.on_stack[path] = true
+
+	for edge in dep_graph.nodes[path].out_edges:
+		var to:String = edge.to
+		if to == "" or not dep_graph.nodes.has(to):
+			continue
+		if not state.index_of.has(to):
+			_tarjan_visit(to, dep_graph, state)
+			state.low[path] = mini(state.low[path], state.low[to])
+		elif state.on_stack.has(to):
+			state.low[path] = mini(state.low[path], state.index_of[to])
+
+	if state.low[path] == state.index_of[path]:
+		while true:
+			var w = state.stack.pop_back()
+			state.on_stack.erase(w)
+			state.comp[w] = state.comp_next
+			if w == path:
+				break
+		state.comp_next += 1
+
+
+## Positions for the neighbourhood view: the focus file(s) at column 0, their dependencies
+## counting up to the right, their dependents counting down to the left, out to max_depth
+## hops each way. Same column ordering and spacing as the full layered layout.
+static func compute_neighborhood(dep_graph, focus:Array, max_depth:int, sizes:Dictionary, opts:Dictionary = {}) -> Dictionary:
+	var h_gap:float = opts.get("h_gap", DEFAULTS.h_gap)
+	var v_gap:float = opts.get("v_gap", DEFAULTS.v_gap)
+	var sweeps:int = opts.get("sweeps", DEFAULTS.sweeps)
+
+	var dist = neighborhood_dist(dep_graph, focus, max_depth)
+	if dist.is_empty():
+		return {}
+
+	var by_column = {}
+	for path in dist:
+		var d:int = dist[path]
+		if not by_column.has(d):
+			by_column[d] = []
+		by_column[d].append(path)
+
+	var keys:Array = by_column.keys()
+	keys.sort()
+	var columns:Array = []
+	for d in keys:
+		var col:Array = by_column[d]
+		col.sort()
+		columns.append(col)
+
+	var order = _order_columns(columns, dep_graph, sweeps)
+	return _assign_positions(order, sizes, h_gap, v_gap)
+
+
+## Signed hop distance from the focus set: dependencies count up (they sit right of the
+## focus), dependents count down. A node reachable from both sides keeps the shorter one;
+## a tie keeps whichever side was found first, so the result is deterministic. `max_depth`
+## bounds each side independently; negative means unbounded. {path: signed hops}.
+static func neighborhood_dist(dep_graph, focus:Array, max_depth:int) -> Dictionary:
+	var dist = {}
+	var queue:Array = []
+	for path in focus:
+		if dep_graph.nodes.has(path) and not dist.has(path):
+			dist[path] = 0
+			queue.append(path)
+
+	while not queue.is_empty():
+		var current:String = queue.pop_front()
+		var d:int = dist[current]
+		if max_depth >= 0 and absi(d) >= max_depth:
+			continue
+		var node = dep_graph.nodes[current]
+		for edge in node.out_edges:
+			_offer_hop(dist, queue, dep_graph, edge.to, d + 1)
+		for edge in node.in_edges:
+			_offer_hop(dist, queue, dep_graph, edge.from, d - 1)
+	return dist
+
+
+static func _offer_hop(dist:Dictionary, queue:Array, dep_graph, path:String, d:int) -> void:
+	if path == "" or not dep_graph.nodes.has(path):
+		return
+	if dist.has(path):
+		# a shorter route from the other side wins, and its neighbours deserve the update
+		if absi(d) < absi(dist[path]):
+			dist[path] = d
+			queue.append(path)
+		return
+	dist[path] = d
+	queue.append(path)
 
 
 static func _order_columns(columns:Array, dep_graph, sweeps:int) -> Array:

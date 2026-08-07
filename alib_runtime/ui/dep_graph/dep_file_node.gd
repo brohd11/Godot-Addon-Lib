@@ -142,6 +142,11 @@ func _set_title_color(color:Color) -> void:
 	add_theme_color_override("title_color", color)
 
 
+## Title-colour like a root: this node is the anchor of the panel's neighbourhood view.
+func mark_focused() -> void:
+	_set_title_color(KindStyle.ROOT_COLOR)
+
+
 func _title_for(_path:String) -> String:
 	var file = _path.get_file()
 	return file if file != "" else _path

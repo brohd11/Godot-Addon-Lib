@@ -16,7 +16,7 @@ var is_root:bool = false
 ## False when the extension has no scanner, or when traversal stopped here.
 var scanned:bool = false
 ## A generated pseudo-namespace file. It preloads every sibling it namespaces, so a viewer may
-## want to elide it - but it is a real file the exporter still has to copy.
+## want to elide it - but it is a real file a caller collecting files still has to keep.
 var is_namespace_hub:bool = false
 
 var in_edges:Array = []

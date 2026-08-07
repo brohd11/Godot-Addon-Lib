@@ -1,6 +1,6 @@
 ## Text scanner for .gd files. Emits unresolved refs; dependencies.gd resolves and places them.
 ## One StringMap per file masks strings and comments, so a `preload(` inside either is ignored
-## without the brittle quote-counting the old plugin_exporter parser relied on.
+## without resorting to counting quotes on the line.
 
 const UString = preload("uid://cwootkivqiwq1") # u_string.gd
 const URegex = preload("uid://cpjnb72qn8bmh") # u_regex.gd
@@ -69,8 +69,8 @@ static func scan(file_path:String, ctx) -> Array:
 
 # `Singletons.Base` names singleton_base.gd, not the namespace file its head resolves to.
 # These are emitted ALONGSIDE the head's own GLOBAL_CLASS edge, never instead of it - the head
-# is a real `class_name` that has to exist for the code to compile, and plugin_exporter needs
-# to keep copying it.
+# is a real `class_name` that has to exist for the code to compile, so a caller collecting
+# files still needs it.
 static func _scan_access_paths(text:String, map, line_starts:PackedInt32Array, file_path:String, declared:Dictionary, ctx, refs:Array) -> void:
 	var heads = ResolveAccess.get_const_paths(file_path, ctx.access_cache)
 	var class_map:Dictionary = ctx.class_map
