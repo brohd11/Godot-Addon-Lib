@@ -27,29 +27,40 @@ static var _const_regex:RegEx
 ## fallback for the first segment. `cache` is {file_path: {const_name: target_path}}, shared
 ## across a scan - most of these files are being read anyway.
 ##
-## Returns {"path": String, "partial": bool}. `partial` marks a walk that stopped early: the
-## path is a real ancestor of what was asked for, not the thing itself, so a caller can choose
-## to trust it less. An unresolvable head gives "".
+## Returns {"path", "partial", "consumed", "head_from_class_map"}. `partial` marks a walk that
+## stopped early: the path is a real ancestor of what was asked for, not the thing itself, so a
+## caller can choose to trust it less. `consumed` counts the leading segments that resolved to
+## files, so `parts[consumed - 1]` names the file the walk landed on and `parts[consumed..]` is
+## the unresolved tail - inner classes, enums, plain consts. `head_from_class_map` says the
+## chain started at a global class rather than one of the file's own const preloads, which is
+## what separates a namespace-style chain from a file's own local indirection. An unresolvable
+## head gives "" and 0.
 static func resolve(expression:String, heads:Dictionary, class_map:Dictionary, cache:Dictionary) -> Dictionary:
 	var parts = expression.split(".", false)
 	if parts.is_empty():
-		return {"path": "", "partial": false}
+		return _unresolved()
 
+	var from_class_map := false
 	var current:String = heads.get(parts[0], "")
 	if current == "":
 		current = class_map.get(parts[0], "")
+		from_class_map = current != ""
 	if current == "":
-		return {"path": "", "partial": false}
+		return _unresolved()
 
 	for i in range(1, parts.size()):
 		var consts = get_const_paths(current, cache)
 		var next:String = consts.get(parts[i], "")
 		if next == "":
 			# an inner class, or a const that is not a preload - the last real file wins
-			return {"path": current, "partial": true}
+			return {"path": current, "partial": true, "consumed": i, "head_from_class_map": from_class_map}
 		current = next
 
-	return {"path": current, "partial": false}
+	return {"path": current, "partial": false, "consumed": parts.size(), "head_from_class_map": from_class_map}
+
+
+static func _unresolved() -> Dictionary:
+	return {"path": "", "partial": false, "consumed": 0, "head_from_class_map": false}
 
 
 ## {const_name: resolved_path} for every `const X = preload("…")` in a file. Cached per scan.

@@ -18,6 +18,14 @@ const KIND_NAMES:Array[String] = [
 	"global_class", "ext_resource", "script_class", "tag",
 ]
 
+## Meta keys the scanners write. An edge carrying RESOLVED_FROM came from a dotted access path
+## rather than a bare reference, and CONSUMED says how many of its segments named files - so
+## `parts[consumed - 1]` is the segment that landed on `to`, and the rest is an unresolved tail.
+const META_RESOLVED_FROM = "resolved_from"
+const META_PARTIAL = "partial"
+const META_CONSUMED = "consumed"
+const META_HEAD_FROM_CLASS_MAP = "head_from_class_map"
+
 ## Path of the file holding the reference.
 var from:String
 ## Resolved absolute path of the referenced file. "" when resolution failed.

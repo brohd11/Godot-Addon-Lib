@@ -111,7 +111,12 @@ static func _scan_access_paths(text:String, map, line_starts:PackedInt32Array, f
 			"path": path,
 			"kind": kind,
 			"line_no": line_no,
-			"meta": {"resolved_from": expression, "partial": result.partial},
+			"meta": {
+				DepEdge.META_RESOLVED_FROM: expression,
+				DepEdge.META_PARTIAL: result.partial,
+				DepEdge.META_CONSUMED: result.consumed,
+				DepEdge.META_HEAD_FROM_CLASS_MAP: result.head_from_class_map,
+			},
 		})
 
 
