@@ -95,7 +95,7 @@ class GitTreeHelper:
 		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_overlay.draw.connect(_draw_icon_overlay)
 		
-		marker_icon = EditorInterface.get_editor_theme().get_icon(&"Breakpoint", &"EditorIcons")
+		marker_icon = Util.get_marker_icon()
 	
 	func reprocess_tree():
 		var item:TreeItem = _tree.get_root()
@@ -213,7 +213,9 @@ class Util:
 		rect.position.y += (rect.size.y - icon.get_size().y) / 2.0
 		rect.size = icon.get_size()
 		return rect
-	pass
+	
+	static func get_marker_icon():
+		return EditorInterface.get_editor_theme().get_icon(&"Breakpoint", &"EditorIcons")
 
 class Keys:
 	const GIT_ICON = &"git_icon"
